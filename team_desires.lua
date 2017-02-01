@@ -13,22 +13,14 @@ function UpdatePushLaneDesires()
 	local friendTeam = GetTeam();
 	local enemyTeam = TEAM_RADIANT+TEAM_DIRE-friendTeam;
 
-	-- local friendRating = TeamAttributes(friendTeam);
-	-- local enemyRating = TeamAttributes(enemyTeam);
-	
-	-- local enemyPushScore = enemyRating["push"] + enemyRating["initiation"] + enemyRating["countrinit"] + enemyRating["teamfight"];
-	-- local friendPushScore = friendRating["push"] + friendRating["initiation"] + friendRating["countrinit"] + friendRating["teamfight"];
-	-- local enemyDefendScore = enemyRating["defense"] + enemyRating["initiation"] + enemyRating["countrinit"] + enemyRating["teamfight"];
-	-- local friendDefendScore  = friendRating["defense"] + friendRating["initiation"] + friendRating["countrinit"] + friendRating["teamfight"];
-
-	local presenceScore = GetPresence(enemyTeam); 
+	local presenceScore = GetPresence(); 
 	local laneDistance = { [1] = 3000, [2] = 3000, [3] = 3000 }; -- lane - tower
 	local heroFactor = { [1] = 0, [2] = 0, [3] = 0 };
 	local tower;
 	for i = 1,3 do
 		laneDistance[i],tower = GetLaneDistance(enemyTeam,friendTeam,i);
 		if tower ~= nil then
-			heroFactor[i] = HeroNearTarget(friendTeam,tower,3000);
+			-- heroFactor[i] = HeroNearTarget(false,tower,2000);
 		end
 	end
 
@@ -52,7 +44,7 @@ function UpdateDefendLaneDesires()
 	for i = 1,3 do
 		laneDistance[i],tower = GetLaneDistance(friendTeam,enemyTeam,i);
 		if tower ~= nil then
-			heroFactor[i] = HeroNearTarget(enemyTeam,tower,3000);
+			-- heroFactor[i] = HeroNearTarget(true,tower,2000);
 		end
 	end
 
@@ -72,14 +64,14 @@ function UpdateFarmLaneDesires()
 	local friendTeam = GetTeam();
 	local enemyTeam = TEAM_RADIANT+TEAM_DIRE-friendTeam;
 
-	local presenceScore = GetPresence(enemyTeam); 
+	local presenceScore = GetPresence(); 
 	local laneDistance = { [1] = 3000, [2] = 3000, [3] = 3000 }; -- lane - tower
 	local heroFactor = { [1] = 0, [2] = 0, [3] = 0 };
 	local tower;
 	for i = 1,3 do
 		laneDistance[i],tower = GetLaneDistance(friendTeam,enemyTeam,i);
 		if tower ~= nil then
-			heroFactor[i] = HeroNearTarget(enemyTeam,tower,3000);
+			-- heroFactor[i] = HeroNearTarget(true,tower,2000);
 		end
 	end
 
@@ -94,19 +86,20 @@ end
 ----------------------------------------------------------------------------------------------------
 
 function UpdateRoamDesire()
-	if (GetGameState( ) ~= GAME_STATE_GAME_IN_PROGRESS and GetGameState( ) ~= GAME_STATE_PRE_GAME) then return { 0.0, GetTeamMember( TEAM_RADIANT, 1 ) } end
+	if (GetGameState( ) ~= GAME_STATE_GAME_IN_PROGRESS and GetGameState( ) ~= GAME_STATE_PRE_GAME) then return { 0.0, nil } end
 
 	local friendTeam = GetTeam();
 	local enemyTeam = TEAM_RADIANT+TEAM_DIRE-friendTeam;
 
-	local presenceScore = GetPresence(enemyTeam);
+	local presenceScore = GetPresence();
 	local roamTarget = nil;
-	for i = 1,5 do
-		roamTarget = GetTeamMember( enemyTeam, i );
-		if presenceScore < 4 or CanFindHero(roamTarget) ~= true or HeroNearTarget(enemyTeam,roamTarget,3000) > 2 then
-			roamTarget = nil;
-		end
-	end
+	-- local heroes = GetTeamMember(4):GetNearbyHeroes( 2000, true, BOT_MODE_NONE );
+	-- for k,v in ipairs(heroes) do
+	-- 	if v~=nil and v:CanBeSeen() then roamTarget = v end
+		-- if presenceScore < 4 or CanFindHero(roamTarget) ~= true or HeroNearTarget(true,roamTarget,2000) > 2 then
+		-- 	roamTarget = nil;
+		-- end
+	-- end
 	local night = 0;
 	local nightRemain = 0;
 	night,nightRemain = DayNight();
@@ -121,14 +114,11 @@ function UpdateRoshanDesire()
 	local friendTeam = GetTeam();
 	local enemyTeam = TEAM_RADIANT+TEAM_DIRE-friendTeam;
 
-	local presenceScore = GetPresence(enemyTeam);
-	local roamTarget = nil;
-	for i = 1,5 do
-		roamTarget = GetTeamMember( enemyTeam, i );
-		if presenceScore < 4 or CanFindHero(roamTarget) ~= true or HeroNearTarget(enemyTeam,roamTarget,3000) > 2 then
-			roamTarget = nil;
-		end
+	local presenceScore = GetPresence();
+	if presenceScore < 4 then
+		roamTarget = nil;
 	end
+	
 	local night = 0;
 	local nightRemain = 0;
 	night,nightRemain = DayNight();

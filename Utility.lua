@@ -375,12 +375,13 @@ function Utility.GetDistance(a,b)
 	return math.sqrt((a[1]-b[1])*(a[1]-b[1]) + (a[2]-b[2])*(a[2]-b[2]));
 end
 
-function Utility.GetPresence(enemyTeam)
+function Utility.GetPresence()
 	local enemy;
 	local presenceScore = 0;
-	for i = 1,5 do
-		enemy = GetTeamMember( enemyTeam, i );
-		if (enemy ~= nil and Utility.CanFindHero(enemy)) then
+	local IDs=GetTeamPlayers(TEAM_RADIANT+TEAM_DIRE-GetTeam());
+	for i,id in pairs(IDs) do
+		location,time = GetHeroLastSeenInfo( id );
+		if (time ~= nil and time < 10) then
 			presenceScore = presenceScore + 1;
 		end
 	end
@@ -400,13 +401,13 @@ function Utility.GetLaneDistance(defendTeam,attackTeam,lane)
 	return dist,tower;
 end
 
-function Utility.HeroNearTarget(team,target,radius)
+function Utility.HeroNearTarget(enemy,target,radius)
 	local numHero = 0;
 	local oneDistance;
-	for i = 1,5 do
-		oneDistance = GetUnitToUnitDistance(GetTeamMember(team,i),target);
-		if oneDistance ~= nil and oneDistance < radius then
-			numHero = numHero + 1;
+	local heroes = target:GetNearbyHeroes( radius, enemy, BOT_MODE_NONE );
+	if heroes ~= nil then
+		for _,v in pairs(heroes) do
+			if v~=nil and v:CanBeSeen() then numHero = numHero + 1 end
 		end
 	end
 	return numHero;
@@ -444,8 +445,8 @@ function Utility.GetRune(npcBot,rune)
 end
 
 function Utility.FurthestCreepLocation(npcBot)
-	local creeps = npcBot:GetNearbyCreeps(900,false);
-	if creeps==nil or #creeps==0 then
+	local creeps = npcBot:GetNearbyCreeps(600,false);
+	if creeps==nil then
 		return nil;
 	end
 
@@ -453,7 +454,7 @@ function Utility.FurthestCreepLocation(npcBot)
 	local loc;
 	for _,creep in pairs(creeps) do
 		loc = creep:GetLocation();
-		print(loc[1],loc[2],furthest[1],furthest[2])
+		print(loc)
 		if (loc[1]>furthest[1] and loc[2]>furthest[2]) then
 			furthest = loc;
 		end
@@ -467,7 +468,7 @@ function Utility.BlockCreep(team,npcBot,lane)
 		[1] = Vector(-150, 150),
 		[2] = Vector(150, -150)
 	};
-	npcBot:Action_MoveToLocation(GetLocationAlongLane( team, GetLaneFrontAmount( team, lane, true )+0.03 )+randomLR[flip] );
+	npcBot:Action_MoveToLocation(GetLocationAlongLane( team, GetLaneFrontAmount( team, lane, true )+0.04 )+randomLR[flip] );
 end
 
 ----------------------------------------------------------------------------------------------------
