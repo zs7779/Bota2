@@ -1,12 +1,7 @@
 Utility = require( GetScriptDirectory().."/Utility" );
 local heroRating = Utility.heroRating;
-local heroRatingLength = Utility.heroRatingLength;
 local keys = Utility.keys;
-local heroCombo = Utility.heroCombo;
-local heroComboLength = Utility.heroComboLength;
-local heroStarter = Utility.heroStarter;
-local heroes = Utility.heroes;
-local TeamAttributes = Utility.TeamAttributes;
+
 ----------------------------------------------------------------------------------------------------
 
 
@@ -131,12 +126,12 @@ local function BanPickLogic(i, id)
 	local idx = 0;
 	local hero;
 
-	local friendRating = TeamAttributes(GetTeam());
-	local enemyRating = TeamAttributes(TEAM_RADIANT+TEAM_DIRE-GetTeam());
+	local friendRating = Utility.TeamAttributes(GetTeam());
+	local enemyRating = Utility.TeamAttributes(TEAM_RADIANT+TEAM_DIRE-GetTeam());
 	
 	local rdx = RandomInt(1,i-1);
-	if (i > 1 and heroCombo[GetSelectedHeroName(id-rdx)] ~= nil and RollPercentage(80)) then
-		heroTable = heroCombo[GetSelectedHeroName(id-rdx)];
+	if (i > 1 and Utility.heroCombo[GetSelectedHeroName(id-rdx)] ~= nil and RollPercentage(80)) then
+		heroTable = Utility.heroCombo[GetSelectedHeroName(id-rdx)];
 		randomHero = RandomInt(1,#heroTable);
 		for key,value in ipairs(heroTable) do
 			if key == randomHero then
@@ -145,8 +140,8 @@ local function BanPickLogic(i, id)
 		end
 	else
 		if i<=2 and RollPercentage(50) then
-			heroTable = heroStarter;
-			randomHero = RandomInt(1,#heroStarter);
+			heroTable = Utility.heroStarter;
+			randomHero = RandomInt(1,#Utility.heroStarter);
 			for key,value in ipairs(heroTable) do
 				idx = idx + 1;
 				if idx == randomHero then
@@ -155,11 +150,11 @@ local function BanPickLogic(i, id)
 			end
 		else
 			if i <= 3 then
-				heroTable = heroCombo;
-				randomHero = RandomInt(1,heroComboLength);
+				heroTable = Utility.heroCombo;
+				randomHero = RandomInt(1,Utility.heroComboLength);
 			else
 				heroTable = heroRating;
-				randomHero = RandomInt(1,heroRatingLength);
+				randomHero = RandomInt(1,Utility.heroRatingLength);
 			end
 			for key,value in pairs(heroTable) do
 				idx = idx + 1;
@@ -197,7 +192,7 @@ local function BanPickLogic(i, id)
 	end	
 ----heroes unfit to position
 	local fitposition = false;
-	for k,v in ipairs(heroes[i]) do
+	for k,v in ipairs(Utility.heroes[i]) do
 		if v == hero and heroRating[hero][i+1] >= positionRequirement then
 			fitposition = true;
 			break;
@@ -234,8 +229,8 @@ function Think()
 			end
 		end
 	end
-	local friendRating = TeamAttributes(friendTeam);
-	local enemyRating = TeamAttributes(TEAM_RADIANT+TEAM_DIRE-friendTeam);
+	local friendRating = Utility.TeamAttributes(friendTeam);
+	local enemyRating = Utility.TeamAttributes(TEAM_RADIANT+TEAM_DIRE-friendTeam);
 	if friendRating["picked"] == 5 and enemyRating["picked"] == 5 then
 		print("Carry: ",friendRating["core"],"Mid: ",friendRating["mid"]);
 		print("Offlane: ",friendRating["off"],"greedsupp: ",friendRating["greedsupp"],"Supp: ",friendRating["support"]);
@@ -262,7 +257,7 @@ end
 
 function UpdateLaneAssignments()
     local IDs=GetTeamPlayers(GetTeam());
-    local friendRating = TeamAttributes(GetTeam());
+    local friendRating = Utility.TeamAttributes(GetTeam());
 
     if ( friendRating["picked"] ~= 5 )
     then

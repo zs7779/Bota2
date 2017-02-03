@@ -1,9 +1,7 @@
-Utility = require( GetScriptDirectory().."/Utility" );
-local GetRune = Utility.GetRune;
-local Locations = Utility.Locations;
-
 _G._savedEnv = getfenv()
 module( "mode_rune_generic", package.seeall )
+
+Utility = require( GetScriptDirectory().."/Utility" );
 
 -- Called every ~300ms, and needs to return a floating-point value between 0 and 1 that indicates how much this mode wants to be the active mode.
 function GetDesire()
@@ -11,11 +9,12 @@ function GetDesire()
 
 	local time = DotaTime();
 	local npcBot = GetBot();
+	if time < 20 and npcBot:GetAssignedLane() == 4 then return 0.0 end
 	if time <= 1 then return 0.9 end
-	if time < 18 and npcBot:GetAssignedLane() == 4 then return 0.0 end
+	
 
 	for rune = RUNE_POWERUP_1,RUNE_BOUNTY_4 do
-		if GetUnitToLocationDistance(npcBot,GetRuneSpawnLocation( rune )) < 200 and GetRuneStatus(rune) == RUNE_STATUS_AVAILABLE then
+		if GetUnitToLocationDistance(npcBot,GetRuneSpawnLocation( rune ))<200 and GetRuneStatus(rune)~=RUNE_STATUS_MISSING then
 			return 0.9;
 		end
 	end
@@ -42,16 +41,15 @@ function Think()
 	local time = DotaTime();
 	
 	if time <= 3 then
-		if npcBot:GetAssignedLane() == 2 then GetRune(npcBot,RUNE_BOUNTY_2)
-		elseif npcBot:GetAssignedLane() == 5 then GetRune(npcBot,RUNE_BOUNTY_1)
-		elseif npcBot:GetAssignedLane() == 3 then npcBot:Action_MoveToLocation( Locations[team].TopShrine )
-		elseif npcBot:GetAssignedLane() == 1 then npcBot:Action_MoveToLocation( Locations[team].BotShrine )
-		elseif npcBot:GetAssignedLane() == 4 then npcBot:Action_MoveToLocation( Locations[team].MidBlock )
+		if npcBot:GetAssignedLane() == 2 then Utility.GetRune(npcBot,RUNE_BOUNTY_2)
+		elseif npcBot:GetAssignedLane() == 5 then Utility.GetRune(npcBot,RUNE_BOUNTY_1)
+		elseif npcBot:GetAssignedLane() == 3 then npcBot:Action_MoveToLocation( Utility.Locations[team].TopShrine )
+		elseif npcBot:GetAssignedLane() == 1 then npcBot:Action_MoveToLocation( Utility.Locations[team].BotShrine )
 		end
 	else
 		for rune = RUNE_POWERUP_1,RUNE_BOUNTY_4 do
-			if GetUnitToLocationDistance( npcBot, GetRuneSpawnLocation( rune ) ) < 2000 then
-				GetRune(npcBot,rune);
+			if GetRuneStatus(rune)~=RUNE_STATUS_MISSING and GetUnitToLocationDistance( npcBot, GetRuneSpawnLocation( rune ) ) < 2000 then
+				Utility.GetRune(npcBot,rune);
 			end
 		end
 	end

@@ -136,7 +136,7 @@ Utility.heroRating = {
 	["npc_dota_hero_shadow_demon"] 			= {3, 0,0,0,2,2, 0,2,1,1, 0,2,1,1,1, 0,1,0,0, 1,0,0,0,0,1, 0,0,2, 0,0, 0,0, 1,0, 1,0, 0,0,0},
 	["npc_dota_hero_lone_druid"] 			= {2, 2,2,2,0,0, 2,0,1,1, 0,1,1,2,0, 2,2,2,0, 0,0,1,0,0,0, 1,0,0, 0,0, 0,0, 0,0, 0,0, 0,0,1},
 	["npc_dota_hero_chaos_knight"] 			= {1, 2,0,0,1,0, 2,0,2,1, 1,0,1,1,0, 2,1,0,0, 1,2,0,0,0,0, 0,0,0, 0,0, 0,0, 1,0, 0,0, 2,0,0},
-	["npc_dota_hero_meepo"] 				= {2, 2,2,0,0,0, 2,1,1,2, 1,0,2,2,0, 2,1,1,0, 2,0,2,0,0,0, 1,0,0, 0,1, 0,0, 1,0, 2,0, 1,1,0},
+	["npc_dota_hero_meepo"] 				= {0, 2,2,0,0,0, 2,1,1,2, 1,0,2,2,0, 2,1,1,0, 2,0,2,0,0,0, 1,0,0, 0,1, 0,0, 1,0, 2,0, 1,1,0},
 	["npc_dota_hero_treant"] 				= {3, 0,0,1,2,2, 0,2,1,0, 2,2,2,0,2, 0,2,0,1, 1,1,2,0,0,0, 0,0,2, 2,0, 1,0, 0,2, 0,0, 0,0,0},
 	["npc_dota_hero_ogre_magi"] 			= {3, 0,0,0,2,2, 2,0,1,1, 0,0,2,1,1, 0,2,0,0, 1,1,0,0,0,0, 0,0,0, 0,0, 0,0, 1,0, 0,0, 0,0,0},
 	["npc_dota_hero_undying"] 				= {1, 0,0,0,2,1, 2,1,0,1, 0,1,2,1,2, 0,2,0,0, 1,0,0,0,0,0, 1,0,0, 0,0, 1,1, 2,0, 2,0, 0,0,0},
@@ -145,8 +145,8 @@ Utility.heroRating = {
 	["npc_dota_hero_nyx_assassin"]			= {2, 0,1,2,2,0, 2,0,2,1, 2,1,2,0,2, 1,1,0,1, 2,2,0,0,2,0, 1,0,0, 2,0, 0,0, 0,0, 1,0, 0,0,0},
 	["npc_dota_hero_naga_siren"] 			= {2, 2,2,0,1,0, 1,0,1,0, 2,2,1,1,1, 2,1,0,0, 1,0,2,0,1,0, 2,0,2, 0,0, 0,0, 1,0, 1,0, 2,0,0},
 	["npc_dota_hero_keeper_of_the_light"] 	= {3, 0,0,0,2,2, 0,2,2,0, 0,1,2,2,2, 0,2,0,2, 0,1,0,0,1,0, 0,0,0, 0,0, 1,0, 0,0, 0,0, 0,0,0},
-	["npc_dota_hero_wisp"] 					= {3, 0,0,0,2,2, 0,2,0,0, 0,2,0,1,0, 0,1,0,0, 1,0,0,0,0,0, 1,0,0, 0,0, 2,0, 1,0, 0,0, 0,0,0},
-	["npc_dota_hero_visage"] 				= {2, 0,0,0,2,2, 1,1,1,2, 0,1,2,2,0, 0,2,0,0, 2,1,0,0,0,0, 0,0,0, 0,0, 0,0, 1,1, 1,1, 0,0,0},
+	["npc_dota_hero_wisp"] 					= {0, 0,0,0,2,2, 0,2,0,0, 0,2,0,1,0, 0,1,0,0, 1,0,0,0,0,0, 1,0,0, 0,0, 2,0, 1,0, 0,0, 0,0,0},
+	["npc_dota_hero_visage"] 				= {0, 0,0,0,2,2, 1,1,1,2, 0,1,2,2,0, 0,2,0,0, 2,1,0,0,0,0, 0,0,0, 0,0, 0,0, 1,1, 1,1, 0,0,0},
 	["npc_dota_hero_slark"] 				= {2, 2,0,0,0,0, 2,0,0,1, 1,1,0,0,0, 2,0,0,2, 1,0,0,0,0,1, 2,2,0, 1,0, 2,0, 1,0, 0,0, 0,0,1},
 	["npc_dota_hero_medusa"] 				= {2, 2,2,0,0,0, 2,0,1,0, 0,1,1,0,1, 2,1,0,0, 0,0,0,0,1,0, 1,0,1, 0,0, 0,0, 0,0, 0,0, 0,2,0},
 	["npc_dota_hero_troll_warlord"] 		= {2, 2,1,0,0,0, 1,1,0,1, 0,0,1,2,0, 2,1,0,0, 1,0,0,0,0,0, 0,0,0, 0,0, 0,0, 2,0, 0,0, 0,0,2},
@@ -157,7 +157,7 @@ Utility.heroRating = {
 	["npc_dota_hero_tusk"] 					= {1, 0,0,2,2,2, 2,0,1,1, 1,2,2,0,1, 0,1,0,0, 2,1,0,0,0,0, 1,0,2, 0,0, 0,0, 1,2, 0,0, 0,0,0},
 	["npc_dota_hero_skywrath_mage"] 		= {3, 0,1,0,2,1, 0,2,0,2, 1,0,2,0,0, 0,2,0,0, 2,0,0,1,0,0, 0,0,0, 0,0, 0,0, 0,0, 2,0, 0,0,0},
 	["npc_dota_hero_abaddon"] 				= {1, 0,0,1,2,2, 2,0,0,0, 0,2,2,1,0, 0,1,0,0, 0,0,0,0,0,1, 2,2,0, 1,0, 1,0, 0,0, 0,0, 0,0,0},
-	["npc_dota_hero_elder_titan"] 			= {1, 0,0,0,2,2, 0,2,2,1, 1,2,2,0,2, 0,1,0,0, 1,1,0,0,0,0, 0,0,1, 0,0, 0,0, 2,0, 2,0, 0,0,0},
+	["npc_dota_hero_elder_titan"] 			= {0, 0,0,0,2,2, 0,2,2,1, 1,2,2,0,2, 0,1,0,0, 1,1,0,0,0,0, 0,0,1, 0,0, 0,0, 2,0, 2,0, 0,0,0},
 	["npc_dota_hero_legion_commander"] 		= {1, 2,2,2,0,0, 2,1,1,0, 2,2,1,1,1, 1,1,1,0, 1,1,0,1,0,1, 0,2,2, 0,0, 1,0, 1,0, 0,0, 0,0,1},
 	["npc_dota_hero_ember_spirit"] 			= {2, 2,2,0,0,0, 1,1,1,1, 1,0,2,0,1, 2,1,0,0, 2,0,2,0,0,0, 2,0,0, 0,0, 0,0, 0,0, 2,0, 0,1,0},
 	["npc_dota_hero_earth_spirit"] 			= {1, 0,0,0,2,2, 1,1,2,1, 1,1,2,0,1, 0,2,0,0, 1,1,0,1,0,0, 2,0,0, 0,0, 0,0, 0,1, 1,1, 0,0,0},
@@ -363,7 +363,8 @@ end
 
 Utility.Locations = {
 	[TEAM_RADIANT] = {
-		MidBlock = Vector(-4040.0, -3544.0),
+		MidBlockStart = Vector(-4000.0, -3504.0),
+		MidBlockEnd = Vector(-1092.6 -693.8),
 		BotShrine = Vector(940.0, -2660.0),
 		TopShrine = Vector(-4124.0, 1780.0),
 	},
@@ -371,49 +372,11 @@ Utility.Locations = {
 
 ----------------------------------------------------------------------------------------------------
 
+Utility.friendHeroes = GetUnitList(UNIT_LIST_ALLIED_HEROES);
+Utility.enemyHeroes = GetUnitList(UNIT_LIST_ENEMY_HEROES);
+
 function Utility.GetDistance(a,b)
 	return math.sqrt((a[1]-b[1])*(a[1]-b[1]) + (a[2]-b[2])*(a[2]-b[2]));
-end
-
-function Utility.GetPresence(enemyTeam)
-	local enemy;
-	local presenceScore = 0;
-	for i = 1,5 do
-		enemy = GetTeamMember( enemyTeam, i );
-		if (enemy ~= nil and Utility.CanFindHero(enemy)) then
-			presenceScore = presenceScore + 1;
-		end
-	end
-	return presenceScore;
-end
-
-function Utility.GetLaneDistance(defendTeam,attackTeam,lane)
-	local dist = 5000;
-	local tower = nil;
-	for towerNum = (lane-1)*3,(lane-1)*3+2 do
-		tower = GetTower( defendTeam, towerNum );
-		if tower ~= nil and tower:IsAlive() then
-			dist = GetUnitToLocationDistance(tower, GetLaneFrontLocation( attackTeam, lane, 0 ));
-			return dist,tower;
-		end
-	end
-	return dist,tower;
-end
-
-function Utility.HeroNearTarget(team,target,radius)
-	local numHero = 0;
-	local oneDistance;
-	for i = 1,5 do
-		oneDistance = GetUnitToUnitDistance(GetTeamMember(team,i),target);
-		if oneDistance ~= nil and oneDistance < radius then
-			numHero = numHero + 1;
-		end
-	end
-	return numHero;
-end
-
-function Utility.CanFindHero(enemyHero)
-	return (enemyHero:CanBeSeen() == true or enemyHero:GetTimeSinceLastSeen( ) < 10);
 end
 
 function Utility.DayNight()
@@ -427,6 +390,51 @@ function Utility.DayNight()
 		end
 	end
 	return DayNight,nextDayNight;
+end
+
+function Utility.GetPresence(enemyTeam)
+
+	local presenceScore = 0;
+	for _,hero in ipairs(Utility.enemyHeroes) do
+		presenceScore = presenceScore + 1;
+	end
+	return presenceScore;
+end
+
+function Utility.FriendNearTarget(target,radius)
+	local numHero = 0;
+	for _,hero in ipairs(Utility.friendHeroes) do
+		if hero ~= nil and GetUnitToUnitDistance(hero,target) < radius then 
+			numHero = numHero + 1 ;
+		end
+	end
+	return numHero;
+end
+function Utility.EnemyNearTarget(target,radius)
+	local numHero = 0;
+	for _,hero in ipairs(Utility.enemyHeroes) do
+		if hero ~= nil and GetUnitToUnitDistance(hero,target) < radius then 
+			numHero = numHero + 1 ;
+		end
+	end
+	return numHero;
+end
+
+function Utility.CanFindHero(enemyHero)
+	return (enemyHero:CanBeSeen() == true or enemyHero:GetTimeSinceLastSeen( ) < 10);
+end
+
+function Utility.GetLaneDistance(defendTeam,attackTeam,lane)
+	local dist = 5000;
+	local tower = nil;
+	for towerNum = (lane-1)*3,(lane-1)*3+2 do
+		tower = GetTower( defendTeam, towerNum );
+		if tower ~= nil and tower:IsAlive() then
+			dist = GetUnitToLocationDistance(tower, GetLaneFrontLocation( attackTeam, lane, 0 ));
+			return dist,tower;
+		end
+	end
+	return dist,tower;
 end
 
 function Utility.GetRune(npcBot,rune)
@@ -443,31 +451,27 @@ function Utility.GetRune(npcBot,rune)
 	end
 end
 
-function Utility.FurthestCreepLocation(npcBot)
-	local creeps = npcBot:GetNearbyCreeps(900,false);
-	if creeps==nil or #creeps==0 then
-		return nil;
+function Utility.BlockCreep(team,npcBot,lane)
+	if GetTeam() == TEAM_RADIANT then
+		npcBot:Action_MoveToLocation(Utility.FurthestCreep(npcBot)+Vector(170,170));
+	else
+		npcBot:Action_MoveToLocation(Utility.FurthestCreep(npcBot)-Vector(170,170));
 	end
+end
 
-	local furthest = Vector(0,0);
-	local loc;
-	for _,creep in pairs(creeps) do
-		loc = creep:GetLocation();
-		print(loc[1],loc[2],furthest[1],furthest[2])
-		if (loc[1]>furthest[1] and loc[2]>furthest[2]) then
-			furthest = loc;
+function Utility.FurthestCreep(npcBot)
+	local furthest = Vector(-5000,-5000);
+	local creeploc;
+	for _,creep in ipairs(npcBot:GetNearbyLaneCreeps(500,false)) do
+		creeploc = creep:GetLocation();
+		if creeploc[1] > furthest[1] and creeploc[2] > furthest[2] then
+			furthest = creeploc;
 		end
 	end
 	return furthest;
 end
 
-function Utility.BlockCreep(team,npcBot,lane)
-	local flip = math.floor(DotaTime()*10)%2+1;
-	local randomLR = {
-		[1] = Vector(-150, 150),
-		[2] = Vector(150, -150)
-	};
-	npcBot:Action_MoveToLocation(GetLocationAlongLane( team, GetLaneFrontAmount( team, lane, true )+0.03 )+randomLR[flip] );
+function Utility.MoveToLane(npcBot)
 end
 
 ----------------------------------------------------------------------------------------------------
