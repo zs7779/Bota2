@@ -1,12 +1,12 @@
 function Think()
 	if GetGameState() ~= GAME_STATE_HERO_SELECTION then	return end
-    local heroes = {"npc_dota_hero_sven","npc_dota_hero_dragon_knight","npc_dota_hero_tidehunter","npc_dota_hero_sand_king","npc_dota_hero_dazzle"};
+    local picks = {"npc_dota_hero_sven","npc_dota_hero_dragon_knight","npc_dota_hero_tidehunter","npc_dota_hero_sand_king","npc_dota_hero_dazzle"};
 	local friendTeam = GetTeam();
 	local IDs = GetTeamPlayers(friendTeam);
 
 	for i,id in pairs(IDs) do
 		if (IsPlayerBot(id) and IsPlayerInHeroSelectionControl(id) and GetSelectedHeroName(id) == "") then
-				SelectHero(id,heroes[i]);
+				SelectHero(id,picks[i]);
 		end
 	end
 end

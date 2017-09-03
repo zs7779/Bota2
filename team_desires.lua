@@ -1,4 +1,4 @@
-utils = require( GetScriptDirectory().."/utils" );
+require(GetScriptDirectory() ..  "/utils")
 
 function UpdatePushLaneDesires()
 -- Consider: 1. Lane tower HP 2. # of enemy heroes defending/off map

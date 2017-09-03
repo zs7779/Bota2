@@ -1,6 +1,15 @@
-utils={};
+_G._savedEnv = getfenv()
+module("utils", package.seeall)
+-- 
 
-function utils.nextTower(nTeam, towerList)
+function CDOTA_Bot_Script:GetPlayerPosition()
+	for position = 1,5 do
+		if GetTeamMember(position) == self then return position; end
+	end
+	return nil;
+end
+
+function nextTower(nTeam, towerList)
 	-- given a team and a list of towers,
 	-- return the first tower that is alive.
 	for i, tower in pairs(towerList) do
@@ -10,12 +19,12 @@ function utils.nextTower(nTeam, towerList)
     return nil;
 end
 
-function utils.locationToLocationDistance(vloc1, vloc2)
+function locationToLocationDistance(vloc1, vloc2)
 	if vloc1 == nil or vloc2 == nil then return nil; end
 	return math.sqrt(math.pow(vloc1.x-vloc2.x,2)+math.pow(vloc1.y-vloc2.y,2));
 end
 
-function utils.tableMax(ids, numTable)
+function tableMax(ids, numTable)
 	local max = 0;
 	local imax = 0;
 	for _, id in pairs(ids) do
@@ -27,4 +36,5 @@ function utils.tableMax(ids, numTable)
 	return imax, max;
 end
 
-return utils;
+-- 
+for k,v in pairs( utils ) do _G._savedEnv[k] = v end
