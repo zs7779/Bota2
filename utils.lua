@@ -9,10 +9,27 @@ function CDOTA_Bot_Script:GetPlayerPosition()
 	return nil;
 end
 
+function CDOTA_Bot_Script:IsLow()
+	if self:GetHealth()/self:GetMaxHealth() < 0.6 or self:GetMana()/self:GetMaxMana() < 0.4 then
+		return true;
+	else
+		return false;
+	end
+end
+
+function CDOTA_Bot_Script:OnRune(runes)
+	for _, rune in pairs(runes) do
+		if GetRuneStatus(rune) == RUNE_STATUS_AVAILABLE and GetUnitToLocationDistance(self,GetRuneSpawnLocation(rune)) < 100 then
+			return rune;
+		end
+	end
+	return nil;
+end
+
 function nextTower(nTeam, towerList)
 	-- given a team and a list of towers,
 	-- return the first tower that is alive.
-	for i, tower in pairs(towerList) do
+	for _, tower in pairs(towerList) do
 		local T = GetTower(nTeam, tower);
 		if T ~= nil then return T; end
 	end
