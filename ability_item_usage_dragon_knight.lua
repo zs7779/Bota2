@@ -99,12 +99,8 @@ function ConsiderBreatheFire(I, ability)
 		if AoELocation.count >= 2 then return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; end
 	end
 
-	if I:GetActiveMode() == BOT_MODE_PUSH_TOWER_TOP or
-		I:GetActiveMode() == BOT_MODE_PUSH_TOWER_MID or
-	 	I:GetActiveMode() == BOT_MODE_PUSH_TOWER_BOT or
-		I:GetActiveMode() == BOT_MODE_DEFEND_TOWER_TOP or
-		I:GetActiveMode() == BOT_MODE_DEFEND_TOWER_MID or
-		I:GetActiveMode() == BOT_MODE_DEFEND_TOWER_BOT then
+	if I:GetActiveMode() >= BOT_MODE_PUSH_TOWER_TOP and
+		I:GetActiveMode() <= BOT_MODE_DEFEND_TOWER_BOT then
 		local AoELocation = I:FindAoELocation( true, false, I:GetLocation(), castRange, radius, 0, 0 );
 		if AoELocation.count >= 2 then return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; end
 	end
