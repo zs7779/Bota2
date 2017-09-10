@@ -9,12 +9,15 @@ function CDOTA_Bot_Script:GetPlayerPosition()
 	return nil;
 end
 
+function CDOTA_Bot_Script:LowHealth()
+	return self:GetHealth()/self:GetMaxHealth() < 0.6;
+end
+function CDOTA_Bot_Script:LowMana()
+	return self:GetMana()/self:GetMaxMana() < 0.4;
+end
+
 function CDOTA_Bot_Script:IsLow()
-	if self:GetHealth()/self:GetMaxHealth() < 0.6 or self:GetMana()/self:GetMaxMana() < 0.4 then
-		return true;
-	else
-		return false;
-	end
+	return self:LowHealth() or self:LowMana();
 end
 
 function CDOTA_Bot_Script:OnRune(runes)
@@ -24,6 +27,20 @@ function CDOTA_Bot_Script:OnRune(runes)
 		end
 	end
 	return nil;
+end
+
+function CDOTA_Bot_Script:IsDisabled()
+	if self:IsRooted() or self:IsStunned() or self:IsHexed() or self:IsNightmared() then
+		return true;
+	end
+	return false;
+end
+
+function CDOTA_Bot_Script:IsImmune()
+	if self:IsMagicImmune() or self:IsInvulnerable() then
+		return true;
+	end
+	return false;
 end
 
 function nextTower(nTeam, towerList)

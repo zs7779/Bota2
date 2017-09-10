@@ -24,12 +24,11 @@ function PendingRunes(runes)
 	return pending;
 end
 
-function NearestRune(runes)
-	local npcBot = GetBot();
+function NearestRune(I,runes)
 	local nearest = nil;
 	local dist = math.huge;
 	for _, rune in pairs(runes) do
-		local tmp = GetUnitToLocationDistance(npcBot,GetRuneSpawnLocation(rune));
+		local tmp = GetUnitToLocationDistance(I,GetRuneSpawnLocation(rune));
 		if tmp < dist then
 			dist = tmp;
 			nearest = rune;
@@ -39,10 +38,10 @@ function NearestRune(runes)
 end
 
 function DibsHaveBeenCalled()
-	local npcBot = GetBot();
+	local I = GetBot();
 	local desire = 0;
-	if npcBot:GetActiveMode() == BOT_MODE_RUNE then
-		desire = npcBot:GetActiveModeDesire();
+	if I:GetActiveMode() == BOT_MODE_RUNE then
+		desire = I:GetActiveModeDesire();
 	end
 
 	local friends = GetUnitList(UNIT_LIST_ALLIED_HEROES);
@@ -50,8 +49,8 @@ function DibsHaveBeenCalled()
 		if friend:GetActiveMode() == BOT_MODE_RUNE and friend:GetActiveModeDesire() > desire then
 			local runes = PendingRunes(safeRunes[GetTeam()]);
 		    if #runes == 0 then return false; end
-		    local runeLoc = GetRuneSpawnLocation(NearestRune(runes));
-		    if GetUnitToLocationDistance(friend,runeLoc)+100 < GetUnitToLocationDistance(npcBot,runeLoc) then
+		    local runeLoc = GetRuneSpawnLocation(NearestRune(I,runes));
+		    if GetUnitToLocationDistance(friend,runeLoc)+100 < GetUnitToLocationDistance(I,runeLoc) then
 		    	return true;
 		    end
 		end
@@ -60,17 +59,17 @@ function DibsHaveBeenCalled()
 end
 
 function GetDesire()
-	local npcBot = GetBot();
-	local position = npcBot:GetPlayerPosition();
-	local hasBottle = (npcBot:FindItemSlot( "item_bottle" ) ~= -1);
+	local I = GetBot();
+	local position = I:GetPlayerPosition();
+	local hasBottle = (I:FindItemSlot( "item_bottle" ) ~= -1);
 
-	if (not npcBot:IsAlive()) or npcBot:IsUsingAbility() or npcBot:IsChanneling() then return 0; end
+	if (not I:IsAlive()) or I:IsUsingAbility() or I:IsChanneling() then return 0; end
     if DibsHaveBeenCalled() then return 0; end
 
-	local friends = npcBot:GetNearbyHeroes(1200,false,BOT_MODE_NONE);
-	local enemys = npcBot:GetNearbyHeroes(1200,true,BOT_MODE_NONE);
+	local friends = I:GetNearbyHeroes(1200,false,BOT_MODE_NONE);
+	local enemys = I:GetNearbyHeroes(1200,true,BOT_MODE_NONE);
 
-	if DotaTime()>=-75 and DotaTime()<=0.5 and (position == 1 or position == 2) and #friends>=#enemys then
+	if DotaTime()<=0.5 and (position == 1 or position == 2) and #friends>=#enemys then
 		return 0.8;
 	end
 
@@ -79,40 +78,40 @@ function GetDesire()
     local runes = PendingRunes(safeRunes[GetTeam()]);
     if #runes == 0 then return 0; end
 
-	if NearestRune(runes) < 2500 then
-		return 0.55;
+	if NearestRune(I,runes) < 2500 then
+		return 0.35;
 	end
 
 	if hasBottle then
-		if npcBot:IsLow() then
-			return 0.65;
+		if I:IsLow() then
+			return 0.45;
 		else
-			return 0.55;
+			return 0.35;
 		end
 	end
 	return 0;
 end
 
 function Think()
-	local npcBot = GetBot();
-	local position = npcBot:GetPlayerPosition();
+	local I = GetBot();
+	local position = I:GetPlayerPosition();
 
-	local rune = npcBot:OnRune(safeRunes[GetTeam()]);
+	local rune = I:OnRune(safeRunes[GetTeam()]);
 	if rune ~= nil then 
-		npcBot:Action_PickUpRune(rune); 
+		I:Action_PickUpRune(rune); 
 		return;
 	end
 
 	-- Find first rune before time 0:00
-	if DotaTime()>=-75 and DotaTime()<=0.5 and position < 3 then
-		npcBot:Action_MoveToLocation(GetRuneSpawnLocation(safeRunes[GetTeam()][position]));
+	if DotaTime()<=0.5 and position < 3 then
+		I:Action_MoveToLocation(GetRuneSpawnLocation(safeRunes[GetTeam()][position]));
+		return;
 	end
 
 	-- Check nearest rune
 	local runes = PendingRunes(safeRunes[GetTeam()]);
 	if #runes ~= 0 then
-		npcBot:Action_MoveToLocation(GetRuneSpawnLocation(NearestRune(runes)));
+		I:Action_MoveToLocation(GetRuneSpawnLocation(NearestRune(I,runes)));
+		return;
 	end
-
-	return;
 end

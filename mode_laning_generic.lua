@@ -1,13 +1,13 @@
 function GetDesire()
 	
-	local npcBot = GetBot();
-	local position = npcBot:GetPlayerPosition();
-	if(DotaTime()<=8*60 and npcBot:GetLevel()<7)
+	local I = GetBot();
+	local position = I:GetPlayerPosition();
+	if(DotaTime()<=8*60 and I:GetLevel()<9)
 	then
-		if position < 4 then return 0.6;
-		else return 0.3; end
+		if position < 4 then return 0.4;
+		else return 0.1; end
 	else
-		return 0.1;
+		return 0.3;
 	end
 
 end
