@@ -66,54 +66,10 @@ function AbilityUsageThink()
 end
 
 function ConsiderBreatheFire(I, ability)
-	local castRange = ability:GetCastRange();
-	local damage = ability:GetAbilityDamage();
-	local radius = ability:GetAOERadius();
-	
-	-- GetNearby sorts units from close to far
-	local enemys = I:GetNearbyHeroes(castRange,true,BOT_MODE_NONE);
-	local creeps = I:GetNearbyCreeps(castRange,true);
-	
-	-- Kill secure
-	for _, enemy in pairs(enemys) do
-		if ability_item_usage_generic.CanCastAbilityOnTarget(ability, enemy) and
-			enemy:GetHealth() <= enemy:GetActualIncomingDamage(damage, DAMAGE_TYPE_MAGICAL) then
-			return BOT_ACTION_DESIRE_HIGH, enemy:GetLocation();
-		end
-	end
-	
-	-- Laning last hit
-	-- If enough mana and low health, try landing any last hit
-	if I:GetActiveMode() == BOT_MODE_LANING then
-		if not I:LowMana() and I:LowHealth() then
-			local AoELocation = I:FindAoELocation( true, false, I:GetLocation(), castRange, radius, 0, damage );
-			if AoELocation.count >= 1 then return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; end
-		elseif not I:LowMana() then -- this logic is questionable.. what does maxHealth consider?
-			local AoELocation = I:FindAoELocation( true, false, I:GetLocation(), castRange, radius, 0, damage );
-			if AoELocation.count >= 2 then return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; end
-		end
-	end
+end
 
-	if I:GetActiveMode() == BOT_MODE_FARM then
-		local AoELocation = I:FindAoELocation( true, false, I:GetLocation(), castRange, radius, 0, damage );
-		if AoELocation.count >= 2 then return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; end
-	end
+function COnsiderDragonTail(I, ability)
+end
 
-	if I:GetActiveMode() >= BOT_MODE_PUSH_TOWER_TOP and
-		I:GetActiveMode() <= BOT_MODE_DEFEND_TOWER_BOT then
-		local AoELocation = I:FindAoELocation( true, false, I:GetLocation(), castRange, radius, 0, 0 );
-		if AoELocation.count >= 2 then return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; end
-	end
-
-	if I:GetActiveMode() == BOT_MODE_ROAM or
-		 I:GetActiveMode() == BOT_MODE_TEAM_ROAM or
-		 I:GetActiveMode() == BOT_MODE_DEFEND_ALLY or
-		 I:GetActiveMode() == BOT_MODE_ATTACK then
-		 local target = I:GetTarget();
-		 if target ~= nil and ability_item_usage_generic.CanCastAbilityOnTarget(ability, target) then
-		 	return BOT_ACTION_DESIRE_MODERATE, target:GetLocation();
-		 end
-	end
-
-	return BOT_ACTION_DESIRE_NONE, nil;
+function ConsiderElderDragonForm(I, ability)
 end

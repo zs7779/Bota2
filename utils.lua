@@ -43,6 +43,45 @@ function CDOTA_Bot_Script:IsImmune()
 	return false;
 end
 
+function weakestUnit(units, disable)
+	local health = math.huge;
+	local weakest = nil;
+	for _, unit in pairs(units) do
+		local thisHealth = unit:GetHealth();
+		if unit:IsAlive() and thisHealth < health and not (disable and not unit:IsDisabled()) then
+			weakest = unit;
+			health = thisHealth;
+		end
+	end
+	return weakest;
+end
+
+function strongestUnit(units, disable)
+	local power = 0;
+	local strongest = nil;
+	for _, unit in pairs(units) do
+		local thisPower = unit:GetOffensivePower();
+		if unit:IsAlive() and thisPower > power then
+			strongest = unit;
+			power = thisPower;
+		end
+	end
+	return strongest;
+end
+
+function strongestDisabler(units, disable)
+	local stunTime = 0;
+	local strongest = nil;
+	for _, unit in pairs(units) do
+		local thisTime = unit:GetStunDuration();
+		if unit:IsAlive() and thisTime > stunTime then
+			strongest = unit;
+			stunTime = thisTime;
+		end
+	end
+	return strongest;
+end
+
 function nextTower(nTeam, towerList)
 	-- given a team and a list of towers,
 	-- return the first tower that is alive.
