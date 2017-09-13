@@ -9,11 +9,49 @@ function CDOTA_Bot_Script:GetPlayerPosition()
 	return nil;
 end
 
+function CDOTA_Bot_Script:GetAbilities()
+	local abilities = {};
+	local talents = {};
+	for i = 0,23 do
+		local ability = self:GetAbilityInSlot(i);
+		if ability ~= nil then
+			if ability:IsTalent() then
+				table.insert(talents, ability:GetName());
+			else
+				table.insert(abilities, ability:GetName());
+			end
+		end
+	end
+	return abilities, talents;
+end
+
+function CDOTA_Bot_Script:GetComboMana()
+	local abilities, talents = self:GetAbilities()
+	local manaCost = 0;
+	for _, ability in pairs(abilities) do
+		if not ability:IsPassive() and ability:IsFullyCastable() and ability:GetAbilityDamage()>0 then
+			manaCOst = manaCost + ability:GetManaCost();
+		end
+	end
+	return manaCost;
+end
+function CDOTA_Bot_Script:GetComboDamage()
+	local abilities, talents = self:GetAbilities()
+	local totalDamage = 0;
+	for _, ability in pairs(abilities) do
+		if not ability:IsPassive() and ability:IsFullyCastable() and ability:GetAbilityDamage()>0 then
+			totalDamage = totalDamage + ability:GetAbilityDamage();
+		end
+	end
+	return totalDamage;
+end
+
 function CDOTA_Bot_Script:LowHealth()
 	return self:GetHealth()/self:GetMaxHealth() < 0.6;
 end
 function CDOTA_Bot_Script:LowMana()
-	return self:GetMana()/self:GetMaxMana() < 0.4;
+	local mana = self:GetMana()
+	return mana/self:GetMaxMana() < 0.4 or mana < self:GetComboMana();
 end
 
 function CDOTA_Bot_Script:IsLow()
@@ -95,6 +133,11 @@ end
 function locationToLocationDistance(vloc1, vloc2)
 	if vloc1 == nil or vloc2 == nil then return nil; end
 	return math.sqrt(math.pow(vloc1.x-vloc2.x,2)+math.pow(vloc1.y-vloc2.y,2));
+end
+
+function middleLocation(vloc1, vloc2)
+	if vloc1 == nil or vloc2 == nil then return nil; end
+	return Vector((vloc1.x+vloc2.x)/2, (vloc1.y+vloc2.y)/2);
 end
 
 function tableMax(ids, numTable)

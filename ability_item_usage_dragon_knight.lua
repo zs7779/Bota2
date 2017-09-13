@@ -1,23 +1,7 @@
 ability_item_usage_generic = dofile( GetScriptDirectory().."/ability_item_usage_generic" )
 
-function GetAbilities(I)
-	local abilities = {};
-	local talents = {};
-	for i = 0,23 do
-		local ability = I:GetAbilityInSlot(i);
-		if ability ~= nil then
-			if ability:IsTalent() then
-				table.insert(talents, ability:GetName());
-			else
-				table.insert(abilities,ability:GetName());
-			end
-		end
-	end
-	return abilities, talents;
-end
-
 function GetAbilityGuide(I)
-	abilities, talents = GetAbilities(I);
+	abilities, talents = I:GetAbilities();
 
 	local abilityLevelUp = {};
 	abilityLevelUp[1] = abilities[1];
@@ -55,7 +39,7 @@ end
 
 function AbilityUsageThink()
 	local I = GetBot();
-	local abilities, talents = GetAbilities(I);
+	local abilities, talents = I:GetAbilities();
 	BreatheFire = I:GetAbilityByName(abilities[1]);
 	DragonTail = I:GetAbilityByName(abilities[2]);
 	local BreatheFireDesire, BreatheFireLoc = ConsiderBreatheFire(I, BreatheFire);
