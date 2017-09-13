@@ -6,12 +6,21 @@ function CanCastAbilityOnTarget(ability, target)
 	ability:GetTargetFlags() == ABILITY_TARGET_FLAG_MAGIC_IMMUNE_ENEMIES);
 end
 
--- ***Generic logic:
--- ***Use nuke when 1. enemy health low 2. harrass 3. attack
--- ***Use stun when 1. channeling       2. enemy health low  3. key hero    4. attack
--- ***use aoe when  1. enemy health low 2. harrass           3. defend/push 4. attack 
+-- ***1. aoe nuke         2. aoe stun         3. aoe debuff         4. aoe buff         5. aoe save
+-- ***6. unit nuke        7. unit stun        8. unit debuff        9. unit buff        10. unit save
+-- ***11. point nuke      12. point stun      13. point debuff      14. point buff      15. point save
+-- ***16. no target nuke  17. no target stun  18. no target debuff  19. no target buff  20. no target save
 
-function ConsiderAoEDamage(I, ability)
+-- ***Generic logic:
+-- ***Use point nuke 1. enemy health low  2. harrass  3. attack
+-- ***Use point stun 1. channeling  2. enemy health low  3. key hero  4. attack
+-- ***Use aoe nuke 1. enemy health low  2. harrass  3. defend/push  4. attack 
+-- ***Use aoe stun 1. channeling  2. enemy health low  3. key hero  4. attack
+-- ***Use debuff same as stun
+-- ***Use buff 1. strongest friend  2. dealing damage friend
+-- ***Use save 1. weakest friend  2. disabled friend  3. slowed/silenced friend
+
+function ConsiderAoENuke(I, ability)
 	if not ability:IsFullyCastable() then
 		return BOT_ACTION_DESIRE_NONE, nil;
 	end
@@ -187,7 +196,7 @@ function ConsiderUnitStun(I, ability)
 	return BOT_ACTION_DESIRE_NONE, nil;
 end
 
-function ConsiderUnitDamage(I, ability)
+function ConsiderUnitNuke(I, ability)
 	if not ability:IsFullyCastable() then
 		return BOT_ACTION_DESIRE_NONE, nil;
 	end
@@ -244,6 +253,34 @@ function ConsiderUnitDamage(I, ability)
 	return BOT_ACTION_DESIRE_NONE, nil;
 end
 
+
+function AbilityUsageThink()
+	local I = GetBot();
+	local abilities, talents = I:GetAbilities();
+	
+	local BreatheFire = I:GetAbilityByName(abilities[1]);
+	local DragonTail = I:GetAbilityByName(abilities[2]);
+	local BreatheFireDesire, BreatheFireLoc = ConsiderAoEDamage(I, BreatheFire);
+	local DragonTailDesire, DragonTailTarget = ConsiderUnitStun(I, DragonTail);
+	
+	local considerations = {};
+	local desires = {};
+	local targets = {};
+	
+	for _, ability in pairs(abilities) do
+		if not ability:IsPassive() and ability:IsFullyCastable() then
+			considerations[#considerations+1] = ability;
+			local desire, target = 
+		end
+	end
+	
+	if BreatheFireDesire > 0 then
+		I:Action_UseAbilityOnLocation(BreatheFire,BreatheFireLoc);
+	end
+	if DragonTailDesire > 0 then
+		I:Action_UseAbilityOnEntity(DragonTailDesire, DragonTailTarget);
+	end
+end
 
 
 BotsInit = require( "game/botsinit" );

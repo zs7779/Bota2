@@ -2,6 +2,18 @@ _G._savedEnv = getfenv()
 module("utils", package.seeall)
 -- 
 
+-- gxc's code
+-- created by date: 2017/03/16
+-- nBehavior = hAbility:GetTargetTeam, GetTargetType, GetTargetFlags or GetBehavior function returns
+-- nFlag = Ability Target Teams, Ability Target Types, Ability Target Flags or Ability Behavior Bitfields constant
+-- behaviors and flags can be combined.. thats why they are all 2^x
+function CheckFlag( nBehavior, nFlag )
+	if ( nFlag == 0 ) then
+		if ( nBehavior == 0 ) then return true; else return false; end
+	end
+	return ( (nBehavior / nFlag) % 2 ) >= 1;
+end
+
 function CDOTA_Bot_Script:GetPlayerPosition()
 	for position = 1,5 do
 		if GetTeamMember(position) == self then return position; end
@@ -16,9 +28,11 @@ function CDOTA_Bot_Script:GetAbilities()
 		local ability = self:GetAbilityInSlot(i);
 		if ability ~= nil then
 			if ability:IsTalent() then
-				table.insert(talents, ability:GetName());
+				-- table.insert(talents, ability:GetName());
+				talents[#talents+1] = ability:GetName()
 			else
 				table.insert(abilities, ability:GetName());
+				abilities[#abilities+1] = ability:GetName()
 			end
 		end
 	end

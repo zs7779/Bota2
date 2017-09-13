@@ -40,20 +40,20 @@ end
 function AbilityUsageThink()
 	local I = GetBot();
 	local abilities, talents = I:GetAbilities();
-	BreatheFire = I:GetAbilityByName(abilities[1]);
-	DragonTail = I:GetAbilityByName(abilities[2]);
-	local BreatheFireDesire, BreatheFireLoc = ConsiderBreatheFire(I, BreatheFire);
+	
+	local BreatheFire = I:GetAbilityByName(abilities[1]);
+	local DragonTail = I:GetAbilityByName(abilities[2]);
+	local BreatheFireDesire, BreatheFireLoc = ConsiderAoENuke(I, BreatheFire);
+	local DragonTailDesire, DragonTailTarget = ConsiderUnitStun(I, DragonTail);
 
 	if BreatheFireDesire > 0 then
 		I:Action_UseAbilityOnLocation(BreatheFire,BreatheFireLoc);
 	end
+	if DragonTailDesire > 0 then
+		I:Action_UseAbilityOnEntity(DragonTailDesire, DragonTailTarget);
+	end
 end
 
-function ConsiderBreatheFire(I, ability)
-end
-
-function COnsiderDragonTail(I, ability)
-end
 
 function ConsiderElderDragonForm(I, ability)
 end
