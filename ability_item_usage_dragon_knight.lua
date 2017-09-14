@@ -43,7 +43,7 @@ function AbilityUsageThink()
 	
 	local BreatheFire = I:GetAbilityByName(abilities[1]);
 	local DragonTail = I:GetAbilityByName(abilities[2]);
-	local BreatheFireDesire, BreatheFireLoc = ConsiderAoENuke(I, BreatheFire);
+	local BreatheFireDesire, BreatheFireLoc = ConsiderPointNuke(I, BreatheFire);
 	local DragonTailDesire, DragonTailTarget = ConsiderUnitStun(I, DragonTail);
 
 	if BreatheFireDesire > 0 then
@@ -56,4 +56,6 @@ end
 
 
 function ConsiderElderDragonForm(I, ability)
+	-- Something something like if pushing and close to tower, of if attack and close to target
+	return BOT_ACTION_DESIRE_NONE;
 end
