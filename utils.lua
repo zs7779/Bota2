@@ -95,6 +95,11 @@ function CDOTA_Bot_Script:IsImmune()
 	return false;
 end
 
+function CDOTA_Bot_Script:PredictLocation(fTime)
+	local stability = self:GetMovementDirectionStability();
+	return utils.midPoint({stability*GetExtrapolatedLocation(fTime), (1.0-stability)*self:GetLocation()});
+end
+
 function weakestUnit(units, disable)
 	local health = math.huge;
 	local weakest = nil;
@@ -149,9 +154,15 @@ function locationToLocationDistance(vloc1, vloc2)
 	return math.sqrt(math.pow(vloc1.x-vloc2.x,2)+math.pow(vloc1.y-vloc2.y,2));
 end
 
-function middleLocation(vloc1, vloc2)
-	if vloc1 == nil or vloc2 == nil then return nil; end
-	return Vector((vloc1.x+vloc2.x)/2, (vloc1.y+vloc2.y)/2);
+function midPoint(vlocs)
+	-- vlocs need to be a strict array of Vectors, with no gap in between
+	if vlocs == nil or #vlocs == 0 then return nil; end
+	local x,y = 0,0;
+	for _, v in vlocs do
+		x = x + v.x;
+		y = y+ v.y;
+	end
+	return Vector(x/#vlocs, y/#vlocs);
 end
 
 function tableMax(ids, numTable)
