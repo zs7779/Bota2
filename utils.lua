@@ -14,6 +14,23 @@ function CheckFlag( nBehavior, nFlag )
 	return ( (nBehavior / nFlag) % 2 ) >= 1;
 end
 
+
+-- Ranked Matchmaking AI
+local debug_mode = true;
+function DebugTalk(message)
+	local npcBot=GetBot();
+	if(npcBot.LastSpeaktime==nil)
+	then
+		npcBot.LastSpeaktime=0;
+	end
+	if(GameTime()-npcBot.LastSpeaktime>1)
+	then
+		npcBot:ActionImmediate_Chat(message,true);
+		npcBot.LastSpeaktime=GameTime();
+	end
+end
+
+--
 function CDOTA_Bot_Script:GetPlayerPosition()
 	for position = 1,5 do
 		if GetTeamMember(position) == self then return position; end
@@ -28,10 +45,8 @@ function CDOTA_Bot_Script:GetAbilities()
 		local ability = self:GetAbilityInSlot(i);
 		if ability ~= nil then
 			if ability:IsTalent() then
-				-- table.insert(talents, ability:GetName());
 				talents[#talents+1] = ability:GetName()
 			else
-				table.insert(abilities, ability:GetName());
 				abilities[#abilities+1] = ability:GetName()
 			end
 		end
@@ -42,7 +57,8 @@ end
 function CDOTA_Bot_Script:GetComboMana()
 	local abilities, talents = self:GetAbilities()
 	local manaCost = 0;
-	for _, ability in pairs(abilities) do
+	for i = 1, #abilities do
+		local ability = self:GetAbilityByName(abilities[i]);
 		if not ability:IsPassive() and ability:IsFullyCastable() and ability:GetAbilityDamage()>0 then
 			manaCOst = manaCost + ability:GetManaCost();
 		end
@@ -52,7 +68,8 @@ end
 function CDOTA_Bot_Script:GetComboDamage()
 	local abilities, talents = self:GetAbilities()
 	local totalDamage = 0;
-	for _, ability in pairs(abilities) do
+	for i = 1, #abilities do
+		local ability = self:GetAbilityByName(abilities[i]);
 		if not ability:IsPassive() and ability:IsFullyCastable() and ability:GetAbilityDamage()>0 then
 			totalDamage = totalDamage + ability:GetAbilityDamage();
 		end
@@ -73,7 +90,8 @@ function CDOTA_Bot_Script:IsLow()
 end
 
 function CDOTA_Bot_Script:OnRune(runes)
-	for _, rune in pairs(runes) do
+	for i = 1, #runes do
+		local rune = runes[i];
 		if GetRuneStatus(rune) == RUNE_STATUS_AVAILABLE and GetUnitToLocationDistance(self,GetRuneSpawnLocation(rune)) < 100 then
 			return rune;
 		end
@@ -97,13 +115,60 @@ end
 
 function CDOTA_Bot_Script:PredictLocation(fTime)
 	local stability = self:GetMovementDirectionStability();
-	return utils.midPoint({stability*GetExtrapolatedLocation(fTime), (1.0-stability)*self:GetLocation()});
+	return stability*self:GetExtrapolatedLocation(fTime) + (1.0-stability)*self:GetLocation();
+end
+
+
+function CDOTA_Bot_Script:FindAoEVector(bEnemies, bHeroes, bHarass, vBaseLocation, nMaxDistanceFromBase, nWidth, fTimeInFuture, nMaxHealth )
+	local AoEVector = {};
+	AoEVector.count = 0;
+	AoEVector.baseloc = vBaseLocation;
+	AoEVector.targetloc = nil;
+	local maxHealth = (nMaxHealth == 0) and math.huge or nMaxHealth;
+
+	nMaxDistanceFromBase = math.min(1550, nMaxDistanceFromBase);
+	local heroes = self:GetNearbyHeroes(nMaxDistanceFromBase, bEnemies, BOT_MODE_NONE);
+	local units = bHeroes and heroes or self:GetNearbyCreeps(nMaxDistanceFromBase, bEnemies);
+	local targetUnits = bHarass and heroes or units;
+
+	local maxCount = 0;
+	local targets = {};
+	for i = 1, #targetUnits do
+		local targetUnit = targetUnits[i];
+	    local vtargetLoc = targetUnit:PredictLocation(fTimeInFuture);
+		local vector = vtargetLoc - vBaseLocation;
+		local vEnd = vBaseLocation + vector/utils.locationToLocationDistance(vBaseLocation, vtargetLoc)*nMaxDistanceFromBase;
+		
+		local thisCount = 0;
+		local thisTargets = {};
+		for j = 1, #units do
+			local unit = units[j];
+			local unitLoc = unit:PredictLocation(fTimeInFuture);
+			local distToLine = PointToLineDistance(vBaseLocation, vEnd, unitLoc);
+			if distToLine.within and distToLine.distance < nWidth and unit:GetHealth() <= maxHealth then
+				thisCount = thisCount + 1;
+				thisTargets[#thisTargets+1] = unitLoc;
+			end
+		end
+		if thisCount > maxCount then
+			maxCount = thisCount;
+			targets = thisTargets;
+		end
+	end
+	
+	AoEVector.count = maxCount;
+	AoEVector.baseloc = vBaseLocation;
+	AoEVector.targetloc = utils.midPoint(targets);
+	-- There is no guarantee this midPoint actually covers all targets...
+	-- Drawing tells me it is guaranteed, but I have trouble proving it mathematically..
+	return AoEVector;
 end
 
 function weakestUnit(units, disable)
 	local health = math.huge;
 	local weakest = nil;
-	for _, unit in pairs(units) do
+	for i = 1, #units do
+		local unit = units[i];
 		local thisHealth = unit:GetHealth();
 		if unit:IsAlive() and thisHealth < health and not (disable and not unit:IsDisabled()) then
 			weakest = unit;
@@ -116,7 +181,8 @@ end
 function strongestUnit(units, disable)
 	local power = 0;
 	local strongest = nil;
-	for _, unit in pairs(units) do
+	for i = 1, #units do
+		local unit = units[i];
 		local thisPower = unit:GetOffensivePower();
 		if unit:IsAlive() and thisPower > power then
 			strongest = unit;
@@ -129,8 +195,9 @@ end
 function strongestDisabler(units, disable)
 	local stunTime = 0;
 	local strongest = nil;
-	for _, unit in pairs(units) do
-		local thisTime = unit:GetStunDuration();
+	for i = 1, #units do
+		local unit = units[i];
+		local thisTime = unit:GetStunDuration(false);
 		if unit:IsAlive() and thisTime > stunTime then
 			strongest = unit;
 			stunTime = thisTime;
@@ -142,8 +209,8 @@ end
 function nextTower(nTeam, towerList)
 	-- given a team and a list of towers,
 	-- return the first tower that is alive.
-	for _, tower in pairs(towerList) do
-		local T = GetTower(nTeam, tower);
+	for i = 1, #towerList do
+		local T = GetTower(nTeam, towerList[i]);
 		if T ~= nil then return T; end
 	end
     return nil;
@@ -157,12 +224,12 @@ end
 function midPoint(vlocs)
 	-- vlocs need to be a strict array of Vectors, with no gap in between
 	if vlocs == nil or #vlocs == 0 then return nil; end
-	local x,y = 0,0;
-	for _, v in vlocs do
-		x = x + v.x;
-		y = y+ v.y;
+	local mid = Vector(0,0);
+	for _, v in pairs(vlocs) do
+		mid.x = mid.x + v.x;
+		mid.y = mid.y + v.y;
 	end
-	return Vector(x/#vlocs, y/#vlocs);
+	return mid;
 end
 
 function tableMax(ids, numTable)

@@ -1,46 +1,11 @@
+require(GetScriptDirectory() ..  "/utils")
+
 function CanCastAbilityOnTarget(ability, target)
 	return ability:IsFullyCastable() and 
-	target:CanBeSeen() and 
+	target:CanBeSeen() and target:IsAlive() and
 	not target:IsInvulnerable() and 
 	(not target:IsMagicImmune() or 
 	ability:GetTargetFlags() == ABILITY_TARGET_FLAG_MAGIC_IMMUNE_ENEMIES);
-end
-
-function FindAoEVector( bool bEnemies, bool bHeroes, vector vBaseLocation, int nMaxDistanceFromBase, int nWidth, float fTimeInFuture, int nMaxHealth )
-	local AoEVector = {};
-	
-	nMaxDistanceFromBase = math.min(1550, nMaxDistanceFromBase);
-	local units = (bHeroes and GetNearbyHeroes(nMaxDistanceFromBase, bEnemies, BOT_MODE_NONE) or 
-				GetNearbyCreeps(nMaxDistanceFromBase, bEnemies));
-	
-	local maxCount = 0;
-	local targets = {};
-	for _, targetUnit in pairs(units) do
-	    local vtargetLoc = targetUnit:GetLocation();
-		local vector = vtargetLoc - vBaseLocation;
-		local vEnd = vBaseLocation + vector/utils.locationToLocationDistance(vBaseLocation, vtargetLoc)*nMaxDistanceFromBase;
-		
-		local thisCount = 0;
-		local thisTargets = {};
-		for _, unit in pairs(units) do
-			local dist, closest_point, within = PointToLineDistance(vBaseLocation, vEnd, unit:GetLocation());
-			if within and dist < nWidth then
-				thisCount = thisCount + 1;
-				thisTargets[#thisTargets+1] = unit;
-			end
-		end
-		if thisCount > maxCount then
-			maxCount = thisCount;
-			targest = thisTargets;
-		end
-	end
-	
-	AoEVector.count = maxCount;
-	AoEVector.baseloc = vBaseLocation;
-	AoEVector.targetloc = utils.midPoint(targets);
-	-- There is no guarantee this midPoint actually covers all targets...
-	-- It seems there is guarantee, but I have trouble proving it.
-	return AoEVector;
 end
 
 -- ***1. aoe nuke         2. aoe stun         3. aoe debuff         4. aoe buff         5. aoe save
@@ -49,9 +14,9 @@ end
 -- ***16. no target nuke  17. no target stun  18. no target debuff  19. no target buff  20. no target save
 
 -- ***Generic logic:
--- ***Use unit nuke 1. enemy health low  2. harrass  3. attack
+-- ***Use unit nuke 1. enemy health low  2. harass  3. attack
 -- ***Use unit stun 1. channeling  2. enemy health low  3. key hero  4. attack
--- ***Use aoe nuke 1. enemy health low  2. harrass  3. defend/push  4. attack 
+-- ***Use aoe nuke 1. enemy health low  2. harass  3. defend/push  4. attack 
 -- ***Use aoe stun 1. channeling  2. enemy health low  3. key hero  4. attack
 -- ***Use debuff same as stun
 -- ***Use buff 1. strongest friend  2. dealing damage friend
@@ -61,13 +26,15 @@ end
 
 -- AoE
 function ConsiderAoENuke(I, ability, radius, fTimeInFuture)
-	if not ability:IsFullyCastable() then
+	if not ability:IsFullyCastable() or not I:IsAlive() then
 		return BOT_ACTION_DESIRE_NONE, nil;
 	end
 	local activeMode = I:GetActiveMode();
 	
 	local mySpeed = I:GetCurrentMovementSpeed();
-	if activeMode == BOT_MODE_RETREAT then mySpeed = 0; end
+	if activeMode == BOT_MODE_RETREAT then 
+		mySpeed = 0; 
+	end
 	
 	local castRange = ability:GetCastRange();
 	local delay = ability:GetCastPoint() + fTimeInFuture;
@@ -84,7 +51,9 @@ function ConsiderAoENuke(I, ability, radius, fTimeInFuture)
 		if CanCastAbilityOnTarget(ability, enemy) and
 			enemy:GetHealth() <= actualDamage then
 			local AoELocation = I:FindAoELocation( true, true, I:GetLocation(), mySpeed+castRange, radius, delay, actualDamage );
-			if AoELocation.count >= 1 then return BOT_ACTION_DESIRE_HIGH, AoELocation.targetloc; end
+			if AoELocation.count >= 1 then 
+				return BOT_ACTION_DESIRE_HIGH, AoELocation.targetloc; 
+			end
 		end
 	end
 	
@@ -98,7 +67,7 @@ function ConsiderAoENuke(I, ability, radius, fTimeInFuture)
 	end
 	
 	-- Laning last hit
-	-- If high mana and high health, try last hit + harrass enemy hero
+	-- If high mana and high health, try last hit + harass enemy hero
 	-- ***If aoe location -> hero location < radius or in same vector.. or something like this
 	-- ***Need to consider the case for vector skills
 	if activeMode == BOT_MODE_LANING then
@@ -112,34 +81,42 @@ function ConsiderAoENuke(I, ability, radius, fTimeInFuture)
 	-- If being harassed or low HP, try landing any last hit
 		elseif (not I:LowMana() and I:WasRecentlyDamagedByAnyHero(1.0)) or I:LowHealth() then
 			local AoELocation = I:FindAoELocation( true, false, I:GetLocation(), castRange, radius, delay, damage );
-			if AoELocation.count >= 1 then return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; end
+			if AoELocation.count >= 1 then 
+				return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; 
+			end
 		end
 	end
 	
-	-- Casual harrassment
+	-- Casual harassment
 	if activeMode ~= BOT_MODE_RETREAT and not I:LowMana() and ability:GetManaCost() < I:GetMana()/5.0 then
 		for _, enemy in pairs(enemys) do
-			return BOT_ACTION_DESIRE_LOW, enemy; end
+			return BOT_ACTION_DESIRE_LOW, enemy;
 		end
 	end
 
 	-- If farming, use aoe to get multiple last hits
 	if activeMode == BOT_MODE_FARM then
 		local AoELocation = I:FindAoELocation( true, false, I:GetLocation(), castRange, radius, delay, damage );
-		if AoELocation.count >= 2 then return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; end
+		if AoELocation.count >= 2 then 
+			return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; 
+		end
 	end
 
 	-- If pushing/defending, clear wave
 	if activeMode >= BOT_MODE_PUSH_TOWER_TOP and
 		activeMode <= BOT_MODE_DEFEND_TOWER_BOT then
 		local AoELocation = I:FindAoELocation( true, false, I:GetLocation(), castRange, radius, delay, 0 );
-		if AoELocation.count >= 2 then return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; end
+		if AoELocation.count >= 2 then 
+			return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; 
+		end
 	end
 
 	-- Add if not BOT_MODE_RETREAT, go ahead if can hit multiple heroes
-	if activeMode ~= BOT_MODE_RETREAT
+	if activeMode ~= BOT_MODE_RETREAT then
 		local AoELocation = I:FindAoELocation( true, false, I:GetLocation(), castRange, radius, delay, 0 );
-		if AoELocation.count >= 3 then return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; end
+		if AoELocation.count >= 3 then 
+			return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; 
+		end
 	end
 	
 	-- If attacking, just go
@@ -148,7 +125,9 @@ function ConsiderAoENuke(I, ability, radius, fTimeInFuture)
 		 activeMode == BOT_MODE_DEFEND_ALLY or
 		 activeMode == BOT_MODE_ATTACK then
 		 local target = I:GetTarget();
-		 if target ~= nil and CanCastAbilityOnTarget(ability, target) then
+		 if target ~= nil and CanCastAbilityOnTarget(ability, target) and 
+		 	target:IsDisabled() and 
+		 	GetUnitToUnitDistance(I, target) < castRange then
 		 	return BOT_ACTION_DESIRE_MODERATE, target:PredictLocation(delay);
 		 end
 	end
@@ -158,13 +137,15 @@ end
 
 -- Point
 function ConsiderPointNuke(I, ability, radius, fTimeInFuture)
-	if not ability:IsFullyCastable() then
+	if not ability:IsFullyCastable() or not I:IsAlive() then
 		return BOT_ACTION_DESIRE_NONE, nil;
 	end
 	local activeMode = I:GetActiveMode();
 	
 	local mySpeed = I:GetCurrentMovementSpeed();
-	if activeMode == BOT_MODE_RETREAT then mySpeed = 0; end
+	if activeMode == BOT_MODE_RETREAT then 
+		mySpeed = 0; 
+	end
 	
 	local castRange = ability:GetCastRange();
 	local delay = ability:GetCastPoint() + fTimeInFuture;
@@ -176,67 +157,92 @@ function ConsiderPointNuke(I, ability, radius, fTimeInFuture)
 	local creeps = I:GetNearbyCreeps(castRange,true);
 
 	-- AoE kill secure
-	for _, enemy in pairs(nearbyEnemys) do
+	for i = 1, #nearbyEnemys do
+		local enemy = nearbyEnemys[i];
 		local actualDamage = enemy:GetActualIncomingDamage(damage, DAMAGE_TYPE_MAGICAL);
 		if CanCastAbilityOnTarget(ability, enemy) and
 			enemy:GetHealth() <= actualDamage then
-			local AoELocation = I:FindAoEVector( true, true, I:GetLocation(), mySpeed+castRange, radius, delay, actualDamage );
-			if AoELocation.count >= 1 then return BOT_ACTION_DESIRE_HIGH, AoELocation.targetloc; end
+			local AoELocation = I:FindAoEVector( true, true, false, I:GetLocation(), mySpeed+castRange, radius, delay, actualDamage );
+			if AoELocation.count >= 1 then 
+				utils.DebugTalk("群体KS",true);
+				return BOT_ACTION_DESIRE_HIGH, AoELocation.targetloc; 
+			end
 		end
 	end
 	
 	-- Single target kill secure
-	for _, enemy in pairs(nearbyEnemys) do
+	for i = 1, #nearbyEnemys do
+		local enemy = nearbyEnemys[i];
 		local actualDamage = enemy:GetActualIncomingDamage(I:GetOffensivePower(), DAMAGE_TYPE_MAGICAL);
 		if CanCastAbilityOnTarget(ability, enemy) and
 			enemy:GetHealth() <= actualDamage and not I:LowMana() then
+			utils.DebugTalk("单体KS",true);
 			return BOT_ACTION_DESIRE_HIGH, enemy:PredictLocation(delay);
 		end
 	end
 	
 	-- Laning last hit
-	-- If high mana and high health, try last hit + harrass enemy hero
+	-- If high mana and high health, try last hit + harass enemy hero
 	-- ***If aoe location -> hero location < radius or in same vector.. or something like this
 	-- ***Need to consider the case for vector skills
 	if activeMode == BOT_MODE_LANING then
 		if not I:IsLow() then
-			local AoEHero = I:FindAoEVector( true, true, I:GetLocation(), castRange, radius, delay, 0 );
-			local AoECreep = I:FindAoEVector( true, false, I:GetLocation(), castRange, radius, delay, damage );
-			if AoEHero.count >= 1 and AoECreep.cout >= 1 and 
-			    utils.locationToLocationDistance(AoEHero.targetloc,AoECreep.targetloc) < radius then 
-				return BOT_ACTION_DESIRE_MODERATE, midPoint({AoEHero.targetloc,AoECreep.targetloc}); 
+			local AoECreep = I:FindAoEVector( true, false, true, I:GetLocation(), castRange, radius, delay, damage );
+			if AoECreep.count >= 1 then 
+			    utils.DebugTalk("收兵+压人",true);
+				return BOT_ACTION_DESIRE_LOW, AoECreep.targetloc; 
 			end
 	-- If being harassed or low HP, try landing any last hit
-		elseif (not I:LowMana() and I:WasRecentlyDamagedByAnyHero(1.0)) or I:LowHealth() then
-			local AoELocation = I:FindAoEVector( true, false, I:GetLocation(), castRange, radius, delay, damage );
-			if AoELocation.count >= 1 then return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; end
+		elseif (not I:LowMana() and I:WasRecentlyDamagedByAnyHero(1.0)) or 
+			(I:LowHealth() and #I:GetNearbyHeroes(6,true,BOT_MODE_NONE) > 0) then
+			local AoELocation = I:FindAoEVector( true, false, false, I:GetLocation(), castRange, radius, delay, damage );
+			if AoELocation.count >= 1 then 
+				utils.DebugTalk("补刀",true); 
+				return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; 
+			end
 		end
 	end
 	
-	-- Casual harrassment
-	if activeMode ~= BOT_MODE_RETREAT and not I:LowMana() and ability:GetManaCost() < I:GetMana()/5.0 then
-		for _, enemy in pairs(enemys) do
-			return BOT_ACTION_DESIRE_LOW, enemy; end
+	-- Casual harassment
+	-- ***should only happen when target is being roamed but teammate is not near
+	-- ***dont want to push lane for no reason
+	if radius == 0 then
+		if activeMode == BOT_MODE_LANING and not I:LowMana() and ability:GetManaCost() < I:GetMana()/4.0 then
+			for i = 1, #enemys do
+				local enemy = enemys[i];
+				utils.DebugTalk("压人",true);
+				return BOT_ACTION_DESIRE_LOW, enemy:GetLocation();
+			end
 		end
 	end
 
 	-- If farming, use aoe to get multiple last hits
 	if activeMode == BOT_MODE_FARM then
-		local AoELocation = I:FindAoEVector( true, false, I:GetLocation(), castRange, radius, delay, damage );
-		if AoELocation.count >= 2 then return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; end
+		local AoELocation = I:FindAoEVector( true, false, false, I:GetLocation(), castRange, radius, delay, damage );
+		if AoELocation.count >= 2 then 
+			utils.DebugTalk("收线",true);
+			return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; 
+		end
 	end
 
 	-- If pushing/defending, clear wave
 	if activeMode >= BOT_MODE_PUSH_TOWER_TOP and
 		activeMode <= BOT_MODE_DEFEND_TOWER_BOT then
-		local AoELocation = I:FindAoEVector( true, false, I:GetLocation(), castRange, radius, delay, 0 );
-		if AoELocation.count >= 2 then return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; end
+		local AoELocation = I:FindAoEVector( true, false, false, I:GetLocation(), castRange, radius, delay, 0 );
+		if AoELocation.count >= 2 then
+			utils.DebugTalk("推线",true); 
+			return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; 
+		end
 	end
 
 	-- Add if not BOT_MODE_RETREAT, go ahead if can hit multiple heroes
-	if activeMode ~= BOT_MODE_RETREAT
-		local AoELocation = I:FindAoEVector( true, false, I:GetLocation(), castRange, radius, delay, 0 );
-		if AoELocation.count >= 3 then return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; end
+	if activeMode ~= BOT_MODE_RETREAT and
+	 activeMode == BOT_MODE_LANING then
+		local AoELocation = I:FindAoEVector( true, true, false, I:GetLocation(), castRange, radius, delay, 0 );
+		if AoELocation.count >= 3 then 
+			utils.DebugTalk("波3个",true);
+			return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; 
+		end
 	end
 	
 	-- If attacking, just go
@@ -245,7 +251,10 @@ function ConsiderPointNuke(I, ability, radius, fTimeInFuture)
 		 activeMode == BOT_MODE_DEFEND_ALLY or
 		 activeMode == BOT_MODE_ATTACK then
 		 local target = I:GetTarget();
-		 if target ~= nil and CanCastAbilityOnTarget(ability, target) then
+		 if target ~= nil and CanCastAbilityOnTarget(ability, target) and 
+		 	target:IsDisabled() and 
+		 	GetUnitToUnitDistance(I, target) < castRange then
+		 	utils.DebugTalk("干他",true);
 		 	return BOT_ACTION_DESIRE_MODERATE, target:PredictLocation(delay);
 		 end
 	end
@@ -256,13 +265,15 @@ end
 -- Unit
 -- ***some unit target spells also have radius
 function ConsiderUnitNuke(I, ability, radius)
-	if not ability:IsFullyCastable() then
+	if not ability:IsFullyCastable() or not I:IsAlive() then
 		return BOT_ACTION_DESIRE_NONE, nil;
 	end
 	local activeMode = I:GetActiveMode();
 	
 	local mySpeed = I:GetCurrentMovementSpeed();
-	if activeMode == BOT_MODE_RETREAT then mySpeed = 0; end
+	if activeMode == BOT_MODE_RETREAT then 
+		mySpeed = 0; 
+	end
 	
 	local castRange = ability:GetCastRange();
 	local delay = 0; -- delay should not apply... right?
@@ -274,7 +285,8 @@ function ConsiderUnitNuke(I, ability, radius)
 	local creeps = I:GetNearbyCreeps(castRange,true);
 	
 	-- Kill secure
-	for _, enemy in pairs(nearbyEnemys) do
+	for i = 1, #nearbyEnemys do
+		local enemy = nearbyEnemys[i];
 		local actualDamage = enemy:GetActualIncomingDamage(I:GetOffensivePower(), DAMAGE_TYPE_MAGICAL);
 		if CanCastAbilityOnTarget(ability, enemy) and
 			enemy:GetHealth() <= actualDamage then
@@ -282,19 +294,23 @@ function ConsiderUnitNuke(I, ability, radius)
 		end
 	end
 	
-	-- Laning last hit when being harrassed or is low
+	-- Laning last hit when being harassed or is low
 	if activeMode == BOT_MODE_LANING then
 		if (not I:LowMana() and I:WasRecentlyDamagedByAnyHero(1.0)) or I:LowHealth() then
-			for _, creep in pairs(creeps) do
-				if creep:GetHealth() <= damage then return BOT_ACTION_DESIRE_LOW, creep; end
+			for i = 1, #creeps do
+				local creep = creeps[i];
+				if creep:GetHealth() <= damage then 
+					return BOT_ACTION_DESIRE_LOW, creep; 
+				end
 			end
 		end
 	end
 
-	-- Casual harrassment
+	-- Casual harassment
 	if activeMode ~= BOT_MODE_RETREAT and not I:LowMana() then
-		for _, enemy in pairs(enemys) do
-			return BOT_ACTION_DESIRE_LOW, enemy; end
+		for i = 1, #enemys do
+			local enemy = nearbyEnemys[i];
+			return BOT_ACTION_DESIRE_LOW, enemy;
 		end
 	end
 			
@@ -304,7 +320,9 @@ function ConsiderUnitNuke(I, ability, radius)
 		 activeMode == BOT_MODE_DEFEND_ALLY or
 		 activeMode == BOT_MODE_ATTACK then
 		 local target = I:GetTarget();
-		 if target ~= nil and CanCastAbilityOnTarget(ability, target) then
+		 if target ~= nil and CanCastAbilityOnTarget(ability, target) and 
+		 	target:IsDisabled() and 
+		 	GetUnitToUnitDistance(I, target) < castRange then
 		 	return BOT_ACTION_DESIRE_MODERATE, target;
 		 end
 	end
@@ -313,13 +331,15 @@ function ConsiderUnitNuke(I, ability, radius)
 end
 
 function ConsiderUnitStun(I, ability, radius)
-	if not ability:IsFullyCastable() then
+	if not ability:IsFullyCastable() or not I:IsAlive() then
 		return BOT_ACTION_DESIRE_NONE, nil;
 	end
 	local activeMode = I:GetActiveMode();
 	
 	local mySpeed = I:GetCurrentMovementSpeed();
-	if activeMode == BOT_MODE_RETREAT then mySpeed = 0; end
+	if activeMode == BOT_MODE_RETREAT then 
+		mySpeed = 0; 
+	end
 	
 	local castRange = ability:GetCastRange();
 	local delay = 0; -- delay should not apply... right?
@@ -332,7 +352,8 @@ function ConsiderUnitStun(I, ability, radius)
 	local nearbyEnemys = I:GetNearbyHeroes(mySpeed+castRange,true,BOT_MODE_NONE);
 	
 	-- Interrupt channeling within 1s walking
-	for _, enemy in pairs(nearbyEnemys) do
+	for i = 1, #nearbyEnemys do
+		local enemy = nearbyEnemys[i];
 		if CanCastAbilityOnTarget(ability, enemy) and
 			enemy:IsChanneling() then
 			return BOT_ACTION_DESIRE_HIGH, target;
@@ -340,7 +361,8 @@ function ConsiderUnitStun(I, ability, radius)
 	end
 	
 	-- Kill secure
-	for _, enemy in pairs(nearbyEnemys) do
+	for i = 1, #nearbyEnemys do
+		local enemy = nearbyEnemys[i];
 		local actualDamage = enemy:GetActualIncomingDamage(I:GetOffensivePower(), DAMAGE_TYPE_MAGICAL);
 		if CanCastAbilityOnTarget(ability, enemy) and
 			enemy:GetHealth() <= actualDamage then
@@ -349,7 +371,7 @@ function ConsiderUnitStun(I, ability, radius)
 	end
 
 	-- If fighting, stun lowHP/strongest carry/best disabler that is not already disabled
-	if activeMode ~= BOT_MODE_RETREAT
+	if activeMode ~= BOT_MODE_RETREAT then
 		local disabler = utils.strongestDisabler(nearbyEnemys, true);
 		if disabler ~= nil and CanCastAbilityOnTarget(ability, disabler) and 
 			not disabler:IsDisabled() then
@@ -368,8 +390,9 @@ function ConsiderUnitStun(I, ability, radius)
 	end
 
 	-- If retreating, stun closest enemy within immediate cast range
-	if activeMode == BOT_MODE_RETREAT
-		for _, enemy in pairs(enemys) do
+	if activeMode == BOT_MODE_RETREAT then
+		for i = 1, #enemys do
+			local enemy = nearbyEnemys[i];
 			if CanCastAbilityOnTarget(ability, enemy) and
 				not enemy:IsDisabled() then
 				return BOT_ACTION_DESIRE_LOW, target;
@@ -384,7 +407,8 @@ function ConsiderUnitStun(I, ability, radius)
 		 activeMode == BOT_MODE_ATTACK then
 		 local target = I:GetTarget();
 		 if target ~= nil and CanCastAbilityOnTarget(ability, target) and
-		 	not target:IsDisabled() then
+		 	not target:IsDisabled() and 
+		 	GetUnitToUnitDistance(I, target) < castRange then
 		 	return BOT_ACTION_DESIRE_MODERATE, target;
 		 end
 	end
@@ -394,7 +418,7 @@ end
 
 -- No target
 function ConsiderNoTargetBuff(I, ability, radius)
-	if not ability:IsFullyCastable() then
+	if not ability:IsFullyCastable() or not I:IsAlive() then
 		return BOT_ACTION_DESIRE_NONE;
 	end
 	local activeMode = I:GetActiveMode();
@@ -403,13 +427,14 @@ function ConsiderNoTargetBuff(I, ability, radius)
 		return BOT_ACTION_DESIRE_HIGH; 
 	end
 	
-	local castRange = ability:GetCastRange();
+	local castRange = 0;
 	local delay = 0; -- delay should not apply... right?
 	local damage = ability:GetAbilityDamage();
 	local friends = {};
 	if radius >= 1600 then 
 		local friendlist = GetUnitList(UNIT_LIST_ALLIED_HEROES);
-		for _, friend in pairs(friendlist) do
+		for i = 1, #friendlist do
+			local friend = friendlist[i];
 			if GetUnitToUnitDistance(I, friend) < radius then
 				friends[#friends+1] = friend;
 			end
@@ -418,9 +443,10 @@ function ConsiderNoTargetBuff(I, ability, radius)
 		friends = I:GetNearbyHeroes(radius,true,BOT_MODE_NONE);
 	end
 	
-	for _, friend in pairs(friends) do
+	for i = 1, #friends do
+		local friend = friends[i]
 		local friendMode = friend:GetActiveMode();
-		if friendMode = BOT_MODE_RETREAT or 
+		if friendMode == BOT_MODE_RETREAT or 
 			friendMode == BOT_MODE_EVASIVE_MANEUVERS then
 			return BOT_ACTION_DESIRE_HIGH;
 		end
@@ -440,38 +466,42 @@ function ConsiderNoTargetBuff(I, ability, radius)
 end
 
 --
-function AbilityUsageThink()
-	local I = GetBot();
-	local abilities, talents = I:GetAbilities();
+-- function AbilityUsageThink()
+-- 	local I = GetBot();
+-- 	local abilities, talents = I:GetAbilities();
 	
-	local BreatheFire = I:GetAbilityByName(abilities[1]);
-	local DragonTail = I:GetAbilityByName(abilities[2]);
-	local BreatheFireDesire, BreatheFireLoc = ConsiderAoEDamage(I, BreatheFire);
-	local DragonTailDesire, DragonTailTarget = ConsiderUnitStun(I, DragonTail);
+-- 	local BreatheFire = I:GetAbilityByName(abilities[1]);
+-- 	local DragonTail = I:GetAbilityByName(abilities[2]);
+-- 	local BreatheFireDesire, BreatheFireLoc = ConsiderAoEDamage(I, BreatheFire);
+-- 	local DragonTailDesire, DragonTailTarget = ConsiderUnitStun(I, DragonTail);
 	
-	local considerations = {};
-	local desires = {};
-	local targets = {};
+-- 	local considerations = {};
+-- 	local desires = {};
+-- 	local targets = {};
 	
-	for _, ability in pairs(abilities) do
-		if not ability:IsPassive() and ability:IsFullyCastable() then
-			considerations[#considerations+1] = ability;
-			local desire, target = 
-		end
-	end
+-- 	for _, ability in pairs(abilities) do
+-- 		if not ability:IsPassive() and ability:IsFullyCastable() then
+-- 			considerations[#considerations+1] = ability;
+-- 			local desire, target = 
+-- 		end
+-- 	end
 	
-	if BreatheFireDesire > 0 then
-		I:Action_UseAbilityOnLocation(BreatheFire,BreatheFireLoc);
-	end
-	if DragonTailDesire > 0 then
-		I:Action_UseAbilityOnEntity(DragonTailDesire, DragonTailTarget);
-	end
-end
+-- 	if BreatheFireDesire > 0 then
+-- 		I:Action_UseAbilityOnLocation(BreatheFire,BreatheFireLoc);
+-- 	end
+-- 	if DragonTailDesire > 0 then
+-- 		I:Action_UseAbilityOnEntity(DragonTailDesire, DragonTailTarget);
+-- 	end
+-- end
 
 
 BotsInit = require( "game/botsinit" );
 local ability_item_usage_generic = BotsInit.CreateGeneric();
-ability_item_usage_generic.GetComboMana = GetComboMana;
-ability_item_usage_generic.GetComboDamage = GetComboDamage;
+ability_item_usage_generic.FindAoEVector = FindAoEVector;
 ability_item_usage_generic.CanCastAbilityOnTarget = CanCastAbilityOnTarget;
+ability_item_usage_generic.ConsiderAoENuke = ConsiderAoENuke;
+ability_item_usage_generic.ConsiderPointNuke = ConsiderPointNuke;
+ability_item_usage_generic.ConsiderUnitNuke = ConsiderUnitNuke;
+ability_item_usage_generic.ConsiderUnitStun = ConsiderUnitStun;
+ability_item_usage_generic.ConsiderNoTargetBuff = ConsiderNoTargetBuff;
 return ability_item_usage_generic;

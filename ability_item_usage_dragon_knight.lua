@@ -1,3 +1,4 @@
+require(GetScriptDirectory() ..  "/utils")
 ability_item_usage_generic = dofile( GetScriptDirectory().."/ability_item_usage_generic" )
 
 function GetAbilityGuide(I)
@@ -45,15 +46,15 @@ function AbilityUsageThink()
 	local DragonTail = I:GetAbilityByName(abilities[2]);
 	local ElderDragonForm = I:GetAbilityByName(abilities[4]);
 	
+	local BreatheFireDesire, BreatheFireLoc = ConsiderBreatheFire(I, BreatheFire);
+	local DragonTailDesire, DragonTailTarget = ConsiderDragonTail(I, DragonTail);
 	local ElderDragonFormDesire = ConsiderElderDragonForm(I, ElderDragonForm);
-	local BreatheFireDesire, BreatheFireLoc = ConsiderPointNuke(I, BreatheFire);
-	local DragonTailDesire, DragonTailTarget = ConsiderUnitStun(I, DragonTail);
 
 	if ElderDragonFormDesire > 0 then
 		I:Action_UseAbility(ElderDragonForm);
 	end
 	if DragonTailDesire > 0 then
-		I:Action_UseAbilityOnEntity(DragonTailDesire, DragonTailTarget);
+		I:Action_UseAbilityOnEntity(DragonTail, DragonTailTarget);
 	end
 	if BreatheFireDesire > 0 then
 		I:Action_UseAbilityOnLocation(BreatheFire, BreatheFireLoc);
@@ -62,10 +63,10 @@ function AbilityUsageThink()
 end
 
 function ConsiderBreatheFire(I, ability)
-	return ConsiderPointNuke(I, ability, ability:GetSpecialValueInt("end_radius"), ability:GetCastPoint());
+	return ability_item_usage_generic.ConsiderPointNuke(I, ability, ability:GetSpecialValueInt("end_radius"),0);
 end
-function COnsiderDragonTail(I, ability)
-	return ConsiderUnitStun(I, ability, 0);
+function ConsiderDragonTail(I, ability)
+	return ability_item_usage_generic.ConsiderUnitStun(I, ability, 0);
 end
 
 function ConsiderElderDragonForm(I, ability)
@@ -78,7 +79,9 @@ function ConsiderElderDragonForm(I, ability)
 	if activeMode >= BOT_MODE_PUSH_TOWER_TOP and 
 		activeMode <= BOT_MODE_PUSH_TOWER_BOT then
 		local towers = GetNearbyTowers(500, true);
-		if #towers > 0 then return BOT_ACTION_DESIRE_MODERATE; end
+		if #towers > 0 then 
+			return BOT_ACTION_DESIRE_MODERATE; 
+		end
 	end
 	
 	if activeMode == BOT_MODE_ROAM or
@@ -86,7 +89,9 @@ function ConsiderElderDragonForm(I, ability)
 		 activeMode == BOT_MODE_DEFEND_ALLY or
 		 activeMode == BOT_MODE_ATTACK then
 		 local target = I:GetTarget();
-		 if GetUnitToUnitDistance(I, target) <= 500 and not I:IsLow() then return BOT_ACTION_DESIRE_MODERATE; end
+		 if GetUnitToUnitDistance(I, target) <= 500 and not I:IsLow() then 
+		 	return BOT_ACTION_DESIRE_MODERATE; 
+		 end
 	 end
 	
 	return BOT_ACTION_DESIRE_NONE;

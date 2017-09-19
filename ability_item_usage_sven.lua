@@ -1,3 +1,4 @@
+require(GetScriptDirectory() ..  "/utils")
 ability_item_usage_generic = dofile( GetScriptDirectory().."/ability_item_usage_generic" )
 
 function GetAbilityGuide(I)
@@ -45,9 +46,9 @@ function AbilityUsageThink()
 	local Warcry = I:GetAbilityByName(abilities[3]);
 	local GodsStrength = I:GetAbilityByName(abilities[4]);
 	
-	local StormBoltDesire, StormBoltTarget = ConsiderStormBoltDesire(I, StormBolt);
-	local WarcryDesire = ConsiderWarcryDesire(I, Warcry);
-	local GodsStrengthDesire = ConsiderGodsStrengthDesire(I, GodsStrength);
+	local StormBoltDesire, StormBoltTarget = ConsiderStormBolt(I, StormBolt);
+	local WarcryDesire = ConsiderWarcry(I, Warcry);
+	local GodsStrengthDesire = ConsiderGodsStrength(I, GodsStrength);
 
 	if StormBoltDesire > 0 then
 		I:Action_UseAbilityOnEntity(StormBolt, StormBoltTarget);
@@ -62,11 +63,11 @@ function AbilityUsageThink()
 end
 
 function ConsiderStormBolt(I, ability)
-	return ConsiderUnitNuke(I, ability, ability:GetSpecialValueInt("bolt_aoe"));
+	return ability_item_usage_generic.ConsiderUnitNuke(I, ability, ability:GetSpecialValueInt("bolt_aoe"));
 end
 
 function ConsiderWarcry(I, ability)
-	return ConsiderNoTargetBuff(I, ability, ability:GetSpecialValueInt("warcry_radius"));
+	return ability_item_usage_generic.ConsiderNoTargetBuff(I, ability, ability:GetSpecialValueInt("warcry_radius"));
 end
 
 function ConsiderGodsStrength(I, ability)
@@ -79,7 +80,9 @@ function ConsiderGodsStrength(I, ability)
 	if activeMode >= BOT_MODE_PUSH_TOWER_TOP and 
 		activeMode <= BOT_MODE_PUSH_TOWER_BOT then
 		local towers = GetNearbyTowers(500, true);
-		if #towers > 0 then return BOT_ACTION_DESIRE_MODERATE; end
+		if #towers > 0 then 
+			return BOT_ACTION_DESIRE_MODERATE; 
+		end
 	end
 	
 	if activeMode == BOT_MODE_ROAM or
@@ -87,7 +90,9 @@ function ConsiderGodsStrength(I, ability)
 		 activeMode == BOT_MODE_DEFEND_ALLY or
 		 activeMode == BOT_MODE_ATTACK then
 		 local target = I:GetTarget();
-		 if GetUnitToUnitDistance(I, target) <= 500 and not I:IsLow() then return BOT_ACTION_DESIRE_MODERATE; end
+		 if GetUnitToUnitDistance(I, target) <= 500 and not I:IsLow() then 
+		 	return BOT_ACTION_DESIRE_MODERATE;
+		 end
 	 end
 	
 	return BOT_ACTION_DESIRE_NONE;
