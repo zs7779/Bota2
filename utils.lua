@@ -6,7 +6,7 @@ module("utils", package.seeall)
 -- created by date: 2017/03/16
 -- nBehavior = hAbility:GetTargetTeam, GetTargetType, GetTargetFlags or GetBehavior function returns
 -- nFlag = Ability Target Teams, Ability Target Types, Ability Target Flags or Ability Behavior Bitfields constant
--- behaviors and flags can be combined.. thats why they are all 2^x
+-- ***behaviors and flags can be combined.. thats why they are all 2^x.. you know.. binary code 000111011
 function CheckFlag( nBehavior, nFlag )
 	if ( nFlag == 0 ) then
 		if ( nBehavior == 0 ) then return true; else return false; end
@@ -30,7 +30,7 @@ function DebugTalk(message)
 	end
 end
 
---
+---------------------------------------------------------------------
 function CDOTA_Bot_Script:GetPlayerPosition()
 	for position = 1,5 do
 		if GetTeamMember(position) == self then return position; end
@@ -100,17 +100,19 @@ function CDOTA_Bot_Script:OnRune(runes)
 end
 
 function CDOTA_Bot_Script:IsDisabled()
-	if self:IsRooted() or self:IsStunned() or self:IsHexed() or self:IsNightmared() then
-		return true;
-	end
-	return false;
+	return self:IsRooted() or self:IsStunned() or self:IsHexed() or self:IsNightmared();
 end
 
 function CDOTA_Bot_Script:IsImmune()
-	if self:IsMagicImmune() or self:IsInvulnerable() then
-		return true;
-	end
-	return false;
+	return self:IsMagicImmune() or self:IsInvulnerable();
+end
+
+function CDOTA_Bot_Script:CanAct()
+	return self:IsAlive() and not self:IsUsingAbility() and not self:IsChanneling();
+end
+
+function CDOTA_Bot_Script:CatCast()
+	return self:CanAct() and not self:IsSilenced() and not self:IsHexed();
 end
 
 function CDOTA_Bot_Script:PredictLocation(fTime)

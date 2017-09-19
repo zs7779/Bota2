@@ -21,12 +21,13 @@ end
 -- ***Use debuff same as stun
 -- ***Use buff 1. strongest friend  2. dealing damage friend
 -- ***Use save 1. weakest friend  2. disabled friend  3. slowed/silenced friend
+-- ***Consider cancel channeling if mode changes
 
 -- ***Point is pretty much like aoe.. just usually in cones or vectors
 
 -- AoE
 function ConsiderAoENuke(I, ability, radius, fTimeInFuture)
-	if not ability:IsFullyCastable() or not I:IsAlive() then
+	if not ability:IsFullyCastable() or not I:CanCast() then
 		return BOT_ACTION_DESIRE_NONE, nil;
 	end
 	local activeMode = I:GetActiveMode();
@@ -51,7 +52,8 @@ function ConsiderAoENuke(I, ability, radius, fTimeInFuture)
 		if CanCastAbilityOnTarget(ability, enemy) and
 			enemy:GetHealth() <= actualDamage then
 			local AoELocation = I:FindAoELocation( true, true, I:GetLocation(), mySpeed+castRange, radius, delay, actualDamage );
-			if AoELocation.count >= 1 then 
+			if AoELocation.count > 1 then
+				utils.DebugTalk("群体KS",true);
 				return BOT_ACTION_DESIRE_HIGH, AoELocation.targetloc; 
 			end
 		end
@@ -62,6 +64,7 @@ function ConsiderAoENuke(I, ability, radius, fTimeInFuture)
 		local actualDamage = enemy:GetActualIncomingDamage(I:GetOffensivePower(), DAMAGE_TYPE_MAGICAL);
 		if CanCastAbilityOnTarget(ability, enemy) and
 			enemy:GetHealth() <= actualDamage and not I:LowMana() then
+			utils.DebugTalk("单体KS",true);
 			return BOT_ACTION_DESIRE_HIGH, enemy:PredictLocation(delay);
 		end
 	end
@@ -76,20 +79,23 @@ function ConsiderAoENuke(I, ability, radius, fTimeInFuture)
 			local AoECreep = I:FindAoELocation( true, false, I:GetLocation(), castRange, radius, delay, damage );
 			if AoEHero.count >= 1 and AoECreep.cout >= 1 and 
 			    utils.locationToLocationDistance(AoEHero.targetloc,AoECreep.targetloc) < radius then 
+				utils.DebugTalk("收兵+压人",true);
 				return BOT_ACTION_DESIRE_MODERATE, midPoint({AoEHero.targetloc,AoECreep.targetloc}); 
 			end
 	-- If being harassed or low HP, try landing any last hit
 		elseif (not I:LowMana() and I:WasRecentlyDamagedByAnyHero(1.0)) or I:LowHealth() then
 			local AoELocation = I:FindAoELocation( true, false, I:GetLocation(), castRange, radius, delay, damage );
-			if AoELocation.count >= 1 then 
+			if AoELocation.count >= 1 then
+				utils.DebugTalk("补刀",true); 
 				return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; 
 			end
 		end
 	end
 	
 	-- Casual harassment
-	if activeMode ~= BOT_MODE_RETREAT and not I:LowMana() and ability:GetManaCost() < I:GetMana()/5.0 then
+	if activeMode == BOT_MODE_LANING and not I:LowMana() and ability:GetManaCost() < I:GetMana()/4.0 then
 		for _, enemy in pairs(enemys) do
+			utils.DebugTalk("压人",true);
 			return BOT_ACTION_DESIRE_LOW, enemy;
 		end
 	end
@@ -97,7 +103,8 @@ function ConsiderAoENuke(I, ability, radius, fTimeInFuture)
 	-- If farming, use aoe to get multiple last hits
 	if activeMode == BOT_MODE_FARM then
 		local AoELocation = I:FindAoELocation( true, false, I:GetLocation(), castRange, radius, delay, damage );
-		if AoELocation.count >= 2 then 
+		if AoELocation.count >= 2 then
+			utils.DebugTalk("收线",true);
 			return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; 
 		end
 	end
@@ -106,7 +113,8 @@ function ConsiderAoENuke(I, ability, radius, fTimeInFuture)
 	if activeMode >= BOT_MODE_PUSH_TOWER_TOP and
 		activeMode <= BOT_MODE_DEFEND_TOWER_BOT then
 		local AoELocation = I:FindAoELocation( true, false, I:GetLocation(), castRange, radius, delay, 0 );
-		if AoELocation.count >= 2 then 
+		if AoELocation.count >= 2 then
+			utils.DebugTalk("推线",true); 
 			return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; 
 		end
 	end
@@ -114,7 +122,8 @@ function ConsiderAoENuke(I, ability, radius, fTimeInFuture)
 	-- Add if not BOT_MODE_RETREAT, go ahead if can hit multiple heroes
 	if activeMode ~= BOT_MODE_RETREAT then
 		local AoELocation = I:FindAoELocation( true, false, I:GetLocation(), castRange, radius, delay, 0 );
-		if AoELocation.count >= 3 then 
+		if AoELocation.count >= 3 then
+			utils.DebugTalk("波3个",true);
 			return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; 
 		end
 	end
@@ -126,8 +135,8 @@ function ConsiderAoENuke(I, ability, radius, fTimeInFuture)
 		 activeMode == BOT_MODE_ATTACK then
 		 local target = I:GetTarget();
 		 if target ~= nil and CanCastAbilityOnTarget(ability, target) and 
-		 	target:IsDisabled() and 
 		 	GetUnitToUnitDistance(I, target) < castRange then
+			utils.DebugTalk("干他",true);
 		 	return BOT_ACTION_DESIRE_MODERATE, target:PredictLocation(delay);
 		 end
 	end
@@ -137,7 +146,7 @@ end
 
 -- Point
 function ConsiderPointNuke(I, ability, radius, fTimeInFuture)
-	if not ability:IsFullyCastable() or not I:IsAlive() then
+	if not ability:IsFullyCastable() or not I:CanCast() then
 		return BOT_ACTION_DESIRE_NONE, nil;
 	end
 	local activeMode = I:GetActiveMode();
@@ -163,7 +172,7 @@ function ConsiderPointNuke(I, ability, radius, fTimeInFuture)
 		if CanCastAbilityOnTarget(ability, enemy) and
 			enemy:GetHealth() <= actualDamage then
 			local AoELocation = I:FindAoEVector( true, true, false, I:GetLocation(), mySpeed+castRange, radius, delay, actualDamage );
-			if AoELocation.count >= 1 then 
+			if AoELocation.count > 1 then 
 				utils.DebugTalk("群体KS",true);
 				return BOT_ACTION_DESIRE_HIGH, AoELocation.targetloc; 
 			end
@@ -252,7 +261,6 @@ function ConsiderPointNuke(I, ability, radius, fTimeInFuture)
 		 activeMode == BOT_MODE_ATTACK then
 		 local target = I:GetTarget();
 		 if target ~= nil and CanCastAbilityOnTarget(ability, target) and 
-		 	target:IsDisabled() and 
 		 	GetUnitToUnitDistance(I, target) < castRange then
 		 	utils.DebugTalk("干他",true);
 		 	return BOT_ACTION_DESIRE_MODERATE, target:PredictLocation(delay);
@@ -265,7 +273,7 @@ end
 -- Unit
 -- ***some unit target spells also have radius
 function ConsiderUnitNuke(I, ability, radius)
-	if not ability:IsFullyCastable() or not I:IsAlive() then
+	if not ability:IsFullyCastable() or not I:CanCast() then
 		return BOT_ACTION_DESIRE_NONE, nil;
 	end
 	local activeMode = I:GetActiveMode();
@@ -294,6 +302,7 @@ function ConsiderUnitNuke(I, ability, radius)
 		end
 	end
 	
+	-- ***Also need to consider harassment when hero is within skill radius
 	-- Laning last hit when being harassed or is low
 	if activeMode == BOT_MODE_LANING then
 		if (not I:LowMana() and I:WasRecentlyDamagedByAnyHero(1.0)) or I:LowHealth() then
@@ -307,7 +316,7 @@ function ConsiderUnitNuke(I, ability, radius)
 	end
 
 	-- Casual harassment
-	if activeMode ~= BOT_MODE_RETREAT and not I:LowMana() then
+	if activeMode == BOT_MODE_LANING and not I:LowMana() and ability:GetManaCost() < I:GetMana()/4.0 then
 		for i = 1, #enemys do
 			local enemy = nearbyEnemys[i];
 			return BOT_ACTION_DESIRE_LOW, enemy;
@@ -321,7 +330,6 @@ function ConsiderUnitNuke(I, ability, radius)
 		 activeMode == BOT_MODE_ATTACK then
 		 local target = I:GetTarget();
 		 if target ~= nil and CanCastAbilityOnTarget(ability, target) and 
-		 	target:IsDisabled() and 
 		 	GetUnitToUnitDistance(I, target) < castRange then
 		 	return BOT_ACTION_DESIRE_MODERATE, target;
 		 end
@@ -331,7 +339,7 @@ function ConsiderUnitNuke(I, ability, radius)
 end
 
 function ConsiderUnitStun(I, ability, radius)
-	if not ability:IsFullyCastable() or not I:IsAlive() then
+	if not ability:IsFullyCastable() or not I:CanCast() then
 		return BOT_ACTION_DESIRE_NONE, nil;
 	end
 	local activeMode = I:GetActiveMode();
@@ -418,7 +426,7 @@ end
 
 -- No target
 function ConsiderNoTargetBuff(I, ability, radius)
-	if not ability:IsFullyCastable() or not I:IsAlive() then
+	if not ability:IsFullyCastable() or not I:CanCast() then
 		return BOT_ACTION_DESIRE_NONE;
 	end
 	local activeMode = I:GetActiveMode();

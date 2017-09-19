@@ -70,7 +70,7 @@ function GetDesire()
 	local enemys = I:GetNearbyHeroes(1200,true,BOT_MODE_NONE);
 
 	if DotaTime()<=0.5 and (position == 1 or position == 2) and #friends>=#enemys then
-		return 0.8;
+		return 0.4;
 	end
 
 	if #enemys > 1 then return 0.0; end
