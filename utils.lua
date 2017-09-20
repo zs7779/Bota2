@@ -17,16 +17,16 @@ end
 
 -- Ranked Matchmaking AI
 local debug_mode = true;
-function DebugTalk(message)
-	local npcBot=GetBot();
-	if(npcBot.LastSpeaktime==nil)
+function CDOTA_Bot_Script:DebugTalk(message)
+	-- local npcBot=GetBot();
+	if(I.LastSpeaktime==nil)
 	then
-		npcBot.LastSpeaktime=0;
+		I.LastSpeaktime=0;
 	end
-	if(GameTime()-npcBot.LastSpeaktime>1)
+	if(GameTime()-I.LastSpeaktime>0.1)
 	then
-		npcBot:ActionImmediate_Chat(message,true);
-		npcBot.LastSpeaktime=GameTime();
+		I:ActionImmediate_Chat(message,true);
+		I.LastSpeaktime=GameTime();
 	end
 end
 
@@ -100,15 +100,23 @@ function CDOTA_Bot_Script:OnRune(runes)
 end
 
 function CDOTA_Bot_Script:IsDisabled()
-	return self:IsRooted() or self:IsStunned() or self:IsHexed() or self:IsNightmared();
+	return self:IsStunned() or self:IsHexed() or self:IsNightmared();
+end
+
+function CDOTA_Bot_Script:IsImmobile()
+	return self:IsDisabled or self:IsRooted();
 end
 
 function CDOTA_Bot_Script:IsImmune()
 	return self:IsMagicImmune() or self:IsInvulnerable();
 end
 
+function CDOTA_Bot_Script:IsTrueHero()
+	return self:IsAlive() and not self:IsIllusion();
+end
+
 function CDOTA_Bot_Script:CanAct()
-	return self:IsAlive() and not self:IsUsingAbility() and not self:IsChanneling();
+	return self:IsTrueHero() and not self:IsUsingAbility() and not self:IsChanneling() and not self:IsDisabled();
 end
 
 function CDOTA_Bot_Script:CatCast()
@@ -135,16 +143,14 @@ function CDOTA_Bot_Script:FindAoEVector(bEnemies, bHeroes, bHarass, vBaseLocatio
 
 	local maxCount = 0;
 	local targets = {};
-	for i = 1, #targetUnits do
-		local targetUnit = targetUnits[i];
+	for _, targetUnit in ipairs(targetUnits) do
 	    local vtargetLoc = targetUnit:PredictLocation(fTimeInFuture);
 		local vector = vtargetLoc - vBaseLocation;
 		local vEnd = vBaseLocation + vector/utils.locationToLocationDistance(vBaseLocation, vtargetLoc)*nMaxDistanceFromBase;
 		
 		local thisCount = 0;
 		local thisTargets = {};
-		for j = 1, #units do
-			local unit = units[j];
+		for _, unit in ipairs(units) do
 			local unitLoc = unit:PredictLocation(fTimeInFuture);
 			local distToLine = PointToLineDistance(vBaseLocation, vEnd, unitLoc);
 			if distToLine.within and distToLine.distance < nWidth and unit:GetHealth() <= maxHealth then
@@ -166,13 +172,13 @@ function CDOTA_Bot_Script:FindAoEVector(bEnemies, bHeroes, bHarass, vBaseLocatio
 	return AoEVector;
 end
 
-function weakestUnit(units, disable)
+function weakestUnit(units, needDisable)
 	local health = math.huge;
 	local weakest = nil;
 	for i = 1, #units do
 		local unit = units[i];
 		local thisHealth = unit:GetHealth();
-		if unit:IsAlive() and thisHealth < health and not (disable and not unit:IsDisabled()) then
+		if unit:IsTrueHero() and thisHealth < health and (not needDisable or not unit:IsDisabled() and not unit:IsSilenced()) then
 			weakest = unit;
 			health = thisHealth;
 		end
@@ -180,13 +186,13 @@ function weakestUnit(units, disable)
 	return weakest;
 end
 
-function strongestUnit(units, disable)
+function strongestUnit(units, needDisable)
 	local power = 0;
 	local strongest = nil;
 	for i = 1, #units do
 		local unit = units[i];
 		local thisPower = unit:GetOffensivePower();
-		if unit:IsAlive() and thisPower > power then
+		if unit:IsTrueHero() and thisPower > power and (not needDisable or not unit:IsDisabled()) then
 			strongest = unit;
 			power = thisPower;
 		end
@@ -194,13 +200,13 @@ function strongestUnit(units, disable)
 	return strongest;
 end
 
-function strongestDisabler(units, disable)
+function strongestDisabler(units, needDisable)
 	local stunTime = 0;
 	local strongest = nil;
 	for i = 1, #units do
 		local unit = units[i];
 		local thisTime = unit:GetStunDuration(false);
-		if unit:IsAlive() and thisTime > stunTime then
+		if unit:IsTrueHero() and thisTime > stunTime and (not needDisable or not unit:IsSilenced() and not unit:IsDisabled()) then
 			strongest = unit;
 			stunTime = thisTime;
 		end
