@@ -140,7 +140,7 @@ function ConsiderAoENuke(I, ability, radius, fTimeInFuture)
 	-- Laning last hit
 	-- If high mana and high health, try last hit + harass enemy hero
 	if activeMode == BOT_MODE_LANING then
-		if not I:IsLow() then
+		if not I:LowHealth() and not I:LowMana() then
 			AoELocation = I:UseAoEHarass(ability, baseLocation, range, radius, delay, damage);
 			if AoELocation ~= nil then
 				return BOT_ACTION_DESIRE_MODERATE, AoELocation.targetloc;
@@ -391,7 +391,7 @@ function ConsiderNoTargetNuke(I, ability, radius)
 	-- Laning last hit
 	-- If high mana and high health, try last hit + harass enemy hero
 	if activeMode == BOT_MODE_LANING then
-		if not I:IsLow() then
+		if not I:LowHealth() and not I:LowMana() then
 			AoELocation = I:UseAoEHarass(ability, baseLocation, range, radius, delay, damage);
 			if AoELocation ~= nil then
 				return BOT_ACTION_DESIRE_MODERATE;

@@ -60,33 +60,72 @@ function CDOTA_Bot_Script:GetComboMana()
 	for i = 1, #abilities do
 		local ability = self:GetAbilityByName(abilities[i]);
 		if not ability:IsPassive() and ability:IsFullyCastable() and ability:GetAbilityDamage()>0 then
-			manaCOst = manaCost + ability:GetManaCost();
+			manaCost = manaCost + ability:GetManaCost();
 		end
 	end
 	return manaCost;
 end
-function CDOTA_Bot_Script:GetComboDamage()
+function CDOTA_Bot_Script:GetComboDamageToTarget(target)
+	-- ***How do you consider duration? and toggle?
 	local abilities, talents = self:GetAbilities()
 	local totalDamage = 0;
 	for i = 1, #abilities do
 		local ability = self:GetAbilityByName(abilities[i]);
 		if not ability:IsPassive() and ability:IsFullyCastable() and ability:GetAbilityDamage()>0 then
-			totalDamage = totalDamage + ability:GetAbilityDamage();
+			totalDamage = totalDamage + target:GetActualIncomingDamage(ability:GetAbilityDamage(),ability:GetDamageType());
 		end
 	end
 	return totalDamage;
 end
 
-function CDOTA_Bot_Script:LowHealth()
-	return self:GetHealth()/self:GetMaxHealth() < 0.6;
-end
-function CDOTA_Bot_Script:LowMana()
-	local mana = self:GetMana()
-	return mana/self:GetMaxMana() < 0.4 or mana < self:GetComboMana();
+function CDOTA_Bot_Script:EstimateDamageToTarget(target)
+	local estimatedDamage = 0;
+	if self:CanCast() then
+		estimatedDamage = estimatedDamage + self:GetComboDamageToTarget(target);
+	end
+	if self:CanHit() then
+		estimatedDamage = estimatedDamage + 
+		target:GetActualIncomingDamage(self:GetAttackDamage(),DAMAGE_TYPE_PHYSICAL) *
+		(1.0 - target:GetEvasion()) *
+		(self:GetStunDuration(true) + 0.5*self:GetSlowDuration(true) + 2 + target:TimeBeforeRescue());
+	end
 end
 
+function CDOTA_Bot_Script:TimeBeforeRescue()
+	local myID = self:GetPlayerID();
+	local minTime = math.huge;
+
+
+	local team = (GetTeam() == self:GetTeam() and UNIT_LIST_ALLIED_HEROES) or UNIT_LIST_ENEMY_HEROES;
+	for _, friend in ipairs(GetUnitList(team)) do
+		local friendID = friend:GetPlayerID();
+		if friendID ~= myID and IsHeroAlive(friendID) then
+			local thisTime = math.huge;
+			if friend:CanBeSeen() and not friend:IsLow() then
+				thisTime = GetUnitToUnitDistance(self, friend)/friend:GetCurrentMovementSpeed();
+			else
+				local lastSeen = GetHeroLastSeenInfo(friendID);
+				thisTime = GetUnitToLocationDistance(self, lastSeen.location)/400 - lastSeen.time;
+			end
+			if thisTime < minTime then
+				minTime = thisTime;
+			end
+		end
+	end
+	return minTime;
+end
+
+function CDOTA_Bot_Script:LowHealth()
+	return self:GetHealth()/self:GetMaxHealth() < 0.4;
+end
+function CDOTA_Bot_Script:noMana()
+	return self:GetMana()/self:GetMaxMana() < 0.2 or self:GetComboMana() == 0;
+end
+function CDOTA_Bot_Script:LowMana()
+	return self:noMana() or self:GetMana() < self:GetComboMana();
+end
 function CDOTA_Bot_Script:IsLow()
-	return self:LowHealth() or self:LowMana();
+	return self:LowHealth() and self:NoMana();
 end
 
 function CDOTA_Bot_Script:OnRune(runes)
@@ -121,6 +160,9 @@ end
 
 function CDOTA_Bot_Script:CatCast()
 	return self:CanAct() and not self:IsSilenced() and not self:IsHexed();
+end
+function CDOTA_Bot_Script:CanHit()
+	return self:CanAct and not self:IsDisarmed();
 end
 
 function CDOTA_Bot_Script:PredictLocation(fTime)
