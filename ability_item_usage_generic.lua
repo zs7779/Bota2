@@ -101,6 +101,7 @@ end
 -- ***1. aoe nuke         2. aoe stun         3. aoe debuff         4. aoe buff         5. aoe save
 -- ***6. unit nuke        7. unit stun        8. unit debuff        9. unit buff        10. unit save
 -- ***11. no target nuke  12. no target stun  13. no target debuff  14. no target buff  15. no target save
+-- ***16. invis           17. blink
 
 -- ***Generic logic:
 -- ***Use unit nuke 1. enemy health low  2. harass  3. attack
@@ -128,8 +129,8 @@ function ConsiderAoENuke(I, ability, radius, fTimeInFuture)
 	local damageType = ability:GetDamageType();
 
 	-- GetNearby sorts units from close to far
-	local enemys = I:GetNearbyHeroes(castRange,true,BOT_MODE_NONE);
-	local creeps = I:GetNearbyCreeps(castRange,true);
+	local enemys = I:GetNearbyHeroes(castRange+radius,true,BOT_MODE_NONE);
+	local creeps = I:GetNearbyCreeps(castRange+radius,true);
 
 	-- AoE kill secure
 	AoELocation = I:UseAoEAbility(ability, I:GetLocation(), castRange, radius, delay, damage, damageType, enemys);
@@ -213,8 +214,8 @@ function ConsiderUnitNuke(I, ability, radius)
 	local damageType = ability:GetDamageType();
 
 	-- GetNearby sorts units from close to far
-	local enemys = I:GetNearbyHeroes(castRange,true,BOT_MODE_NONE);
-	local creeps = I:GetNearbyCreeps(castRange,true);
+	local enemys = I:GetNearbyHeroes(castRange+radius,true,BOT_MODE_NONE);
+	local creeps = I:GetNearbyCreeps(castRange+radius,true);
 	
 	-- Kill secure
 	target = I:UseTargetAbility(ability, radius, damage, damageType, enemys);
@@ -254,20 +255,22 @@ function ConsiderUnitStun(I, ability, radius)
 	local target;
 	local activeMode = I:GetActiveMode();
 	
-	local mySpeed = (activeMode == BOT_MODE_RETREAT and 0) or I:GetCurrentMovementSpeed();
 	local castRange = ability:GetCastRange();
 	local delay = 0; -- delay should not apply... right?
 	local damage = 0;
 	local damageType = ability:GetDamageType();
 	
 	-- GetNearby sorts units from close to far
-	-- ***When to use enemys vs nearbyEnemys?
-	-- ***I guess use nearbyEnemys in the enemy must die situation?
-	local enemys = I:GetNearbyHeroes(castRange,true,BOT_MODE_NONE);
-	local nearbyEnemys = I:GetNearbyHeroes(mySpeed+castRange,true,BOT_MODE_NONE);
+	local enemys = I:GetNearbyHeroes(castRange+radius,true,BOT_MODE_NONE);
+	local channelingEnemys = {};
+	for i, enemy in ipairs(enemys) do
+		if enemy:IsChanneling() then
+			table.insert(channelingEnemys, enemy);
+		end
+	end
 	
 	-- Interrupt channeling within 1s walking
-	target = I:UseTargetAbility(ability, radius, 0, damageType, nearbyEnemys);
+	target = I:UseTargetAbility(ability, radius, 0, damageType, channelingEnemys);
 	if target ~= nil then
 		return BOT_ACTION_DESIRE_HIGH, target;
 	end
@@ -324,7 +327,7 @@ function ConsiderUnitDebuff(I, ability, radius)
 	local damageType = ability:GetDamageType();
 	
 	-- GetNearby sorts units from close to far
-	local enemys = I:GetNearbyHeroes(castRange,true,BOT_MODE_NONE);
+	local enemys = I:GetNearbyHeroes(castRange+radius,true,BOT_MODE_NONE);
 
 	-- If fighting, stun lowHP/strongest carry/best disabler that is not already disabled
 	if activeMode ~= BOT_MODE_RETREAT then
@@ -366,7 +369,7 @@ function ConsiderUnitDebuff(I, ability, radius)
 end
 
 -- No target
-function ConsiderNoTargetNuke(I, ability, radius)
+function ConsiderNoTargetNuke(I, ability, radius, fTimeInFuture)
 	if not ability:IsFullyCastable() or not I:CanCast() then
 		return BOT_ACTION_DESIRE_NONE, nil;
 	end
@@ -379,8 +382,8 @@ function ConsiderNoTargetNuke(I, ability, radius)
 	local damageType = ability:GetDamageType();
 
 	-- GetNearby sorts units from close to far
-	local enemys = I:GetNearbyHeroes(castRange,true,BOT_MODE_NONE);
-	local creeps = I:GetNearbyCreeps(castRange,true);
+	local enemys = I:GetNearbyHeroes(castRange+radius,true,BOT_MODE_NONE);
+	local creeps = I:GetNearbyCreeps(castRange+radius,true);
 
 	-- AoE kill secure
 	AoELocation = I:UseAoEAbility(ability, I:GetLocation(), castRange, radius, delay, damage, damageType, enemys);
@@ -449,7 +452,75 @@ function ConsiderNoTargetNuke(I, ability, radius)
 	return BOT_ACTION_DESIRE_NONE;
 end
 
-function ConsiderNoTargetDebuff(I, ability, radius)
+function ConsiderNoTargetStun(I, ability, radius, fTimeInFuture)
+	if not ability:IsFullyCastable() or not I:CanCast() then
+		return BOT_ACTION_DESIRE_NONE, nil;
+	end
+	local target;
+	local activeMode = I:GetActiveMode();
+	
+	local castRange = 0;
+	local delay = ability:GetCastPoint() + fTimeInFuture;
+	local damage = 0;
+	local damageType = ability:GetDamageType();
+	
+	-- GetNearby sorts units from close to far
+	-- ***When to use enemys vs channelingEnemys?
+	-- ***I guess use channelingEnemys in the enemy must die situation?
+	local enemys = I:GetNearbyHeroes(castRange+radius,true,BOT_MODE_NONE);
+	local channelingEnemys = {};
+	for i, enemy in ipairs(enemys) do
+		if enemy:IsChanneling() then
+			table.insert(channelingEnemys, enemy);
+		end
+	end
+	
+	-- Interrupt channeling within 1s walking
+	target = I:UseTargetAbility(ability, radius, 0, damageType, channelingEnemys);
+	if target ~= nil then
+		return BOT_ACTION_DESIRE_HIGH;
+	end
+
+	-- If fighting, stun lowHP/strongest carry/best disabler that is not already disabled
+	if activeMode ~= BOT_MODE_RETREAT then
+		local disabler = I:UseTargetAbility(ability, radius, 0, damageType, {utils.strongestDisabler(enemys, true)});
+		if disabler ~= nil then
+			return BOT_ACTION_DESIRE_HIGH;
+		end
+		local weakest = I:UseTargetAbility(ability, radius, 0, damageType, {utils.weakestUnit(enemys, true)});
+		if weakest ~= nil then
+			return BOT_ACTION_DESIRE_HIGH;
+		end
+		local strongest = I:UseTargetAbility(ability, radius, 0, damageType, {utils.strongestUnit(enemys, true)});
+		if strongest ~= nil then
+			return BOT_ACTION_DESIRE_HIGH;
+		end
+	end
+
+	-- If retreating, stun closest enemy within immediate cast range
+	if activeMode == BOT_MODE_RETREAT then
+		target = I:UseTargetAbility(ability, radius, 0, damageType, enemys);
+		if target ~= nil and not target:IsDisabled() then
+			return BOT_ACTION_DESIRE_HIGH;
+		end
+	end
+
+	-- If have target, go
+	if activeMode == BOT_MODE_LANING or
+		activeMode == BOT_MODE_ROAM or
+		activeMode == BOT_MODE_TEAM_ROAM or
+		activeMode == BOT_MODE_DEFEND_ALLY or
+		activeMode == BOT_MODE_ATTACK then
+		target = I:UseTargetAbility(ability, radius, 0, damageType, {I:GetTarget()});
+	 	if target ~= nil and not target:IsDisabled() then
+		 	return BOT_ACTION_DESIRE_MODERATE;
+		end
+	end
+
+	return BOT_ACTION_DESIRE_NONE;
+end
+
+function ConsiderNoTargetDebuff(I, ability, radius, fTimeInFuture)
 	if not ability:IsFullyCastable() or not I:CanCast() then
 		return BOT_ACTION_DESIRE_NONE, nil;
 	end
@@ -462,8 +533,7 @@ function ConsiderNoTargetDebuff(I, ability, radius)
 	local damageType = ability:GetDamageType();
 
 	-- GetNearby sorts units from close to far
-	local enemys = I:GetNearbyHeroes(castRange,true,BOT_MODE_NONE);
-	local creeps = I:GetNearbyCreeps(castRange,true);
+	local enemys = I:GetNearbyHeroes(castRange+radius,true,BOT_MODE_NONE);
 
 	-- Add if not BOT_MODE_RETREAT, go ahead if can hit multiple heroes
 	if activeMode ~= BOT_MODE_RETREAT then
@@ -500,7 +570,7 @@ function ConsiderNoTargetDebuff(I, ability, radius)
 	return BOT_ACTION_DESIRE_NONE;
 end
 
-function ConsiderNoTargetBuff(I, ability, radius)
+function ConsiderNoTargetBuff(I, ability, radius, fTimeInFuture)
 	if not ability:IsFullyCastable() or not I:CanCast() then
 		return BOT_ACTION_DESIRE_NONE;
 	end
@@ -547,6 +617,21 @@ function ConsiderNoTargetBuff(I, ability, radius)
 			end
 		end
 	end
+	
+	return BOT_ACTION_DESIRE_NONE;
+end
+
+function ConsiderInvisibility(I, ability)
+	if not ability:IsFullyCastable() or not I:CanCast() then
+		return BOT_ACTION_DESIRE_NONE;
+	end
+	local activeMode = I:GetActiveMode();
+	if activeMode == BOT_MODE_RETREAT or 
+		activeMode == BOT_MODE_EVASIVE_MANEUVERS then 
+		return BOT_ACTION_DESIRE_HIGH; 
+	end
+	local enemys = I:GetNearbyHeroes(1500,true,BOT_MODE_NONE);
+	-- ***Use invis to walk up to enemy from outside of vision.. 1800
 	
 	return BOT_ACTION_DESIRE_NONE;
 end
