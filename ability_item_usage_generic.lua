@@ -5,48 +5,53 @@ function CanCastAbilityOnTarget(ability, target)
 	target:CanBeSeen() and target:IsAlive() and
 	not target:IsInvulnerable() and 
 	(not target:IsMagicImmune() or 
-	ability:GetTargetFlags() == ABILITY_TARGET_FLAG_MAGIC_IMMUNE_ENEMIES);
+	utils.CheckFlag(ability:GetTargetFlags(), ABILITY_TARGET_FLAG_MAGIC_IMMUNE_ENEMIES) or
+	utils.CheckFlag(ability:GetTargetFlags(), ABILITY_TARGET_FLAG_NOT_MAGIC_IMMUNE_ALLIES));
 end
 -- And by AoE, I mean AoE, not your punk ass defination
 function CDOTA_Bot_Script:UseAoEAbility(ability, baseLocation, range, radius, delay, damage, damageType, units)
 	local AoELocation; AoELocation.count = 0;
-	-- ***Sometimes you think about if it is worth it to put a loop here.
-	if #units == 1 then
-		local unit = units[1];
-		AoELocation.count = 1;
-		AoELocation.targetloc = unit:PredictLocation(delay);
-		if damage > 0 and unit:GetHealth() <= unit:GetActualIncomingDamage(damage, damageType)then
-			self:DebugTalk("AoE 精致");
-			return AoELocation;
-		elseif damage == 0
-			self:DebugTalk("AoE 干他");
-			return AoELocation;
-		end
-		return AoELocation;
-	end
+	
+	-- **If FindAoELocation cannot be trusted, use this V, but may need to reconsider search range = castRange+radius or castRange
+	-- if #units == 1 then
+	-- 	local unit = units[1];
+	-- 	AoELocation.count = 1;
+	-- 	AoELocation.targetloc = unit:PredictLocation(delay);
+	-- 	if damage > 0 and unit:GetHealth() <= unit:GetActualIncomingDamage(damage, damageType)then
+	-- 		self:DebugTalk("AoE 精致");
+	-- 		return AoELocation;
+	-- 	elseif damage == 0
+	-- 		self:DebugTalk("AoE 干他");
+	-- 		return AoELocation;
+	-- 	end
+	-- 	return AoELocation;
+	-- end
 
+	-- ***Sometimes you think about if it is worth it to put a loop here.
 	for _, unit in ipairs(units) do
-		local actualDamage = unit:GetActualIncomingDamage(damage, damageType);
+		if not unit:IsMyFriend() then
+			damage = unit:GetActualIncomingDamage(damage, damageType);
+		end
 		if CanCastAbilityOnTarget(ability, unit) and
-			unit:GetHealth() <= actualDamage then
+			unit:GetHealth() <= damage then
 			if utils.CheckFlag(ability.GetBehavior(), ABILITY_BEHAVIOR_AOE) then
-				AoELocation = self:FindAoELocation( true, unit:IsHero(), baseLocation, range, radius, delay, actualDamage);
+				AoELocation = self:FindAoELocation( true, unit:IsHero(), baseLocation, range, radius, delay, damage);
 			elseif utils.CheckFlag(ability.GetBehavior(), DOTA_ABILITY_BEHAVIOR_DIRECTIONAL) then
-				AoELocation = self:FindAoEVector(true, unit:IsHero(), false, baseLocation, range, radius, delay, actualDamage);
+				AoELocation = self:FindAoEVector(true, unit:IsHero(), false, baseLocation, range, radius, delay, damage);
 			end
 
 			if AoELocation.count > 0 then
 				if unit:IsHero() then
 					if damage > 0 then
-						self:DebugTalk("AoE 精致");
+						self:DebugTalk(ability:GetName() .. "AoE 精致");
 					else
-						self:DebugTalk("AoE 干他");
+						self:DebugTalk(ability:GetName() .. "AoE 干他");
 					end
 				else
 					if damage > 0 then
-						self:DebugTalk("AoE 收线");
+						self:DebugTalk(ability:GetName() .. "AoE 收线");
 					else
-						self:DebugTalk("AoE 推线");
+						self:DebugTalk(ability:GetName() .. "AoE 推线");
 					end
 				end
 				return AoELocation;
@@ -63,14 +68,14 @@ function CDOTA_Bot_Script:UseAoEHarass(lity, baseLocation, range, radius, delay,
 		local AoECreep = self:FindAoELocation( true, false, baseLocation, castRange, radius, delay, damage);
 		if AoEHero.count > 0 and AoECreep.count > 0 and 
 		    utils.locationToLocationDistance(AoEHero.targetloc,AoECreep.targetloc) < radius then 
-			self:DebugTalk("收兵+压人");
+			self:DebugTalk(ability:GetName() .. "收兵+压人");
 			AoELocation.count =  AoEHero.count + AoECreep.count;
 			AoELocation.targetloc = midPoint({AoEHero.targetloc,AoECreep.targetloc}); 
 		end
 	elseif utils.CheckFlag(ability.GetBehavior(), DOTA_ABILITY_BEHAVIOR_DIRECTIONAL) then
 		local AoECreep = self:FindAoEVector( true, false, true, self:GetLocation(), castRange, radius, delay, damage);
 		if AoECreep.count > 0 then 
-		    self:DebugTalk("收兵+压人");
+		    self:DebugTalk(ability:GetName() .. "收兵+压人");
 		    AoELocation = AoECreep;
 		end
 	end
@@ -80,18 +85,20 @@ end
 function CDOTA_Bot_Script:UseTargetAbility(ability, radius, damage, damageType, units)
 	if damage == 0 then damage = math.huge; end
 	for _, unit in ipairs(units) do
-		local actualDamage = unit:GetActualIncomingDamage(damage, damageType);
+		if not unit:IsMyFriend() then
+			damage = unit:GetActualIncomingDamage(damage, damageType);
+		end
 		if target ~= nil and CanCastAbilityOnTarget(ability, target) and 
 		 	GetUnitToUnitDistance(I, target) < castRange and
-			unit:GetHealth() <= actualDamage then
+			unit:GetHealth() <= damage then
 			if unit:IsHero() then
 				if damage > 0 then
-					self:DebugTalk("精致");
+					self:DebugTalk(ability:GetName() .. "精致");
 				else --*** maybe we don't consider harassing right now.
-					self:DebugTalk("干他");
+					self:DebugTalk(ability:GetName() .. "干他");
 				end
 			else
-				self:DebugTalk("补刀");
+				self:DebugTalk(ability:GetName() .. "补刀");
 			end
 			return unit;
 		end
@@ -368,6 +375,39 @@ function ConsiderUnitDebuff(I, ability, radius)
 	return BOT_ACTION_DESIRE_NONE, nil;
 end
 
+function ConsiderUnitSave(I, ability, radius, critHealth)
+	if not ability:IsFullyCastable() or not I:CanCast() then
+		return BOT_ACTION_DESIRE_NONE, nil;
+	end
+	local target;
+	local activeMode = I:GetActiveMode();
+	
+	local castRange = ability:GetCastRange();
+	local delay = 0; -- delay should not apply... right?
+	local damage = 0; -- do not consider damage
+	local damageType = ability:GetDamageType();
+	
+	-- GetNearby sorts units from close to far
+	local friends = {};
+	if castRange >= 1600 then 
+		friends = I:GetFarHeroes(castRange,false,BOT_MODE_NONE);
+	else
+		friends = I:GetNearbyHeroes(castRange,false,BOT_MODE_NONE);
+	end
+	
+	for _, friend in ipairs(richestSort(friends)) do
+		if friend:IsTrueHero() and friend:GetHealth() < critHealth and 
+		(friend:IsImmobile() or friend:WasRecentlyDamagedByAnyHero(1.0) or #(friend:GetIncomingTrackingProjectiles())>0) then
+			target = I:UseTargetAbility(ability, radius, damage, damageType, {friend});
+			if target ~= nil then
+				BOT_ACTION_DESIRE_HIGH, target;
+			end
+		end
+	end
+
+	return BOT_ACTION_DESIRE_NONE, nil;
+end
+
 -- No target
 function ConsiderNoTargetNuke(I, ability, radius, fTimeInFuture)
 	if not ability:IsFullyCastable() or not I:CanCast() then
@@ -580,7 +620,6 @@ function ConsiderNoTargetBuff(I, ability, radius, fTimeInFuture)
 		return BOT_ACTION_DESIRE_HIGH; 
 	end
 
-	local AoELocation;
 	local activeMode = I:GetActiveMode();
 
 	local castRange = 0; -- *** need testing for what range to use. dunno if 0 works
@@ -589,13 +628,7 @@ function ConsiderNoTargetBuff(I, ability, radius, fTimeInFuture)
 	-- GetNearby sorts units from close to far
 	local friends = {};
 	if radius >= 1600 then 
-		local friendlist = GetUnitList(UNIT_LIST_ALLIED_HEROES);
-		for _, friend in ipairs(friendlist) do
-			local friend = friendlist[i];
-			if GetUnitToUnitDistance(I, friend) < radius then
-				friends[#friends+1] = friend;
-			end
-		end
+		friends = I:GetFarHeroes(radius,false,BOT_MODE_NONE);
 	else
 		friends = I:GetNearbyHeroes(radius,false,BOT_MODE_NONE);
 	end
@@ -622,16 +655,23 @@ function ConsiderNoTargetBuff(I, ability, radius, fTimeInFuture)
 end
 
 function ConsiderInvisibility(I, ability)
-	if not ability:IsFullyCastable() or not I:CanCast() then
+	if not ability:IsFullyCastable() or not I:CanCast() or I:IsInvisible() then
 		return BOT_ACTION_DESIRE_NONE;
 	end
 	local activeMode = I:GetActiveMode();
 	if activeMode == BOT_MODE_RETREAT or 
 		activeMode == BOT_MODE_EVASIVE_MANEUVERS then 
-		return BOT_ACTION_DESIRE_HIGH; 
+		return BOT_ACTION_DESIRE_MODERATE; -- invis is the last resource, not high priority 
 	end
-	local enemys = I:GetNearbyHeroes(1500,true,BOT_MODE_NONE);
-	-- ***Use invis to walk up to enemy from outside of vision.. 1800
+	local enemys = I:GetNearbyHeroes(1550,true,BOT_MODE_NONE);
+	if (activeMode == BOT_MODE_ATTACK or
+		activeMode == BOT_MODE_ROAM or
+		activeMode == BOT_MODE_TEAM_ROAM or
+		activeMode == BOT_MODE_RUNE or
+		activeMode == BOT_MODE_WARD) and
+		(not I:LowMana() or #enemys > 0) then
+		return BOT_ACTION_DESIRE_LOW;
+	end
 	
 	return BOT_ACTION_DESIRE_NONE;
 end

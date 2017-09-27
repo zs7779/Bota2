@@ -31,6 +31,23 @@ function CDOTA_Bot_Script:DebugTalk(message)
 end
 
 ---------------------------------------------------------------------
+
+function CDOTA_Bot_Script:GetFarHeroes(nRadius, bEnemy, nMode)
+	if nRadius == 0 then nRadius = math.huge; end
+	local team = (self:IsMyFriend() ~= bEnemy) and UNIT_LIST_ALLIED_HEROES or UNIT_LIST_ENEMY_HEROES;
+	local heroes = {};
+	for _, hero in ipairs(GetUnitList(team)) do
+		if GetUnitToUnitDistance(self, hero) <= nRadius and not (bEnemy and hero:GetActiveMode() ~= nMode) then
+			table.insert(heroes, hero);
+		end
+	end
+	return heroes;
+end
+
+function  CDOTA_Bot_Script:IsMyFriend()
+	return GetTeam() == self:GetTeam();
+end
+
 function CDOTA_Bot_Script:GetPlayerPosition()
 	for position = 1,5 do
 		if GetTeamMember(position) == self then return position; end
@@ -95,9 +112,7 @@ function CDOTA_Bot_Script:TimeBeforeRescue()
 	local myID = self:GetPlayerID();
 	local minTime = math.huge;
 
-
-	local team = (GetTeam() == self:GetTeam() and UNIT_LIST_ALLIED_HEROES) or UNIT_LIST_ENEMY_HEROES;
-	for _, friend in ipairs(GetUnitList(team)) do
+	for _, friend in ipairs(self:GetFarHeroes(0, false, BOT_MODE_NONE)) do
 		local friendID = friend:GetPlayerID();
 		if friendID ~= myID and IsHeroAlive(friendID) then
 			local thisTime = math.huge;
@@ -114,6 +129,7 @@ function CDOTA_Bot_Script:TimeBeforeRescue()
 	end
 	return minTime;
 end
+
 
 function CDOTA_Bot_Script:LowHealth()
 	return self:GetHealth()/self:GetMaxHealth() < 0.4;
@@ -167,6 +183,7 @@ end
 
 function CDOTA_Bot_Script:PredictLocation(fTime)
 	local stability = self:GetMovementDirectionStability();
+	-- local lastSeen = GetHeroLastSeenInfo(friendID);
 	return stability*self:GetExtrapolatedLocation(fTime) + (1.0-stability)*self:GetLocation();
 end
 
@@ -214,46 +231,49 @@ function CDOTA_Bot_Script:FindAoEVector(bEnemies, bHeroes, bHarass, vBaseLocatio
 	return AoEVector;
 end
 
+function weakestSort(units)
+	table.sort(units, function(a,b) return a:GetHealth()<b:GetHealth());
+	return units;
+end
 function weakestUnit(units, needDisable)
-	local health = math.huge;
-	local weakest = nil;
-	for i = 1, #units do
-		local unit = units[i];
-		local thisHealth = unit:GetHealth();
-		if unit:IsTrueHero() and thisHealth < health and (not needDisable or not unit:IsDisabled() and not unit:IsSilenced()) then
-			weakest = unit;
-			health = thisHealth;
+	for _, unit in ipairs(weakestSort(units) do
+		if unit:IsTrueHero() and (not needDisable or not unit:IsDisabled() and not unit:IsSilenced()) then
+			return unit;
 		end
 	end
-	return weakest;
+	return nil;
 end
 
+function strongestSort(units)
+	table.sort(units, function(a,b) return a:GetOffensivePower()>b:GetOffensivePower());
+	return units;
+end
 function strongestUnit(units, needDisable)
-	local power = 0;
-	local strongest = nil;
-	for i = 1, #units do
-		local unit = units[i];
-		local thisPower = unit:GetOffensivePower();
-		if unit:IsTrueHero() and thisPower > power and (not needDisable or not unit:IsDisabled()) then
-			strongest = unit;
-			power = thisPower;
+	for _, unit in ipairs(strongestSort(units)) do
+		if unit:IsTrueHero() and (not needDisable or not unit:IsDisabled()) then
+			return unit;
 		end
 	end
-	return strongest;
+	return nil;
 end
 
+function disablerSort(units)
+	table.sort(units, function(a,b) return a:GetStunDuration(false)>b:GetStunDuration(false));
+	return units;
+end
 function strongestDisabler(units, needDisable)
-	local stunTime = 0;
-	local strongest = nil;
-	for i = 1, #units do
-		local unit = units[i];
+	for _, unit in ipairs(disablerSort(units)) do
 		local thisTime = unit:GetStunDuration(false);
-		if unit:IsTrueHero() and thisTime > stunTime and (not needDisable or not unit:IsSilenced() and not unit:IsDisabled()) then
-			strongest = unit;
-			stunTime = thisTime;
+		if unit:IsTrueHero() and (not needDisable or not unit:IsSilenced() and not unit:IsDisabled()) then
+			return unit;
 		end
 	end
-	return strongest;
+	return nil;
+end
+
+function richestSort(units)
+	table.sort(units, function(a,b) return a:GetNetWorth()>b:GetNetWorth());
+	return units;
 end
 
 function nextTower(nTeam, towerList)
