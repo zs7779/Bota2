@@ -66,7 +66,7 @@ function ConsiderStormBolt(I, spell)
 	local castRange = spell:GetCastRange();
 	local radius = spell:GetSpecialValueInt("bolt_aoe");
 	local damage = spell:GetAbilityDamage();
-	local spellType = GetDamageType();
+	local spellType = spell:GetDamageType();
 	local delay = 0;
 	
 	local considerStun = ability_item_usage_generic.ConsiderUnitStun(I, spell, castRange, radius);
@@ -77,7 +77,7 @@ function ConsiderStormBolt(I, spell)
 end
 
 function ConsiderWarcry(I, spell)
-	local castRange = spell:GetCastRange();
+	local castRange = 0;
 	local radius = spell:GetSpecialValueInt("warcry_radius");
 	local damage = 0;
 	local spellType = 0;

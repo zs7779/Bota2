@@ -235,7 +235,7 @@ function ConsiderAoEStun(I, spell, castRange, radius, delay)
 
 	-- If fighting, stun lowHP/strongest carry/best disabler that is not already disabled
 	if activeMode ~= BOT_MODE_RETREAT then
-		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, {utils.strongestDisabler(movingEnemys, true), utils.strongestUnit(movingEnemys, true), utils.weakestUnit(movingEnemys, true)}});
+		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, {utils.strongestDisabler(movingEnemys, true), utils.strongestUnit(movingEnemys, true), utils.weakestUnit(movingEnemys, true)});
 		if AoELocation.count > 0 then
 			return {BOT_ACTION_DESIRE_HIGH, AoELocation.targetloc};
 		end

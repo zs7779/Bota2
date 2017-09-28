@@ -65,7 +65,7 @@ function ConsiderBreatheFire(I, spell)
 	local castRange = spell:GetCastRange();
 	local radius = spell:GetSpecialValueInt("end_radius");
 	local damage = spell:GetAbilityDamage();
-	local spellType = GetDamageType();
+	local spellType = spell:GetDamageType();
 	local delay = 0;
 	return ability_item_usage_generic.ConsiderAoENuke(I, spell, castRange, radius, damage, spellType, delay);
 end
