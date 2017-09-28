@@ -2,26 +2,26 @@ require(GetScriptDirectory() ..  "/utils")
 ability_item_usage_generic = dofile( GetScriptDirectory().."/ability_item_usage_generic" )
 
 function GetAbilityGuide(I)
-	local abilities, talents = I:GetAbilities();
+	local spells, talents = table.unpack(I:GetAbilities());
 
 	local abilityLevelUp = {};
-	abilityLevelUp[1] = abilities[1];
-	abilityLevelUp[2] = abilities[3];
-	abilityLevelUp[3] = abilities[2];
-	abilityLevelUp[4] = abilities[2];
-	abilityLevelUp[5] = abilities[2];
-	abilityLevelUp[6] = abilities[4];
-	abilityLevelUp[7] = abilities[2];
-	abilityLevelUp[8] = abilities[3];
-	abilityLevelUp[9] = abilities[3];
+	abilityLevelUp[1] = spells[1];
+	abilityLevelUp[2] = spells[3];
+	abilityLevelUp[3] = spells[2];
+	abilityLevelUp[4] = spells[2];
+	abilityLevelUp[5] = spells[2];
+	abilityLevelUp[6] = spells[4];
+	abilityLevelUp[7] = spells[2];
+	abilityLevelUp[8] = spells[3];
+	abilityLevelUp[9] = spells[3];
 	abilityLevelUp[10] = talents[1];
-	abilityLevelUp[11] = abilities[3];
-	abilityLevelUp[12] = abilities[4];
-	abilityLevelUp[13] = abilities[1];
-	abilityLevelUp[14] = abilities[1];
+	abilityLevelUp[11] = spells[3];
+	abilityLevelUp[12] = spells[4];
+	abilityLevelUp[13] = spells[1];
+	abilityLevelUp[14] = spells[1];
 	abilityLevelUp[15] = talents[4];
-	abilityLevelUp[16] = abilities[1];
-	abilityLevelUp[18] = abilities[4];
+	abilityLevelUp[16] = spells[1];
+	abilityLevelUp[18] = spells[4];
 	abilityLevelUp[20] = talents[5];
 	abilityLevelUp[25] = talents[7];
 	return abilityLevelUp;
@@ -46,8 +46,8 @@ function AbilityUsageThink()
 	local Warcry = I:GetAbilityByName(abilities[3]);
 	local GodsStrength = I:GetAbilityByName(abilities[4]);
 	
-	local StormBoltDesire, StormBoltTarget = ConsiderStormBolt(I, StormBolt);
-	local WarcryDesire = ConsiderWarcry(I, Warcry);
+	local StormBoltDesire, StormBoltTarget = table.unpack(ConsiderStormBolt(I, StormBolt));
+	local WarcryDesire = ConsiderWarcry(I, Warcry)[1];
 	local GodsStrengthDesire = ConsiderGodsStrength(I, GodsStrength);
 
 	if StormBoltDesire > 0 then
@@ -62,17 +62,32 @@ function AbilityUsageThink()
 	
 end
 
-function ConsiderStormBolt(I, ability)
-	return ability_item_usage_generic.ConsiderUnitNuke(I, ability, ability:GetSpecialValueInt("bolt_aoe"));
+function ConsiderStormBolt(I, spell)
+	local castRange = spell:GetCastRange();
+	local radius = spell:GetSpecialValueInt("bolt_aoe");
+	local damage = spell:GetAbilityDamage();
+	local spellType = GetDamageType();
+	local delay = 0;
+	
+	local considerStun = ability_item_usage_generic.ConsiderUnitStun(I, spell, castRange, radius);
+	if considerStun[1] > 0 then	return considerStun; end
+	return ability_item_usage_generic.ConsiderUnitNuke(I, spell, castRange, radius, damage, spellType);
+
+	
 end
 
-function ConsiderWarcry(I, ability)
-	return ability_item_usage_generic.ConsiderNoTargetBuff(I, ability, ability:GetSpecialValueInt("warcry_radius"));
+function ConsiderWarcry(I, spell)
+	local castRange = spell:GetCastRange();
+	local radius = spell:GetSpecialValueInt("warcry_radius");
+	local damage = 0;
+	local spellType = 0;
+	local delay = 0;
+	return ability_item_usage_generic.ConsiderAoEBuff(I, spell, castRange, radius, delay);
 end
 
-function ConsiderGodsStrength(I, ability)
-	if not ability:IsFullyCastable() then
-		return BOT_ACTION_DESIRE_NONE;
+function ConsiderGodsStrength(I, spell)
+	if not spell:IsFullyCastable() or not I:CanCast() then
+		return BOT_ACTION_DESIRE_NONE, nil;
 	end
 	local activeMode = I:GetActiveMode();
 
@@ -90,7 +105,7 @@ function ConsiderGodsStrength(I, ability)
 		 activeMode == BOT_MODE_DEFEND_ALLY or
 		 activeMode == BOT_MODE_ATTACK then
 		 local target = I:GetTarget();
-		 if GetUnitToUnitDistance(I, target) <= 500 and not I:IsLow() then 
+		 if GetUnitToUnitDistance(I, target) <= 300 then 
 		 	return BOT_ACTION_DESIRE_MODERATE;
 		 end
 	 end

@@ -55,7 +55,7 @@ function CDOTA_Bot_Script:GetPlayerPosition()
 	return nil;
 end
 
-function CDOTA_Bot_Script:GetSpells()
+function CDOTA_Bot_Script:GetAbilities()
 	local spells = {};
 	local talents = {};
 	for i = 0,23 do
@@ -68,11 +68,11 @@ function CDOTA_Bot_Script:GetSpells()
 			end
 		end
 	end
-	return spells, talents;
+	return {spells, talents};
 end
 
 function CDOTA_Bot_Script:GetComboMana()
-	local spells, talents = self:GetSpells()
+	local spells = self:GetAbilities()[1];
 	local manaCost = 0;
 	for i = 1, #spells do
 		local spell = self:GetAbilityByName(spells[i]);
@@ -84,7 +84,7 @@ function CDOTA_Bot_Script:GetComboMana()
 end
 function CDOTA_Bot_Script:GetComboDamageToTarget(target)
 	-- ***How do you consider duration? and toggle?
-	local spells, talents = self:GetSpells()
+	local spells = self:GetAbilities()[1];
 	local totalDamage = 0;
 	for i = 1, #spells do
 		local spell = self:GetAbilityByName(spells[i]);

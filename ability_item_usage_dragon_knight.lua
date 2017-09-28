@@ -1,27 +1,26 @@
 require(GetScriptDirectory() ..  "/utils")
 ability_item_usage_generic = dofile( GetScriptDirectory().."/ability_item_usage_generic" )
 
-function GetAbilityGuide(I)
-	local abilities, talents = I:GetAbilities();
-
+local function GetAbilityGuide(I)
+	local spells, talents = table.unpack(I:GetAbilities()); --*** need test if unpack exist
 	local abilityLevelUp = {};
-	abilityLevelUp[1] = abilities[1];
-	abilityLevelUp[2] = abilities[3];
-	abilityLevelUp[3] = abilities[3];
-	abilityLevelUp[4] = abilities[1];
-	abilityLevelUp[5] = abilities[2];
-	abilityLevelUp[6] = abilities[4];
-	abilityLevelUp[7] = abilities[1];
-	abilityLevelUp[8] = abilities[1];
-	abilityLevelUp[9] = abilities[3];
+	abilityLevelUp[1] = spells[1];
+	abilityLevelUp[2] = spells[3];
+	abilityLevelUp[3] = spells[3];
+	abilityLevelUp[4] = spells[1];
+	abilityLevelUp[5] = spells[2];
+	abilityLevelUp[6] = spells[4];
+	abilityLevelUp[7] = spells[1];
+	abilityLevelUp[8] = spells[1];
+	abilityLevelUp[9] = spells[3];
 	abilityLevelUp[10] = talents[2];
-	abilityLevelUp[11] = abilities[3];
-	abilityLevelUp[12] = abilities[4];
-	abilityLevelUp[13] = abilities[2];
-	abilityLevelUp[14] = abilities[2];
+	abilityLevelUp[11] = spells[3];
+	abilityLevelUp[12] = spells[4];
+	abilityLevelUp[13] = spells[2];
+	abilityLevelUp[14] = spells[2];
 	abilityLevelUp[15] = talents[4];
-	abilityLevelUp[16] = abilities[2];
-	abilityLevelUp[18] = abilities[4];
+	abilityLevelUp[16] = spells[2];
+	abilityLevelUp[18] = spells[4];
 	abilityLevelUp[20] = talents[6];
 	abilityLevelUp[25] = talents[8];
 	return abilityLevelUp;
@@ -40,15 +39,15 @@ end
 
 function AbilityUsageThink()
 	local I = GetBot();
-	local abilities, talents = I:GetAbilities();
+	local spells, talents = I:GetAbilities();
 	
-	local BreatheFire = I:GetAbilityByName(abilities[1]);
-	local DragonTail = I:GetAbilityByName(abilities[2]);
-	local ElderDragonForm = I:GetAbilityByName(abilities[4]);
+	local BreatheFire = I:GetAbilityByName(spells[1]);
+	local DragonTail = I:GetAbilityByName(spells[2]);
+	local ElderDragonForm = I:GetAbilityByName(spells[4]);
 	
-	local BreatheFireDesire, BreatheFireLoc = ConsiderBreatheFire(I, BreatheFire);
-	local DragonTailDesire, DragonTailTarget = ConsiderDragonTail(I, DragonTail);
-	local ElderDragonFormDesire = ConsiderElderDragonForm(I, ElderDragonForm);
+	local BreatheFireDesire, BreatheFireLoc = table.unpack(ConsiderBreatheFire(I, BreatheFire));
+	local DragonTailDesire, DragonTailTarget = table.unpack(ConsiderDragonTail(I, DragonTail));
+	local ElderDragonFormDesire = table.unpack(ConsiderElderDragonForm(I, ElderDragonForm));
 
 	if ElderDragonFormDesire > 0 then
 		I:Action_UseAbility(ElderDragonForm);
@@ -62,16 +61,26 @@ function AbilityUsageThink()
 	
 end
 
-function ConsiderBreatheFire(I, ability)
-	return ability_item_usage_generic.ConsiderPointNuke(I, ability, ability:GetSpecialValueInt("end_radius"),0);
+function ConsiderBreatheFire(I, spell)
+	local castRange = spell:GetCastRange();
+	local radius = spell:GetSpecialValueInt("end_radius");
+	local damage = spell:GetAbilityDamage();
+	local spellType = GetDamageType();
+	local delay = 0;
+	return ability_item_usage_generic.ConsiderAoENuke(I, spell, castRange, radius, damage, spellType, delay);
 end
-function ConsiderDragonTail(I, ability)
-	return ability_item_usage_generic.ConsiderUnitStun(I, ability, 0);
+function ConsiderDragonTail(I, spell)
+	local castRange = spell:GetCastRange();
+	local radius = 0;
+	local damage = 0; -- I don't consider it as a damage spell
+	local spellType = 0;
+	local delay = 0;
+	return ability_item_usage_generic.ConsiderUnitStun(I, spell, castRange, radius);
 end
 
-function ConsiderElderDragonForm(I, ability)
-	if not ability:IsFullyCastable() then
-		return BOT_ACTION_DESIRE_NONE;
+function ConsiderElderDragonForm(I, spell)
+	if not spell:IsFullyCastable() or not I:CanCast() then
+		return BOT_ACTION_DESIRE_NONE, nil;
 	end
 	local activeMode = I:GetActiveMode();
 

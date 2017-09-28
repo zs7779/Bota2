@@ -129,7 +129,7 @@ end
 -- AoE
 function ConsiderAoENuke(I, spell, castRange, radius, maxHealth, spellType, delay)
 	if not spell:IsFullyCastable() or not I:CanCast() then
-		return BOT_ACTION_DESIRE_NONE, nil;
+		return {BOT_ACTION_DESIRE_NONE, nil};
 	end
 	local AoELocation;
 	local activeMode = I:GetActiveMode();
@@ -142,7 +142,7 @@ function ConsiderAoENuke(I, spell, castRange, radius, maxHealth, spellType, dela
 	-- AoE kill secure
 	AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, maxHealth, spellType, enemys);
 	if AoELocation.count > 0 then
-		return BOT_ACTION_DESIRE_HIGH, AoELocation.targetloc; 
+		return {BOT_ACTION_DESIRE_HIGH, AoELocation.targetloc}; 
 	end
 	
 	-- Laning last hit
@@ -151,13 +151,13 @@ function ConsiderAoENuke(I, spell, castRange, radius, maxHealth, spellType, dela
 		if not I:LowHealth() and not I:LowMana() then
 			AoELocation = I:UseAoEHarass(spell, myLocation, castRange, radius, delay, maxHealth);
 			if AoELocation ~= nil then
-				return BOT_ACTION_DESIRE_MODERATE, AoELocation.targetloc;
+				return {BOT_ACTION_DESIRE_MODERATE, AoELocation.targetloc};
 			end
 	-- If being harassed or low HP, try landing any last hit
 		elseif (not I:LowMana() and I:WasRecentlyDamagedByAnyHero(1.0)) or I:LowHealth() then
 			AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, maxHealth, spellType, creeps);
 			if AoELocation.count > 0 then
-				return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; 
+				return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc}; 
 			end
 		end
 	end
@@ -166,7 +166,7 @@ function ConsiderAoENuke(I, spell, castRange, radius, maxHealth, spellType, dela
 	if activeMode == BOT_MODE_FARM then
 		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, maxHealth, spellType, creeps);
 		if AoELocation.count >= 2 then
-			return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; 
+			return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc}; 
 		end
 	end
 
@@ -175,7 +175,7 @@ function ConsiderAoENuke(I, spell, castRange, radius, maxHealth, spellType, dela
 		activeMode <= BOT_MODE_DEFEND_TOWER_BOT then
 		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, spellType, creeps);
 			if AoELocation.count >= 2 then
-			return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc; 
+			return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc}; 
 		end
 	end
 
@@ -183,7 +183,7 @@ function ConsiderAoENuke(I, spell, castRange, radius, maxHealth, spellType, dela
 	if activeMode ~= BOT_MODE_LANING and activeMode ~= BOT_MODE_RETREAT then
 		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, spellType, enemys);
 		if AoELocation.count >= 3 then
-			return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc;
+			return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc};
 		end
 	end
 	
@@ -198,17 +198,17 @@ function ConsiderAoENuke(I, spell, castRange, radius, maxHealth, spellType, dela
 			GetUnitToUnitDistance(I, target) < castRange then
 			AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, spellType, {target});
 			if AoELocation.count > 0 then
-		 		return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc;
+		 		return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc};
 		 	end
 		end
 	end
 
-	return BOT_ACTION_DESIRE_NONE, nil;
+	return {BOT_ACTION_DESIRE_NONE, nil};
 end
 
-function ConsiderAoEStun(I, spell, castRange, radius, maxHealth, delay)
+function ConsiderAoEStun(I, spell, castRange, radius, delay)
 	if not spell:IsFullyCastable() or not I:CanCast() then
-		return BOT_ACTION_DESIRE_NONE, nil;
+		return {BOT_ACTION_DESIRE_NONE, nil};
 	end
 	local AoELocation;
 	local activeMode = I:GetActiveMode();
@@ -230,14 +230,14 @@ function ConsiderAoEStun(I, spell, castRange, radius, maxHealth, delay)
 	-- Interrupt channeling
 	AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, channelingEnemys);
 	if AoELocation.count > 0 then
-		return BOT_ACTION_DESIRE_HIGH, AoELocation.targetloc;
+		return {BOT_ACTION_DESIRE_HIGH, AoELocation.targetloc};
 	end
 
 	-- If fighting, stun lowHP/strongest carry/best disabler that is not already disabled
 	if activeMode ~= BOT_MODE_RETREAT then
 		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, {utils.strongestDisabler(movingEnemys, true), utils.strongestUnit(movingEnemys, true), utils.weakestUnit(movingEnemys, true)}});
 		if AoELocation.count > 0 then
-			return BOT_ACTION_DESIRE_HIGH, AoELocation.targetloc;
+			return {BOT_ACTION_DESIRE_HIGH, AoELocation.targetloc};
 		end
 	end
 
@@ -245,7 +245,7 @@ function ConsiderAoEStun(I, spell, castRange, radius, maxHealth, delay)
 	if activeMode == BOT_MODE_RETREAT then
 		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, movingEnemys);
 		if AoELocation.count > 0 then
-			return BOT_ACTION_DESIRE_MODERATE, AoELocation.targetloc;
+			return {BOT_ACTION_DESIRE_MODERATE, AoELocation.targetloc};
 		end
 	end
 	
@@ -261,17 +261,17 @@ function ConsiderAoEStun(I, spell, castRange, radius, maxHealth, delay)
 			not target:IsDisabled() then
 			AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, {target});
 			if AoELocation.count > 0 then
-		 		return BOT_ACTION_DESIRE_MODERATE, AoELocation.targetloc;
+		 		return {BOT_ACTION_DESIRE_MODERATE, AoELocation.targetloc};
 		 	end
 		end
 	end
 
-	return BOT_ACTION_DESIRE_NONE, nil;
+	return {BOT_ACTION_DESIRE_NONE, nil};
 end
 
-function ConsiderAoEDebuff(I, spell, castRange, radius, maxHealth, delay)
+function ConsiderAoEDebuff(I, spell, castRange, radius, delay)
 	if not spell:IsFullyCastable() or not I:CanCast() then
-		return BOT_ACTION_DESIRE_NONE, nil;
+		return {BOT_ACTION_DESIRE_NONE, nil};
 	end
 	local AoELocation;
 	local activeMode = I:GetActiveMode();
@@ -284,14 +284,14 @@ function ConsiderAoEDebuff(I, spell, castRange, radius, maxHealth, delay)
 	if activeMode ~= BOT_MODE_RETREAT then
 		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, enemys);
 		if AoELocation.count >= 3 then
-			return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc;
+			return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc};
 		end
 	end
 	
 	if activeMode == BOT_MODE_RETREAT then
 		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, enemys);
 		if AoELocation.count > 0 then
-			return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc;
+			return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc};
 		end
 	end
 
@@ -307,17 +307,17 @@ function ConsiderAoEDebuff(I, spell, castRange, radius, maxHealth, delay)
 			GetUnitToUnitDistance(I, target) < radius then
 			AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, {target});
 			if AoELocation.count > 0 then
-		 		return BOT_ACTION_DESIRE_MODERATE, AoELocation.targetloc;
+		 		return {BOT_ACTION_DESIRE_MODERATE, AoELocation.targetloc};
 		 	end
 		end
 	end
 
-	return BOT_ACTION_DESIRE_NONE, nil;
+	return {BOT_ACTION_DESIRE_NONE, nil};
 end
 
-function ConsiderAoEBuff(I, spell, castRange, radius, maxHealth, delay)
+function ConsiderAoEBuff(I, spell, castRange, radius, delay)
 	if not spell:IsFullyCastable() or not I:CanCast() then
-		return BOT_ACTION_DESIRE_NONE, nil;
+		return {BOT_ACTION_DESIRE_NONE, nil};
 	end
 	local activeMode = I:GetActiveMode();
 	local myLocation = I:GetLocation();
@@ -336,7 +336,7 @@ function ConsiderAoEBuff(I, spell, castRange, radius, maxHealth, delay)
 			friendMode == BOT_MODE_EVASIVE_MANEUVERS then
 			AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, friends);
 			if AoELocation.count > 0 then
-				return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc;
+				return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc};
 			end
 		end
 		if friendMode == BOT_MODE_ROAM or
@@ -346,19 +346,19 @@ function ConsiderAoEBuff(I, spell, castRange, radius, maxHealth, delay)
 			local target = friend:GetTarget();
 			AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, friends);
 			if AoELocation.count > 0 and not I:LowMana() or AoELocation.count >= 2 then
-				return BOT_ACTION_DESIRE_LOW, AoELocation.targetloc;
+				return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc};
 			end
 		end
 	end
 
-	return BOT_ACTION_DESIRE_NONE, nil;
+	return {BOT_ACTION_DESIRE_NONE, nil};
 end
 
 -- Unit
 -- ***some unit target spells also have radius
 function ConsiderUnitNuke(I, spell, castRange, radius, maxHealth, spellType)
 	if not spell:IsFullyCastable() or not I:CanCast() then
-		return BOT_ACTION_DESIRE_NONE, nil;
+		return {BOT_ACTION_DESIRE_NONE, nil};
 	end
 	local target;
 	local activeMode = I:GetActiveMode();
@@ -370,7 +370,7 @@ function ConsiderUnitNuke(I, spell, castRange, radius, maxHealth, spellType)
 	-- Kill secure
 	target = I:UseUnitSpell(spell, radius, maxHealth, spellType, enemys);
 	if target ~= nil then
-		return BOT_ACTION_DESIRE_HIGH, target;
+		return {BOT_ACTION_DESIRE_HIGH, target};
 	end
 	
 	-- Laning last hit when being harassed or is low
@@ -378,7 +378,7 @@ function ConsiderUnitNuke(I, spell, castRange, radius, maxHealth, spellType)
 		if (not I:LowMana() and I:WasRecentlyDamagedByAnyHero(1.0)) or I:LowHealth() then
 			target = I:UseUnitSpell(spell, radius, maxHealth, spellType, creeps);
 			if target ~= nil then
-				return BOT_ACTION_DESIRE_LOW, target;
+				return {BOT_ACTION_DESIRE_LOW, target};
 			end
 		end
 	end
@@ -391,16 +391,16 @@ function ConsiderUnitNuke(I, spell, castRange, radius, maxHealth, spellType)
 		activeMode == BOT_MODE_ATTACK then
 	 	target = I:UseUnitSpell(spell, radius, 0, spellType, {I:GetTarget()});
 	 	if target ~= nil then
-		 	return BOT_ACTION_DESIRE_LOW, target;
+		 	return {BOT_ACTION_DESIRE_LOW, target};
 		end
 	end
 
-	return BOT_ACTION_DESIRE_NONE, nil;
+	return {BOT_ACTION_DESIRE_NONE, nil};
 end
 
-function ConsiderUnitStun(I, spell, castRange, radius, maxHealth)
+function ConsiderUnitStun(I, spell, castRange, radius)
 	if not spell:IsFullyCastable() or not I:CanCast() then
-		return BOT_ACTION_DESIRE_NONE, nil;
+		return {BOT_ACTION_DESIRE_NONE, nil};
 	end
 	local target;
 	local activeMode = I:GetActiveMode();
@@ -421,14 +421,14 @@ function ConsiderUnitStun(I, spell, castRange, radius, maxHealth)
 	-- Interrupt channeling within 1s walking
 	target = I:UseUnitSpell(spell, radius, 0, 0, channelingEnemys);
 	if target ~= nil then
-		return BOT_ACTION_DESIRE_HIGH, target;
+		return {BOT_ACTION_DESIRE_HIGH, target};
 	end
 
 	-- If fighting, stun lowHP/strongest carry/best disabler that is not already disabled
 	if activeMode ~= BOT_MODE_RETREAT then
 		target = I:UseUnitSpell(spell, radius, 0, 0, {utils.strongestDisabler(movingEnemys, true), utils.strongestUnit(movingEnemys, true), utils.weakestUnit(movingEnemys, true)});
 		if target ~= nil then
-			return BOT_ACTION_DESIRE_HIGH, target;
+			return {BOT_ACTION_DESIRE_HIGH, target};
 		end
 	end
 
@@ -436,7 +436,7 @@ function ConsiderUnitStun(I, spell, castRange, radius, maxHealth)
 	if activeMode == BOT_MODE_RETREAT then
 		target = I:UseUnitSpell(spell, radius, 0, 0, movingEnemys);
 		if target ~= nil then
-			return BOT_ACTION_DESIRE_MODERATE, target;
+			return {BOT_ACTION_DESIRE_MODERATE, target};
 		end
 	end
 
@@ -448,16 +448,16 @@ function ConsiderUnitStun(I, spell, castRange, radius, maxHealth)
 		activeMode == BOT_MODE_ATTACK then
 		target = I:UseUnitSpell(spell, radius, 0, 0, {I:GetTarget()});
 	 	if target ~= nil and not target:IsDisabled() then
-		 	return BOT_ACTION_DESIRE_MODERATE, target;
+		 	return {BOT_ACTION_DESIRE_MODERATE, target};
 		end
 	end
 
-	return BOT_ACTION_DESIRE_NONE, nil;
+	return {BOT_ACTION_DESIRE_NONE, nil};
 end
 
-function ConsiderUnitDebuff(I, spell, castRange, radius, maxHealth)
+function ConsiderUnitDebuff(I, spell, castRange, radius)
 	if not spell:IsFullyCastable() or not I:CanCast() then
-		return BOT_ACTION_DESIRE_NONE, nil;
+		return {BOT_ACTION_DESIRE_NONE, nil};
 	end
 	local target;
 	local activeMode = I:GetActiveMode();
@@ -475,7 +475,7 @@ function ConsiderUnitDebuff(I, spell, castRange, radius, maxHealth)
 	if activeMode ~= BOT_MODE_RETREAT then
 		local target = I:UseUnitSpell(spell, radius, 0, 0, {utils.weakestUnit(movingEnemys, true), utils.strongestDisabler(movingEnemys, true), utils.strongestUnit(movingEnemys, true)});
 		if target ~= nil then
-			return BOT_ACTION_DESIRE_MODERATE, target;
+			return {BOT_ACTION_DESIRE_MODERATE, target};
 		end
 	end
 
@@ -483,7 +483,7 @@ function ConsiderUnitDebuff(I, spell, castRange, radius, maxHealth)
 	if activeMode == BOT_MODE_RETREAT then
 		target = I:UseUnitSpell(spell, radius, 0, 0, movingEnemys);
 		if target ~= nil then
-			return BOT_ACTION_DESIRE_LOW, target;
+			return {BOT_ACTION_DESIRE_LOW, target};
 		end
 	end
 
@@ -495,16 +495,16 @@ function ConsiderUnitDebuff(I, spell, castRange, radius, maxHealth)
 		activeMode == BOT_MODE_ATTACK then
 		target = I:UseUnitSpell(spell, radius, 0, 0, {I:GetTarget()});
 	 	if target ~= nil and not target:IsDisabled() then
-		 	return BOT_ACTION_DESIRE_MODERATE, target;
+		 	return {BOT_ACTION_DESIRE_MODERATE, target};
 		end
 	end
 
-	return BOT_ACTION_DESIRE_NONE, nil;
+	return {BOT_ACTION_DESIRE_NONE, nil};
 end
 
 function ConsiderUnitSave(I, spell, castRange, radius, maxHealth)
 	if not spell:IsFullyCastable() or not I:CanCast() then
-		return BOT_ACTION_DESIRE_NONE, nil;
+		return {BOT_ACTION_DESIRE_NONE, nil};
 	end
 	local target;
 	local activeMode = I:GetActiveMode();
@@ -527,7 +527,7 @@ function ConsiderUnitSave(I, spell, castRange, radius, maxHealth)
 		end
 	end
 
-	return BOT_ACTION_DESIRE_NONE, nil;
+	return {BOT_ACTION_DESIRE_NONE, nil};
 end
 
 
