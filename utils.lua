@@ -55,41 +55,41 @@ function CDOTA_Bot_Script:GetPlayerPosition()
 	return nil;
 end
 
-function CDOTA_Bot_Script:GetAbilities()
-	local abilities = {};
+function CDOTA_Bot_Script:GetSpells()
+	local spells = {};
 	local talents = {};
 	for i = 0,23 do
-		local ability = self:GetAbilityInSlot(i);
-		if ability ~= nil then
-			if ability:IsTalent() then
-				talents[#talents+1] = ability:GetName()
+		local spell = self:GetAbilityInSlot(i);
+		if spell ~= nil then
+			if spell:IsTalent() then
+				talents[#talents+1] = spell:GetName()
 			else
-				abilities[#abilities+1] = ability:GetName()
+				spells[#spells+1] = spell:GetName()
 			end
 		end
 	end
-	return abilities, talents;
+	return spells, talents;
 end
 
 function CDOTA_Bot_Script:GetComboMana()
-	local abilities, talents = self:GetAbilities()
+	local spells, talents = self:GetSpells()
 	local manaCost = 0;
-	for i = 1, #abilities do
-		local ability = self:GetAbilityByName(abilities[i]);
-		if not ability:IsPassive() and ability:IsFullyCastable() and ability:GetAbilityDamage()>0 then
-			manaCost = manaCost + ability:GetManaCost();
+	for i = 1, #spells do
+		local spell = self:GetAbilityByName(spells[i]);
+		if not spell:IsPassive() and spell:IsFullyCastable() and spell:GetAbilityDamage()>0 then
+			manaCost = manaCost + spell:GetManaCost();
 		end
 	end
 	return manaCost;
 end
 function CDOTA_Bot_Script:GetComboDamageToTarget(target)
 	-- ***How do you consider duration? and toggle?
-	local abilities, talents = self:GetAbilities()
+	local spells, talents = self:GetSpells()
 	local totalDamage = 0;
-	for i = 1, #abilities do
-		local ability = self:GetAbilityByName(abilities[i]);
-		if not ability:IsPassive() and ability:IsFullyCastable() and ability:GetAbilityDamage()>0 then
-			totalDamage = totalDamage + target:GetActualIncomingDamage(ability:GetAbilityDamage(),ability:GetDamageType());
+	for i = 1, #spells do
+		local spell = self:GetAbilityByName(spells[i]);
+		if not spell:IsPassive() and spell:IsFullyCastable() and spell:GetAbilityDamage()>0 then
+			totalDamage = totalDamage + target:GetActualIncomingDamage(spell:GetAbilityDamage(),spell:GetDamageType());
 		end
 	end
 	return totalDamage;

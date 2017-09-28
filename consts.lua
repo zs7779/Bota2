@@ -1,4 +1,4 @@
-abilityDictionary = {
+spellDictionary = {
 	sven_storm_bolt = "Storm Bolt",
 	sven_warcry = "Warcry",
 	sven_gods_strength = "God's Strength",
