@@ -1,3 +1,5 @@
+require(GetScriptDirectory() ..  "/utils")
+
 function GetDesire()
 	
 	local I = GetBot();

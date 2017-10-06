@@ -1,113 +1,5 @@
 require(GetScriptDirectory() ..  "/utils")
 
-function CanCastSpellOnTarget(spell, target)
-	return spell:IsFullyCastable() and 
-	target:CanBeSeen() and target:IsAlive() and
-	not target:IsInvulnerable() and 
-	(not target:IsMagicImmune() or 
-	utils.CheckFlag(spell:GetTargetFlags(), ABILITY_TARGET_FLAG_MAGIC_IMMUNE_ENEMIES) or
-	utils.CheckFlag(spell:GetTargetFlags(), ABILITY_TARGET_FLAG_NOT_MAGIC_IMMUNE_ALLIES));
-end
--- And by AoE, I mean AoE, not your half ass defination
-function CDOTA_Bot_Script:UseAoESpell(spell, baseLocation, range, radius, delay, maxHealth, spellType, units)
-	assert(spell~=nil and baseLocation.x~=nil and baseLocation.y~=nil and range>=0 and radius>=0 and delay>=0 and maxHealth>=0 and spellType >=0 and #units>=0)
-	local AoELocation; AoELocation.count = 0;
-	
-	-- **If FindAoELocation cannot be trusted, use this V, but may need to reconsider search range = castRange+radius or castRange
-	-- if #units == 1 then
-	-- 	local unit = units[1];
-	-- 	AoELocation.count = 1;
-	-- 	AoELocation.targetloc = unit:PredictLocation(delay);
-	-- 	if maxHealth > 0 and unit:GetHealth() <= unit:GetActualIncomingDamage(maxHealth, spellType)then
-	-- 		self:DebugTalk("AoE 精致");
-	-- 		return AoELocation;
-	-- 	elseif maxHealth == 0
-	-- 		self:DebugTalk("AoE 干他");
-	-- 		return AoELocation;
-	-- 	end
-	-- 	return AoELocation;
-	-- end
-
-	-- ***Sometimes you think about if it is worth it to put a loop here.
-	for _, unit in ipairs(units) do
-		if not unit:IsMyFriend() and spellType > 0 then
-			maxHealth = unit:GetActualIncomingDamage(maxHealth, spellType);
-		end
-		if CanCastSpellOnTarget(spell, unit) and
-			unit:GetHealth() <= maxHealth then
-			if utils.CheckFlag(spell:GetBehavior(), ABILITY_BEHAVIOR_AOE) then
-				AoELocation = self:FindAoELocation( true, unit:IsHero(), baseLocation, range, radius, delay, maxHealth);
-			elseif utils.CheckFlag(spell:GetBehavior(), DOTA_ABILITY_BEHAVIOR_DIRECTIONAL) then
-				AoELocation = self:FindAoEVector(true, unit:IsHero(), false, baseLocation, range, radius, delay, maxHealth);
-			end
-
-			if AoELocation.count > 0 then
-				if unit:IsHero() then
-					if maxHealth > 0 then
-						self:DebugTalk(spell:GetName() .. "AoE 精致");
-					else
-						self:DebugTalk(spell:GetName() .. "AoE 干他");
-					end
-				else
-					if maxHealth > 0 then
-						self:DebugTalk(spell:GetName() .. "AoE 收线");
-					else
-						self:DebugTalk(spell:GetName() .. "AoE 推线");
-					end
-				end
-				return AoELocation;
-			end
-		end
-	end
-	return AoELocation;
-end
-
-function CDOTA_Bot_Script:UseAoEHarass(spell, baseLocation, range, radius, delay, maxHealth)
-	assert(spell~=nil and baseLocation.x~=nil and baseLocation.y~=nil and range>=0 and radius>=0 and delay>=0 and maxHealth>=0)
-	local AoELocation; AoELocation.count = 0;
-	if utils.CheckFlag(spell:GetBehavior(), ABILITY_BEHAVIOR_AOE) then
-		local AoEHero = self:FindAoELocation( true, true, baseLocation, castRange, radius, delay, 0);
-		local AoECreep = self:FindAoELocation( true, false, baseLocation, castRange, radius, delay, maxHealth);
-		if AoEHero.count > 0 and AoECreep.count > 0 and 
-		    utils.locationToLocationDistance(AoEHero.targetloc,AoECreep.targetloc) < radius then 
-			self:DebugTalk(spell:GetName() .. "收兵+压人");
-			AoELocation.count =  AoEHero.count + AoECreep.count;
-			AoELocation.targetloc = midPoint({AoEHero.targetloc,AoECreep.targetloc}); 
-		end
-	elseif utils.CheckFlag(spell:GetBehavior(), DOTA_ABILITY_BEHAVIOR_DIRECTIONAL) then
-		local AoECreep = self:FindAoEVector( true, false, true, self:GetLocation(), castRange, radius, delay, maxHealth);
-		if AoECreep.count > 0 then 
-		    self:DebugTalk(spell:GetName() .. "收兵+压人");
-		    AoELocation = AoECreep;
-		end
-	end
-	return AoELocation;
-end
-
-function CDOTA_Bot_Script:UseUnitSpell(spell, radius, maxHealth, spellType, units)
-	assert(spell~=nil and radius>=0 and maxHealth>=0 and spellType >=0 and #units>=0)
-	if maxHealth == 0 then maxHealth = math.huge; end
-	for _, unit in ipairs(units) do
-		if not unit:IsMyFriend() then
-			maxHealth = unit:GetActualIncomingDamage(maxHealth, spellType);
-		end
-		if target ~= nil and CanCastSpellOnTarget(spell, target) and 
-		 	GetUnitToUnitDistance(I, target) < castRange and
-			unit:GetHealth() <= maxHealth then
-			if unit:IsHero() then
-				if maxHealth > 0 then
-					self:DebugTalk(spell:GetName() .. "精致");
-				else --*** maybe we don't consider harassing right now.
-					self:DebugTalk(spell:GetName() .. "干他");
-				end
-			else
-				self:DebugTalk(spell:GetName() .. "补刀");
-			end
-			return unit;
-		end
-	end
-	return nil;
-end
 -- ***circle aoe and point aoe are the same. circle aoe and no target are pretty much the same, need to pass in range as 0
 -- ***1. aoe nuke         2. aoe stun         3. aoe debuff         4. aoe buff         5. aoe save
 -- ***6. unit nuke        7. unit stun        8. unit debuff        9. unit buff        10. unit save
@@ -150,7 +42,7 @@ function ConsiderAoENuke(I, spell, castRange, radius, maxHealth, spellType, dela
 	if activeMode == BOT_MODE_LANING then
 		if not I:LowHealth() and not I:LowMana() then
 			AoELocation = I:UseAoEHarass(spell, myLocation, castRange, radius, delay, maxHealth);
-			if AoELocation ~= nil then
+			if AoELocation.count > 0 then
 				return {BOT_ACTION_DESIRE_MODERATE, AoELocation.targetloc};
 			end
 	-- If being harassed or low HP, try landing any last hit
@@ -368,7 +260,7 @@ function ConsiderUnitNuke(I, spell, castRange, radius, maxHealth, spellType)
 	local creeps = I:GetNearbyCreeps(castRange+radius,true);
 	
 	-- Kill secure
-	target = I:UseUnitSpell(spell, radius, maxHealth, spellType, enemys);
+	target = I:UseUnitSpell(spell, castRange, radius, maxHealth, spellType, enemys);
 	if target ~= nil then
 		return {BOT_ACTION_DESIRE_HIGH, target};
 	end
@@ -376,7 +268,7 @@ function ConsiderUnitNuke(I, spell, castRange, radius, maxHealth, spellType)
 	-- Laning last hit when being harassed or is low
 	if activeMode == BOT_MODE_LANING then
 		if (not I:LowMana() and I:WasRecentlyDamagedByAnyHero(1.0)) or I:LowHealth() then
-			target = I:UseUnitSpell(spell, radius, maxHealth, spellType, creeps);
+			target = I:UseUnitSpell(spell, castRange, radius, maxHealth, spellType, creeps);
 			if target ~= nil then
 				return {BOT_ACTION_DESIRE_LOW, target};
 			end
@@ -389,7 +281,7 @@ function ConsiderUnitNuke(I, spell, castRange, radius, maxHealth, spellType)
 		activeMode == BOT_MODE_TEAM_ROAM or
 		activeMode == BOT_MODE_DEFEND_ALLY or
 		activeMode == BOT_MODE_ATTACK then
-	 	target = I:UseUnitSpell(spell, radius, 0, spellType, {I:GetTarget()});
+	 	target = I:UseUnitSpell(spell, castRange, radius, 0, spellType, {I:GetTarget()});
 	 	if target ~= nil then
 		 	return {BOT_ACTION_DESIRE_LOW, target};
 		end
@@ -419,14 +311,14 @@ function ConsiderUnitStun(I, spell, castRange, radius)
 	end
 	
 	-- Interrupt channeling within 1s walking
-	target = I:UseUnitSpell(spell, radius, 0, 0, channelingEnemys);
+	target = I:UseUnitSpell(spell, castRange, radius, 0, 0, channelingEnemys);
 	if target ~= nil then
 		return {BOT_ACTION_DESIRE_HIGH, target};
 	end
 
 	-- If fighting, stun lowHP/strongest carry/best disabler that is not already disabled
 	if activeMode ~= BOT_MODE_RETREAT then
-		target = I:UseUnitSpell(spell, radius, 0, 0, {utils.strongestDisabler(movingEnemys, true), utils.strongestUnit(movingEnemys, true), utils.weakestUnit(movingEnemys, true)});
+		target = I:UseUnitSpell(spell, castRange, radius, 0, 0, {utils.strongestDisabler(movingEnemys, true), utils.strongestUnit(movingEnemys, true), utils.weakestUnit(movingEnemys, true)});
 		if target ~= nil then
 			return {BOT_ACTION_DESIRE_HIGH, target};
 		end
@@ -434,7 +326,7 @@ function ConsiderUnitStun(I, spell, castRange, radius)
 
 	-- If retreating, stun closest enemy within immediate cast range
 	if activeMode == BOT_MODE_RETREAT then
-		target = I:UseUnitSpell(spell, radius, 0, 0, movingEnemys);
+		target = I:UseUnitSpell(spell, castRange, radius, 0, 0, movingEnemys);
 		if target ~= nil then
 			return {BOT_ACTION_DESIRE_MODERATE, target};
 		end
@@ -446,7 +338,7 @@ function ConsiderUnitStun(I, spell, castRange, radius)
 		activeMode == BOT_MODE_TEAM_ROAM or
 		activeMode == BOT_MODE_DEFEND_ALLY or
 		activeMode == BOT_MODE_ATTACK then
-		target = I:UseUnitSpell(spell, radius, 0, 0, {I:GetTarget()});
+		target = I:UseUnitSpell(spell, castRange, radius, 0, 0, {I:GetTarget()});
 	 	if target ~= nil and not target:IsDisabled() then
 		 	return {BOT_ACTION_DESIRE_MODERATE, target};
 		end
@@ -473,7 +365,7 @@ function ConsiderUnitDebuff(I, spell, castRange, radius)
 
 	-- If fighting, stun lowHP/strongest carry/best disabler that is not already disabled
 	if activeMode ~= BOT_MODE_RETREAT then
-		local target = I:UseUnitSpell(spell, radius, 0, 0, {utils.weakestUnit(movingEnemys, true), utils.strongestDisabler(movingEnemys, true), utils.strongestUnit(movingEnemys, true)});
+		local target = I:UseUnitSpell(spell, castRange, radius, 0, 0, {utils.weakestUnit(movingEnemys, true), utils.strongestDisabler(movingEnemys, true), utils.strongestUnit(movingEnemys, true)});
 		if target ~= nil then
 			return {BOT_ACTION_DESIRE_MODERATE, target};
 		end
@@ -481,7 +373,7 @@ function ConsiderUnitDebuff(I, spell, castRange, radius)
 
 	-- If retreating, stun closest enemy within immediate cast range
 	if activeMode == BOT_MODE_RETREAT then
-		target = I:UseUnitSpell(spell, radius, 0, 0, movingEnemys);
+		target = I:UseUnitSpell(spell, castRange, radius, 0, 0, movingEnemys);
 		if target ~= nil then
 			return {BOT_ACTION_DESIRE_LOW, target};
 		end
@@ -493,7 +385,7 @@ function ConsiderUnitDebuff(I, spell, castRange, radius)
 		activeMode == BOT_MODE_TEAM_ROAM or
 		activeMode == BOT_MODE_DEFEND_ALLY or
 		activeMode == BOT_MODE_ATTACK then
-		target = I:UseUnitSpell(spell, radius, 0, 0, {I:GetTarget()});
+		target = I:UseUnitSpell(spell, castRange, radius, 0, 0, {I:GetTarget()});
 	 	if target ~= nil and not target:IsDisabled() then
 		 	return {BOT_ACTION_DESIRE_MODERATE, target};
 		end
@@ -520,9 +412,9 @@ function ConsiderUnitSave(I, spell, castRange, radius, maxHealth)
 	for _, friend in ipairs(richestSort(friends)) do
 		if friend:IsTrueHero() and friend:GetHealth() < maxHealth and 
 		(friend:IsImmobile() or friend:IsSilenced() or friend:WasRecentlyDamagedByAnyHero(1.0) or #(friend:GetIncomingTrackingProjectiles())>0) then
-			target = I:UseUnitSpell(spell, radius, maxHealth, 0, {friend});
+			target = I:UseUnitSpell(spell, castRange, radius, maxHealth, 0, {friend});
 			if target ~= nil then
-				BOT_ACTION_DESIRE_HIGH, target;
+				return {BOT_ACTION_DESIRE_HIGH, target};
 			end
 		end
 	end
@@ -585,8 +477,12 @@ end
 
 BotsInit = require( "game/botsinit" );
 local ability_item_usage_generic = BotsInit.CreateGeneric();
-ability_item_usage_generic.CanCastSpellOnTarget = CanCastSpellOnTarget;
 ability_item_usage_generic.ConsiderAoENuke = ConsiderAoENuke;
+ability_item_usage_generic.ConsiderAoEStun = ConsiderAoEStun;
+ability_item_usage_generic.ConsiderAoEDebuff = ConsiderAoEDebuff;
+ability_item_usage_generic.ConsiderAoEBuff = ConsiderAoEBuff;
 ability_item_usage_generic.ConsiderUnitNuke = ConsiderUnitNuke;
 ability_item_usage_generic.ConsiderUnitStun = ConsiderUnitStun;
+ability_item_usage_generic.ConsiderUnitDebuff = ConsiderUnitDebuff;
+ability_item_usage_generic.ConsiderUnitSave = ConsiderUnitSave;
 return ability_item_usage_generic;

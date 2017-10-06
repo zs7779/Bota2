@@ -1,8 +1,8 @@
 require(GetScriptDirectory() ..  "/utils")
 ability_item_usage_generic = dofile( GetScriptDirectory().."/ability_item_usage_generic" )
 
-function GetAbilityGuide(I)
-	local spells, talents = table.unpack(I:GetAbilities());
+local function GetAbilityGuide(I)
+	local spells, talents = unpack(I:GetAbilities());
 
 	local abilityLevelUp = {};
 	abilityLevelUp[1] = spells[1];
@@ -40,13 +40,13 @@ end
 
 function AbilityUsageThink()
 	local I = GetBot();
-	local abilities, talents = I:GetAbilities();
+	local abilities, talents = unpack(I:GetAbilities());
 	
 	local StormBolt = I:GetAbilityByName(abilities[1]);
 	local Warcry = I:GetAbilityByName(abilities[3]);
 	local GodsStrength = I:GetAbilityByName(abilities[4]);
 	
-	local StormBoltDesire, StormBoltTarget = table.unpack(ConsiderStormBolt(I, StormBolt));
+	local StormBoltDesire, StormBoltTarget = unpack(ConsiderStormBolt(I, StormBolt));
 	local WarcryDesire = ConsiderWarcry(I, Warcry)[1];
 	local GodsStrengthDesire = ConsiderGodsStrength(I, GodsStrength);
 

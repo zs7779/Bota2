@@ -2,7 +2,8 @@ require(GetScriptDirectory() ..  "/utils")
 ability_item_usage_generic = dofile( GetScriptDirectory().."/ability_item_usage_generic" )
 
 local function GetAbilityGuide(I)
-	local spells, talents = table.unpack(I:GetAbilities()); --*** need test if unpack exist
+	local spells, talents = unpack(I:GetAbilities()); --*** need test if unpack exist
+
 	local abilityLevelUp = {};
 	abilityLevelUp[1] = spells[1];
 	abilityLevelUp[2] = spells[3];
@@ -39,15 +40,14 @@ end
 
 function AbilityUsageThink()
 	local I = GetBot();
-	local spells, talents = I:GetAbilities();
-	
+	local spells, talents = unpack(I:GetAbilities());
 	local BreatheFire = I:GetAbilityByName(spells[1]);
 	local DragonTail = I:GetAbilityByName(spells[2]);
 	local ElderDragonForm = I:GetAbilityByName(spells[4]);
 	
-	local BreatheFireDesire, BreatheFireLoc = table.unpack(ConsiderBreatheFire(I, BreatheFire));
-	local DragonTailDesire, DragonTailTarget = table.unpack(ConsiderDragonTail(I, DragonTail));
-	local ElderDragonFormDesire = table.unpack(ConsiderElderDragonForm(I, ElderDragonForm));
+	local BreatheFireDesire, BreatheFireLoc = unpack(ConsiderBreatheFire(I, BreatheFire));
+	local DragonTailDesire, DragonTailTarget = unpack(ConsiderDragonTail(I, DragonTail));
+	local ElderDragonFormDesire = ConsiderElderDragonForm(I, ElderDragonForm);
 
 	if ElderDragonFormDesire > 0 then
 		I:Action_UseAbility(ElderDragonForm);
