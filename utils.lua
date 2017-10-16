@@ -110,6 +110,9 @@ function CDOTA_Bot_Script:UseAoESpell(spell, baseLocation, range, radius, delay,
 		if not unit:IsMyFriend() and spellType > 0 then
 			maxHealth = unit:GetActualIncomingDamage(maxHealth, spellType);
 		end
+		if maxHealth < 0 then
+			maxHealth = unit:GetMaxHealth() - maxHealth;
+		end
 		if CanCastSpellOnTarget(spell, unit) and
 			unit:GetHealth() <= maxHealth then
 			if utils.CheckFlag(spell:GetBehavior(), ABILITY_BEHAVIOR_AOE) then
@@ -166,10 +169,13 @@ end
 
 function CDOTA_Bot_Script:UseUnitSpell(spell, range, radius, maxHealth, spellType, units)
 	assert(spell~=nil and radius>=0 and maxHealth>=0 and spellType >=0 and #units>=0)
-	if maxHealth == 0 then maxHealth = math.huge; end
+	
 	for _, unit in ipairs(units) do
 		if not unit:IsMyFriend() then
 			maxHealth = unit:GetActualIncomingDamage(maxHealth, spellType);
+		end
+		if maxHealth < 0 then
+			maxHealth = unit:GetMaxHealth() - maxHealth;
 		end
 		if target ~= nil and CanCastSpellOnTarget(spell, target) and 
 		 	GetUnitToUnitDistance(I, target) < range and
@@ -178,7 +184,7 @@ function CDOTA_Bot_Script:UseUnitSpell(spell, range, radius, maxHealth, spellTyp
 				if maxHealth > 0 then
 					self:DebugTalk(spell:GetName() .. "精致");
 				else --*** maybe we don't consider harassing right now.
-					self:DebugTalk(spell:GetName() .. "干他");
+					self:DebugTalk(spell:GetName() .. "弄他");
 				end
 			else
 				self:DebugTalk(spell:GetName() .. "补刀");

@@ -40,11 +40,11 @@ end
 
 function AbilityUsageThink()
 	local I = GetBot();
-	local abilities, talents = unpack(I:GetAbilities());
+	local spells = I:GetAbilities()[1];
 	
-	local StormBolt = I:GetAbilityByName(abilities[1]);
-	local Warcry = I:GetAbilityByName(abilities[3]);
-	local GodsStrength = I:GetAbilityByName(abilities[4]);
+	local StormBolt = I:GetAbilityByName(spells[1]);
+	local Warcry = I:GetAbilityByName(spells[3]);
+	local GodsStrength = I:GetAbilityByName(spells[4]);
 	
 	local StormBoltDesire, StormBoltTarget = unpack(ConsiderStormBolt(I, StormBolt));
 	local WarcryDesire = ConsiderWarcry(I, Warcry)[1];

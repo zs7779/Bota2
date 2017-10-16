@@ -48,6 +48,7 @@ function ConsiderAoENuke(I, spell, castRange, radius, maxHealth, spellType, dela
 	-- If being harassed or low HP, try landing any last hit
 		elseif (not I:LowMana() and I:WasRecentlyDamagedByAnyHero(1.0)) or I:LowHealth() then
 			AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, maxHealth, spellType, creeps);
+			print(AoELocation.count)
 			if AoELocation.count > 0 then
 				return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc}; 
 			end
@@ -400,7 +401,7 @@ function ConsiderUnitSave(I, spell, castRange, radius, maxHealth)
 	end
 	local target;
 	local activeMode = I:GetActiveMode();
-	
+	if maxHealth == 0 then maxHealth = math.huge; end
 	-- GetNearby sorts units from close to far
 	local friends = {};
 	if castRange >= 1600 then 
@@ -410,8 +411,11 @@ function ConsiderUnitSave(I, spell, castRange, radius, maxHealth)
 	end
 	
 	for _, friend in ipairs(richestSort(friends)) do
-		if friend:IsTrueHero() and friend:GetHealth() < maxHealth and 
-		(friend:IsImmobile() or friend:IsSilenced() or friend:WasRecentlyDamagedByAnyHero(1.0) or #(friend:GetIncomingTrackingProjectiles())>0) then
+		if friend:IsTrueHero() and friend:GetHealth() < maxHealth and
+		    (friend:IsImmobile() or 
+			friend:IsSilenced() or
+			friend:WasRecentlyDamagedByAnyHero(1.0) or
+			#(friend:GetIncomingTrackingProjectiles())>0) then
 			target = I:UseUnitSpell(spell, castRange, radius, maxHealth, 0, {friend});
 			if target ~= nil then
 				return {BOT_ACTION_DESIRE_HIGH, target};
@@ -445,34 +449,11 @@ function ConsiderInvis(I, spell)
 	return BOT_ACTION_DESIRE_NONE;
 end
 
---
--- function AbilityUsageThink()
--- 	local I = GetBot();
--- 	local abilities, talents = I:GetAbilities();
+
+function AbilityUsageThink()
+	local I = GetBot();
 	
--- 	local BreatheFire = I:GetAbilityByName(abilities[1]);
--- 	local DragonTail = I:GetAbilityByName(abilities[2]);
--- 	local BreatheFireDesire, BreatheFireLoc = ConsiderAoEDamage(I, BreatheFire);
--- 	local DragonTailDesire, DragonTailTarget = ConsiderUnitStun(I, DragonTail);
-	
--- 	local considerations = {};
--- 	local desires = {};
--- 	local targets = {};
-	
--- 	for _, spell in pairs(abilities) do
--- 		if not spell:IsPassive() and spell:IsFullyCastable() then
--- 			considerations[#considerations+1] = spell;
--- 			local desire, target = 
--- 		end
--- 	end
-	
--- 	if BreatheFireDesire > 0 then
--- 		I:Action_UseAbilityOnLocation(BreatheFire,BreatheFireLoc);
--- 	end
--- 	if DragonTailDesire > 0 then
--- 		I:Action_UseAbilityOnEntity(DragonTailDesire, DragonTailTarget);
--- 	end
--- end
+end
 
 
 BotsInit = require( "game/botsinit" );
@@ -485,4 +466,5 @@ ability_item_usage_generic.ConsiderUnitNuke = ConsiderUnitNuke;
 ability_item_usage_generic.ConsiderUnitStun = ConsiderUnitStun;
 ability_item_usage_generic.ConsiderUnitDebuff = ConsiderUnitDebuff;
 ability_item_usage_generic.ConsiderUnitSave = ConsiderUnitSave;
+ability_item_usage_generic.ConsiderInvis = ConsiderInvis;
 return ability_item_usage_generic;

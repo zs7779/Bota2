@@ -40,7 +40,8 @@ end
 
 function AbilityUsageThink()
 	local I = GetBot();
-	local spells, talents = unpack(I:GetAbilities());
+	local spells = I:GetAbilities()[1];
+	
 	local BreatheFire = I:GetAbilityByName(spells[1]);
 	local DragonTail = I:GetAbilityByName(spells[2]);
 	local ElderDragonForm = I:GetAbilityByName(spells[4]);

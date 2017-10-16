@@ -40,11 +40,11 @@ end
 
 function AbilityUsageThink()
 	local I = GetBot();
-	local abilities, talents = unpack(I:GetAbilities());
+	local spells = I:GetAbilities()[1];
 	
-	local Gush = I:GetAbilityByName(abilities[1]);
-	local AnchorSmash = I:GetAbilityByName(abilities[3]);
-	local Ravage = I:GetAbilityByName(abilities[4]);
+	local Gush = I:GetAbilityByName(spells[1]);
+	local AnchorSmash = I:GetAbilityByName(spells[3]);
+	local Ravage = I:GetAbilityByName(spells[4]);
 	
 	local GushDesire, GushTarget = unpack(ConsiderGush(I, Gush));
 	local AnchorSmashDesire = ConsiderAnchorSmash(I, AnchorSmash)[1];
