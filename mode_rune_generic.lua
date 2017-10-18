@@ -26,7 +26,7 @@ end
 
 function NearestRune(I,runes)
 	local nearest = nil;
-	local dist = math.huge;
+	local dist = 100000;
 	for _, rune in pairs(runes) do
 		local tmp = GetUnitToLocationDistance(I,GetRuneSpawnLocation(rune));
 		if tmp < dist then
@@ -66,6 +66,11 @@ function GetDesire()
 	if (not I:IsAlive()) or I:IsUsingAbility() or I:IsChanneling() then return 0; end
     if DibsHaveBeenCalled() then return 0; end
 
+    local rune = I:OnRune(safeRunes[GetTeam()]);
+	if rune ~= nil then 
+		return 0.99;
+	end
+
 	local friends = I:GetNearbyHeroes(1200,false,BOT_MODE_NONE);
 	local enemys = I:GetNearbyHeroes(1200,true,BOT_MODE_NONE);
 
@@ -78,15 +83,15 @@ function GetDesire()
     local runes = PendingRunes(safeRunes[GetTeam()]);
     if #runes == 0 then return 0; end
 
-	if NearestRune(I,runes) < 2500 then
-		return 0.35;
+	if NearestRune(I,runes) < 2500 and position ~= 1 and position ~= 2 or NearestRune(I,runes) < 1200 then
+		return 0.25;
 	end
 
 	if hasBottle then
 		if I:IsLow() then
-			return 0.45;
-		else
 			return 0.35;
+		else
+			return 0.25;
 		end
 	end
 	return 0;

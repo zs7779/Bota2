@@ -48,7 +48,7 @@ function AbilityUsageThink()
 	
 	local StormBoltDesire, StormBoltTarget = unpack(ConsiderStormBolt(I, StormBolt));
 	local WarcryDesire = ConsiderWarcry(I, Warcry)[1];
-	local GodsStrengthDesire = ConsiderGodsStrength(I, GodsStrength);
+	local GodsStrengthDesire = ConsiderGodsStrength(I, GodsStrength)[1];
 
 	if StormBoltDesire > 0 then
 		I:Action_UseAbilityOnEntity(StormBolt, StormBoltTarget);
@@ -68,7 +68,6 @@ function ConsiderStormBolt(I, spell)
 	local damage = spell:GetAbilityDamage();
 	local spellType = spell:GetDamageType();
 	local delay = 0;
-	
 	local considerStun = ability_item_usage_generic.ConsiderUnitStun(I, spell, castRange, radius);
 	if considerStun[1] > 0 then	return considerStun; end
 	return ability_item_usage_generic.ConsiderUnitNuke(I, spell, castRange, radius, damage, spellType);
@@ -77,7 +76,7 @@ function ConsiderStormBolt(I, spell)
 end
 
 function ConsiderWarcry(I, spell)
-	local castRange = 0;
+	local castRange = 50;
 	local radius = spell:GetSpecialValueInt("warcry_radius");
 	local damage = 0;
 	local spellType = 0;
@@ -87,16 +86,17 @@ end
 
 function ConsiderGodsStrength(I, spell)
 	if not spell:IsFullyCastable() or not I:CanCast() then
-		return BOT_ACTION_DESIRE_NONE, nil;
+		return {BOT_ACTION_DESIRE_NONE};
 	end
 	local activeMode = I:GetActiveMode();
 
 	-- Something something like if pushing and close to tower, of if attack and close to target
 	if activeMode >= BOT_MODE_PUSH_TOWER_TOP and 
 		activeMode <= BOT_MODE_PUSH_TOWER_BOT then
-		local towers = GetNearbyTowers(500, true);
-		if #towers > 0 then 
-			return BOT_ACTION_DESIRE_MODERATE; 
+		local towers = I:GetNearbyTowers(300, true);
+		if #towers > 0 then
+			I:DebugTalk("牛逼推塔")
+			return {BOT_ACTION_DESIRE_MODERATE}; 
 		end
 	end
 	
@@ -104,11 +104,12 @@ function ConsiderGodsStrength(I, spell)
 		 activeMode == BOT_MODE_TEAM_ROAM or
 		 activeMode == BOT_MODE_DEFEND_ALLY or
 		 activeMode == BOT_MODE_ATTACK then
-		 local target = I:GetTarget();
-		 if GetUnitToUnitDistance(I, target) <= 300 then 
-		 	return BOT_ACTION_DESIRE_MODERATE;
+		 local target = I:UseUnitSpell(spell, 300, 0, 0, 0, {I:GetTarget()});
+		 if target~=nil then
+		 	I:DebugTalk("牛逼干人")
+		 	return {BOT_ACTION_DESIRE_MODERATE};
 		 end
 	 end
 	
-	return BOT_ACTION_DESIRE_NONE;
+	return {BOT_ACTION_DESIRE_NONE};
 end

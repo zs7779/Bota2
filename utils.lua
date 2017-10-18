@@ -23,7 +23,7 @@ function CDOTA_Bot_Script:DebugTalk(message)
 	then
 		self.LastSpeaktime=0;
 	end
-	if(GameTime()-self.LastSpeaktime>0.1)
+	if(GameTime()-self.LastSpeaktime>0.5)
 	then
 		self:ActionImmediate_Chat(message,true);
 		self.LastSpeaktime=GameTime();
@@ -41,44 +41,49 @@ function CanCastSpellOnTarget(spell, target)
 	utils.CheckFlag(spell:GetTargetFlags(), ABILITY_TARGET_FLAG_NOT_MAGIC_IMMUNE_ALLIES));
 end
 
-function CDOTA_Bot_Script:FindAoEVector(bEnemies, bHeroes, bHarass, vBaseLocation, nMaxDistanceFromBase, nWidth, fTimeInFuture, nMaxHealth )
+function CDOTA_Bot_Script:FindAoEVector(bEnemies, bHeroes, vBaseLocation, nMaxDistanceFromBase, nWidth, fTimeInFuture, nMaxHealth )
 	local AoEVector = {};
 	AoEVector.count = 0;
-	AoEVector.baseloc = vBaseLocation;
 	AoEVector.targetloc = nil;
-	local maxHealth = (nMaxHealth == 0) and math.huge or nMaxHealth;
+	if nMaxHealth == 0 then nMaxHealth = 100000; end
 
-	nMaxDistanceFromBase = math.min(1550, nMaxDistanceFromBase);
-	local heroes = self:GetNearbyHeroes(nMaxDistanceFromBase, bEnemies, BOT_MODE_NONE);
-	local units = bHeroes and heroes or self:GetNearbyCreeps(nMaxDistanceFromBase, bEnemies);
-	local targetUnits = bHarass and heroes or units;
+	nMaxDistanceFromBase = math.min(1580, nMaxDistanceFromBase);
+	local tmpUnits = bHeroes and self:GetNearbyHeroes(nMaxDistanceFromBase, bEnemies, BOT_MODE_NONE) or
+	                          self:GetNearbyCreeps(nMaxDistanceFromBase, bEnemies);
+    local units = {};
+	for _, unit in ipairs(tmpUnits) do
+		if unit:CanBeSeen() then table.insert(units, unit); end
+	end
 
 	local maxCount = 0;
 	local targets = {};
-	for _, targetUnit in ipairs(targetUnits) do
+	for _, targetUnit in ipairs(units) do
 	    local vtargetLoc = targetUnit:PredictLocation(fTimeInFuture);
-		local vector = vtargetLoc - vBaseLocation;
-		local vEnd = vBaseLocation + vector/utils.locationToLocationDistance(vBaseLocation, vtargetLoc)*nMaxDistanceFromBase;
+		local vector = (vtargetLoc - vBaseLocation)/GetLocationToLocationDistance(vBaseLocation, vtargetLoc);
+		local vEnd = vBaseLocation + vector*nMaxDistanceFromBase;
 		
-		local thisCount = 0;
 		local thisTargets = {};
 		for _, unit in ipairs(units) do
-			local unitLoc = unit:PredictLocation(fTimeInFuture);
-			local distToLine = PointToLineDistance(vBaseLocation, vEnd, unitLoc);
-			if distToLine.within and distToLine.distance < nWidth and unit:GetHealth() <= maxHealth then
-				thisCount = thisCount + 1;
-				thisTargets[#thisTargets+1] = unitLoc;
+			if unit:GetHealth() <= nMaxHealth then
+				if unit == targetUnit then
+					thisTargets[#thisTargets+1] = unitLoc;
+				else
+					local unitLoc = unit:PredictLocation(fTimeInFuture);
+					local distToLine = PointToLineDistance(vBaseLocation, vEnd, unitLoc);
+					if distToLine.within and distToLine.distance < nWidth then
+						thisTargets[#thisTargets+1] = unitLoc;
+					end
+				end
 			end
 		end
-		if thisCount > maxCount then
-			maxCount = thisCount;
+		if #thisTargets > #targets then
 			targets = thisTargets;
 		end
 	end
 	
-	AoEVector.count = maxCount;
-	AoEVector.baseloc = vBaseLocation;
+	AoEVector.count = #targets;
 	AoEVector.targetloc = utils.midPoint(targets);
+	if AoEVector.count>0 then	DebugDrawCircle( AoEVector.targetloc, 100, 255, 0, 255 ); end
 	-- There is no guarantee this midPoint actually covers all targets...
 	-- Drawing tells me it is guaranteed, but I have trouble proving it mathematically..
 	return AoEVector;
@@ -86,28 +91,15 @@ end
 
 -- And by AoE, I mean AoE, not your half ass defination
 function CDOTA_Bot_Script:UseAoESpell(spell, baseLocation, range, radius, delay, maxHealth, spellType, units)
-	assert(spell~=nil and baseLocation.x~=nil and baseLocation.y~=nil and range>=0 and radius>=0 and delay>=0 and maxHealth>=0 and spellType >=0 and #units>=0)
+	if maxHealth == 0 then maxHealth = 100000; end
+
 	local AoELocation = {};
 	AoELocation.count = 0;
 	AoELocation.targetloc = nil;
-	-- **If FindAoELocation cannot be trusted, use this V, but may need to reconsider search range = castRange+radius or castRange
-	-- if #units == 1 then
-	-- 	local unit = units[1];
-	-- 	AoELocation.count = 1;
-	-- 	AoELocation.targetloc = unit:PredictLocation(delay);
-	-- 	if maxHealth > 0 and unit:GetHealth() <= unit:GetActualIncomingDamage(maxHealth, spellType)then
-	-- 		self:DebugTalk("AoE 精致");
-	-- 		return AoELocation;
-	-- 	elseif maxHealth == 0
-	-- 		self:DebugTalk("AoE 干他");
-	-- 		return AoELocation;
-	-- 	end
-	-- 	return AoELocation;
-	-- end
 
-	-- ***Sometimes you think about if it is worth it to put a loop here.
 	for _, unit in ipairs(units) do
-		if not unit:IsMyFriend() and spellType > 0 then
+		local friendly = unit:IsMyFriend();
+		if not friendly and spellType > 0 then
 			maxHealth = unit:GetActualIncomingDamage(maxHealth, spellType);
 		end
 		if maxHealth < 0 then
@@ -116,25 +108,12 @@ function CDOTA_Bot_Script:UseAoESpell(spell, baseLocation, range, radius, delay,
 		if CanCastSpellOnTarget(spell, unit) and
 			unit:GetHealth() <= maxHealth then
 			if utils.CheckFlag(spell:GetBehavior(), ABILITY_BEHAVIOR_AOE) then
-				AoELocation = self:FindAoELocation( true, unit:IsHero(), baseLocation, range, radius, delay, maxHealth);
-			elseif utils.CheckFlag(spell:GetBehavior(), ABILITY_BEHAVIOR_DIRECTIONAL) then
-				AoELocation = self:FindAoEVector(true, unit:IsHero(), false, baseLocation, range, radius, delay, maxHealth);
+				AoELocation = self:FindAoELocation(not friendly, unit:IsHero(), baseLocation, range, radius, delay, maxHealth);
+			elseif utils.CheckFlag(spell:GetBehavior(), ABILITY_BEHAVIOR_POINT) then
+				AoELocation = self:FindAoEVector(not friendly, unit:IsHero(), baseLocation, range, radius, delay, maxHealth);
 			end
 
 			if AoELocation.count > 0 then
-				if unit:IsHero() then
-					if maxHealth > 0 then
-						self:DebugTalk(spell:GetName() .. "AoE 精致");
-					else
-						self:DebugTalk(spell:GetName() .. "AoE 干他");
-					end
-				else
-					if maxHealth > 0 then
-						self:DebugTalk(spell:GetName() .. "AoE 收线");
-					else
-						self:DebugTalk(spell:GetName() .. "AoE 推线");
-					end
-				end
 				return AoELocation;
 			end
 		end
@@ -142,61 +121,31 @@ function CDOTA_Bot_Script:UseAoESpell(spell, baseLocation, range, radius, delay,
 	return AoELocation;
 end
 
-function CDOTA_Bot_Script:UseAoEHarass(spell, baseLocation, range, radius, delay, maxHealth)
-	assert(spell~=nil and baseLocation.x~=nil and baseLocation.y~=nil and range>=0 and radius>=0 and delay>=0 and maxHealth>=0)
-	local AoELocation = {};
-	AoELocation.count = 0;
-	AoELocation.targetloc = nil;
 
-	if utils.CheckFlag(spell:GetBehavior(), ABILITY_BEHAVIOR_AOE) then
-		local AoEHero = self:FindAoELocation( true, true, baseLocation, range, radius, delay, 0);
-		local AoECreep = self:FindAoELocation( true, false, baseLocation, range, radius, delay, maxHealth);
-		if AoEHero.count > 0 and AoECreep.count > 0 and 
-		    utils.locationToLocationDistance(AoEHero.targetloc,AoECreep.targetloc) < radius then 
-			self:DebugTalk(spell:GetName() .. "收兵+压人");
-			AoELocation.count =  AoEHero.count + AoECreep.count;
-			AoELocation.targetloc = midPoint({AoEHero.targetloc,AoECreep.targetloc}); 
-		end
-	elseif utils.CheckFlag(spell:GetBehavior(), ABILITY_BEHAVIOR_DIRECTIONAL) then
-		local AoECreep = self:FindAoEVector( true, false, true, self:GetLocation(), range, radius, delay, maxHealth);
-		if AoECreep.count > 0 then 
-		    self:DebugTalk(spell:GetName() .. "收兵+压人");
-		    AoELocation = AoECreep;
-		end
-	end
-	return AoELocation;
-end
 
 function CDOTA_Bot_Script:UseUnitSpell(spell, range, radius, maxHealth, spellType, units)
-	assert(spell~=nil and radius>=0 and maxHealth>=0 and spellType >=0 and #units>=0)
-	
+	if maxHealth == 0 then maxHealth = 100000; end
+
 	for _, unit in ipairs(units) do
-		if not unit:IsMyFriend() then
+		if not unit:IsMyFriend() and spellType > 0 then
 			maxHealth = unit:GetActualIncomingDamage(maxHealth, spellType);
 		end
-		if maxHealth < 0 then
-			maxHealth = unit:GetMaxHealth() - maxHealth;
-		end
-		if target ~= nil and CanCastSpellOnTarget(spell, target) and 
-		 	GetUnitToUnitDistance(I, target) < range and
-			unit:GetHealth() <= maxHealth then
-			if unit:IsHero() then
-				if maxHealth > 0 then
-					self:DebugTalk(spell:GetName() .. "精致");
-				else --*** maybe we don't consider harassing right now.
-					self:DebugTalk(spell:GetName() .. "弄他");
-				end
-			else
-				self:DebugTalk(spell:GetName() .. "补刀");
+		if unit ~= nil then
+			local dist = GetUnitToUnitDistance(self, unit);
+			if dist > 0 and dist < range and
+				CanCastSpellOnTarget(spell, unit) and
+				unit:GetHealth() <= maxHealth then
+				-- print(GetUnitToUnitDistance(self, unit),range)
+				-- ***GetUnitToUnitDistance stopped working for some reason
+				return unit;
 			end
-			return unit;
 		end
 	end
 	return nil;
 end
 
 function CDOTA_Bot_Script:GetFarHeroes(nRadius, bEnemy, nMode)
-	if nRadius == 0 then nRadius = math.huge; end
+	if nRadius == 0 then nRadius = 100000; end
 	local team = (self:IsMyFriend() ~= bEnemy) and UNIT_LIST_ALLIED_HEROES or UNIT_LIST_ENEMY_HEROES;
 	local heroes = {};
 	for _, hero in ipairs(GetUnitList(team)) do
@@ -273,12 +222,12 @@ end
 
 function CDOTA_Bot_Script:TimeBeforeRescue()
 	local myID = self:GetPlayerID();
-	local minTime = math.huge;
+	local minTime = 1000000;
 
 	for _, friend in ipairs(self:GetFarHeroes(0, false, BOT_MODE_NONE)) do
 		local friendID = friend:GetPlayerID();
 		if friendID ~= myID and IsHeroAlive(friendID) then
-			local thisTime = math.huge;
+			local thisTime = 1000000;
 			if friend:CanBeSeen() and not friend:IsLow() then
 				thisTime = GetUnitToUnitDistance(self, friend)/friend:GetCurrentMovementSpeed();
 			else
@@ -346,8 +295,11 @@ end
 
 function CDOTA_Bot_Script:PredictLocation(fTime)
 	local stability = self:GetMovementDirectionStability();
-	-- local lastSeen = GetHeroLastSeenInfo(friendID);
-	return stability*self:GetExtrapolatedLocation(fTime) + (1.0-stability)*self:GetLocation();
+	local location = self:GetExtrapolatedLocation(fTime);
+	if stability < 0.5 and fTime > 0.5 then
+		return stability*location + (1.0-stability)*self:GetLocation(), false;
+	end
+	return location, true;
 end
 
 
@@ -406,19 +358,21 @@ function nextTower(nTeam, towerList)
     return nil;
 end
 
-function locationToLocationDistance(vloc1, vloc2)
+function GetLocationToLocationDistance(vloc1, vloc2)
 	if vloc1 == nil or vloc2 == nil then return nil; end
 	return math.sqrt(math.pow(vloc1.x-vloc2.x,2)+math.pow(vloc1.y-vloc2.y,2));
 end
 
 function midPoint(vlocs)
 	-- vlocs need to be a strict array of Vectors, with no gap in between
-	if vlocs == nil or #vlocs == 0 then return Vector(0,0); end
+	if vlocs == nil or #vlocs == 0 then return nil; end
 	local mid = Vector(0,0);
-	for _, v in pairs(vlocs) do
+	for _, v in ipairs(vlocs) do
 		mid.x = mid.x + v.x;
 		mid.y = mid.y + v.y;
 	end
+	mid.x = mid.x/#vlocs;
+	mid.y = mid.y/#vlocs;
 	return mid;
 end
 

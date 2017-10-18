@@ -88,7 +88,7 @@ function ConsiderElderDragonForm(I, spell)
 	-- Something something like if pushing and close to tower, of if attack and close to target
 	if activeMode >= BOT_MODE_PUSH_TOWER_TOP and 
 		activeMode <= BOT_MODE_PUSH_TOWER_BOT then
-		local towers = GetNearbyTowers(500, true);
+		local towers = I:GetNearbyTowers(400, true);
 		if #towers > 0 then 
 			return BOT_ACTION_DESIRE_MODERATE; 
 		end
@@ -96,10 +96,9 @@ function ConsiderElderDragonForm(I, spell)
 	
 	if activeMode == BOT_MODE_ROAM or
 		 activeMode == BOT_MODE_TEAM_ROAM or
-		 activeMode == BOT_MODE_DEFEND_ALLY or
 		 activeMode == BOT_MODE_ATTACK then
 		 local target = I:GetTarget();
-		 if GetUnitToUnitDistance(I, target) <= 500 and not I:IsLow() then 
+		 if utils.GetLocationToLocationDistance(self:GetLocation(), unit:GetLocation()) <= 300 and not I:IsLow() then 
 		 	return BOT_ACTION_DESIRE_MODERATE; 
 		 end
 	 end

@@ -48,7 +48,7 @@ function AbilityUsageThink()
 	
 	local GushDesire, GushTarget = unpack(ConsiderGush(I, Gush));
 	local AnchorSmashDesire = ConsiderAnchorSmash(I, AnchorSmash)[1];
-	local RavageDesire = ConsiderRavage(I, Ravage);
+	local RavageDesire = ConsiderRavage(I, Ravage)[1];
 
 	if RavageDesire > 0 then
 		I:Action_UseAbility(Ravage);
@@ -71,13 +71,11 @@ function ConsiderGush(I, spell)
 	local considerDebuff = ability_item_usage_generic.ConsiderUnitDebuff(I, spell, castRange, radius);
 	if considerDebuff[1] > 0 then return considerDebuff; end
 	return ability_item_usage_generic.ConsiderUnitNuke(I, spell, castRange, radius, damage, spellType);
-
-	
 end
 
 function ConsiderAnchorSmash(I, spell)
-	local castRange = 0;
-	local radius = spell:GetSpecialValueInt("radius");
+	local castRange = 50;
+	local radius = spell:GetAOERadius();
 	local damage = spell:GetAbilityDamage();
 	local spellType = spell:GetDamageType();
 	local delay = 0;
@@ -88,41 +86,13 @@ function ConsiderAnchorSmash(I, spell)
 end
 
 function ConsiderRavage(I, spell)
-	if not spell:IsFullyCastable() or not I:CanCast() then
-		return BOT_ACTION_DESIRE_NONE, nil;
-	end
-	local castRange = 0;
-	local radius = spell:GetSpecialValueInt("radius");
+	local castRange = 50;
+	local radius = spell:GetAOERadius();
 	local damage = spell:GetAbilityDamage();
 	local spellType = spell:GetDamageType();
 	local delay = 0;
-
-	local activeMode = I:GetActiveMode();
-	local myLocation = I:GetLocation();
-
-	local enemys = I:GetNearbyHeroes(castRange+radius,true,BOT_MODE_NONE);
-	local targetEnemys = {}
-	for i, enemy in ipairs(enemys) do
-		if not enemy:IsImmobile() then
-			table.insert(targetEnemys, enemy);
-		end
-	end
-
-	-- KS
-	AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, damage, spellType, enemys);
-	if AoELocation.count >= 2 then
-		return BOT_ACTION_DESIRE_HIGH;
-	end
-
-	AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, spellType, {utils.strongestDisabler(targetEnemys, true), utils.strongestUnit(targetEnemys, true), utils.weakestUnit(targetEnemys, true)});
-	if (activeMode == BOT_MODE_ATTACK or
-		activeMode == BOT_MODE_TEAM_ROAM) and
-		AoELocation.count >= 2 then
-		return math.max(BOT_ACTION_DESIRE_MODERATE+AoELocation.count/10, BOT_ACTION_DESIRE_ABSOLUTE);
-	elseif (activeMode == BOT_MODE_DEFEND_ALLY or
-		activeMode == BOT_MODE_RETREAT) and AoELocation.count >= 4 then
-		return BOT_ACTION_DESIRE_MODERATE;
-	end
 	
-	return BOT_ACTION_DESIRE_NONE;
+	local considerStun = ability_item_usage_generic.ConsiderAoEStun(I, spell, castRange, radius, delay);
+	if considerStun[1] > 0 then	return considerStun; end
+	return ability_item_usage_generic.ConsiderAoENuke(I, spell, castRange, radius, damage, spellType, delay);
 end

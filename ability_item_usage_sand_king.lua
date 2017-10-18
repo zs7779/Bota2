@@ -45,13 +45,13 @@ function AbilityUsageThink()
 	local Burrowstrike = I:GetAbilityByName(spells[1]);
 	local SandStorm = I:GetAbilityByName(spells[2]);
 	local Epicenter = I:GetAbilityByName(spells[4]);
-	
+	-- print(spells[1],spells[2],spells[3],spells[4])
 	local BurrowstrikeDesire, BurrowstrikeLoc = unpack(ConsiderBurrowstrike(I, Burrowstrike));
-	local SandStormDesire = ConsiderSandStorm(I, SandStorm);
+	local SandStormDesire = ConsiderSandStorm(I, SandStorm)[1];
 	local EpicenterDesire = ConsiderEpicenter(I, Epicenter)[1];
 
 	if BurrowstrikeDesire > 0 then
-		I:Action_UseAbilityOnEntity(Burrowstrike, BurrowstrikeLoc);
+		I:Action_UseAbilityOnLocation(Burrowstrike, BurrowstrikeLoc);
 	end
 	if SandStormDesire > 0 then
 		I:Action_UseAbility(SandStorm);
@@ -85,8 +85,8 @@ function ConsiderSandStorm(I, spell)
 end
 
 function ConsiderEpicenter(I, spell)
-	local castRange = 0;
-	local radius = spell:GetSpecialValueInt("epicenter_radius");
+	local castRange = 50;
+	local radius = spell:GetAOERadius();
 	local damage = spell:GetAbilityDamage();
 	local spellType = spell:GetDamageType();
 	local delay = spell:GetChannelTime();

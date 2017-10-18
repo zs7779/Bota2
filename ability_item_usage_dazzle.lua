@@ -86,13 +86,13 @@ function ConsiderShallowGrave(I, spell)
 	local spellType = 0;
 	local delay = 0;
 	-- *** consider closeby enemys
-	return ability_item_usage_generic.ConsiderUnitSave(I, spell, castRange, radius, 200);
+	return ability_item_usage_generic.ConsiderUnitSave(I, spell, castRange, radius, 300);
 end
 
 function ConsiderShadowWave(I, spell)
 	local castRange = spell:GetCastRange();
 	local radius = spell:GetSpecialValueInt("damage_radius");
-	local damage = spell:GetAbilityDamage();
+	local damage = spell:GetSpecialValueInt("damage");
 	local spellType = spell:GetDamageType();
 	local delay = 0;
 	
@@ -108,5 +108,7 @@ function ConsiderWeave(I, spell)
 	local damage = 0;
 	local spellType = 0;
 	local delay = 0;
+	considerDebuff = ability_item_usage_generic.ConsiderAoEDebuff(I, spell, castRange, radius, delay);
+	if considerDebuff[1] > 0 then return considerDebuff; end
 	return ability_item_usage_generic.ConsiderAoEBuff(I, spell, castRange, radius, delay);
 end
