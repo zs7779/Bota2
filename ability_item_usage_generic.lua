@@ -63,7 +63,7 @@ function ConsiderAoENuke(I, spell, castRange, radius, maxHealth, spellType, dela
 	local laneCreeps = I:GetNearbyLaneCreeps(castRange,true);
 
 	-- AoE kill secure
-	AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, maxHealth, spellType, enemys);
+	AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, maxHealth, spellType, enemys, true);
 	if AoELocation.count > 0 then
 		I:DebugTalk("精致x"..AoELocation.count);
 		return {BOT_ACTION_DESIRE_HIGH, AoELocation.targetloc}; 
@@ -74,7 +74,7 @@ function ConsiderAoENuke(I, spell, castRange, radius, maxHealth, spellType, dela
 		activeMode == BOT_MODE_TEAM_ROAM or
 		activeMode == BOT_MODE_DEFEND_ALLY or
 		activeMode == BOT_MODE_ATTACK then
-		local target = I:UseUnitSpell(spell, castRange, radius, 0, spellType, {I:GetTarget()});
+		local target = I:UseUnitSpell(spell, castRange, radius, 0, spellType, {I:GetTarget()}, true);
 		if target ~= nil then
 			I:DebugTalk("干人x1")
 			local AoELocation, stable = target:PredictLocation(delay);
@@ -87,7 +87,7 @@ function ConsiderAoENuke(I, spell, castRange, radius, maxHealth, spellType, dela
 	-- Laning last hit
 	-- If high mana and high health, try last hit + harass enemy hero
 	if activeMode == BOT_MODE_LANING and not spell:IsUltimate() then
-		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, maxHealth, spellType, creeps);
+		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, maxHealth, spellType, creeps, true);
 		if AoELocation.count >= 2 and not I:LowMana()  or
 			AoELocation.count > 0 and
 			(not I:LowMana() and 
@@ -101,7 +101,7 @@ function ConsiderAoENuke(I, spell, castRange, radius, maxHealth, spellType, dela
 
 	-- If farming, use aoe to get multiple last hits
 	if activeMode == BOT_MODE_FARM and not spell:IsUltimate() then
-		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, maxHealth, spellType, creeps);
+		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, maxHealth, spellType, creeps, true);
 		if AoELocation.count >= 2 and not I:LowMana() or
 			AoELocation.count > 0 and I:LowHealth() then
 			I:DebugTalk("伐木x"..AoELocation.count)
@@ -112,7 +112,7 @@ function ConsiderAoENuke(I, spell, castRange, radius, maxHealth, spellType, dela
 	-- If pushing/defending, clear wave
 	if activeMode >= BOT_MODE_PUSH_TOWER_TOP and
 		activeMode <= BOT_MODE_DEFEND_TOWER_BOT and not spell:IsUltimate() then
-		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, spellType, laneCreeps);
+		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, spellType, laneCreeps, true);
 		if AoELocation.count >= 2 and not I:LowMana() or
 			AoELocation.count > 0 and I:LowHealth() then
 			I:DebugTalk("推线x"..AoELocation.count)
@@ -122,7 +122,7 @@ function ConsiderAoENuke(I, spell, castRange, radius, maxHealth, spellType, dela
 
 	-- Add if not BOT_MODE_RETREAT, go ahead if can hit multiple heroes
 	if activeMode ~= BOT_MODE_LANING and activeMode ~= BOT_MODE_RETREAT and not spell:IsUltimate() then
-		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, spellType, enemys);
+		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, spellType, enemys, true);
 		if AoELocation.count >= 3 then
 			I:DebugTalk("耗血x"..AoELocation.count)
 			return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc};
@@ -155,7 +155,7 @@ function ConsiderAoEStun(I, spell, castRange, radius, delay)
 	end
 	
 	-- Interrupt channeling
-	AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, channelingEnemys);
+	AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, channelingEnemys, true);
 	if AoELocation.count > 0 and
 		(not spell:IsUltimate() or activeMode == BOT_MODE_ROAM or
 		activeMode == BOT_MODE_TEAM_ROAM or
@@ -170,15 +170,13 @@ function ConsiderAoEStun(I, spell, castRange, radius, delay)
 		activeMode == BOT_MODE_TEAM_ROAM or
 		activeMode == BOT_MODE_DEFEND_ALLY or
 		activeMode == BOT_MODE_ATTACK then
-		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, {utils.strongestDisabler(movingEnemys, true), utils.strongestUnit(movingEnemys, true), utils.weakestUnit(movingEnemys, true)});
-		if(spell:GetName()=="tidehunter_ravage") then
-			print(AoELocation.count,#{utils.strongestDisabler(movingEnemys, true), utils.strongestUnit(movingEnemys, true), utils.weakestUnit(movingEnemys, true)})
-		end
+		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, {utils.strongestDisabler(movingEnemys, true), utils.strongestUnit(movingEnemys, true), utils.weakestUnit(movingEnemys, true)}, true);
+
 		if AoELocation.count > 0 then
 			I:DebugTalk("控关键英雄x"..AoELocation.count)
 			return {BOT_ACTION_DESIRE_HIGH, AoELocation.targetloc};
 		end
-		local target = I:UseUnitSpell(spell, castRange, radius, 0, 0, {I:GetTarget()});
+		local target = I:UseUnitSpell(spell, castRange, radius, 0, 0, {I:GetTarget()}, true);
 		if target ~= nil then
 			I:DebugTalk("晕人x1")
 			local AoELocation, stable = target:PredictLocation(delay);
@@ -190,7 +188,7 @@ function ConsiderAoEStun(I, spell, castRange, radius, delay)
 
 	-- If retreating, stun closest enemy within immediate cast range
 	if activeMode == BOT_MODE_RETREAT then
-		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, movingEnemys);
+		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, movingEnemys, true);
 		if AoELocation.count > 0 and not spell:IsUltimate() then
 			I:DebugTalk("随便控x"..AoELocation.count)
 			return {BOT_ACTION_DESIRE_MODERATE, AoELocation.targetloc};
@@ -214,7 +212,7 @@ function ConsiderAoEDebuff(I, spell, castRange, radius, delay)
 
 	-- Add if not BOT_MODE_RETREAT, go ahead if can hit multiple heroes
 	if activeMode ~= BOT_MODE_RETREAT then
-		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, enemys);
+		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, enemys, true);
 		if AoELocation.count > 0 then
 			I:DebugTalk("骚扰x"..AoELocation.count)
 			return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc};
@@ -226,7 +224,7 @@ function ConsiderAoEDebuff(I, spell, castRange, radius, delay)
 		activeMode == BOT_MODE_TEAM_ROAM or
 		activeMode == BOT_MODE_DEFEND_ALLY or
 		activeMode == BOT_MODE_ATTACK then
-		local target = I:UseUnitSpell(spell, castRange, radius, 0, 0, {I:GetTarget()});
+		local target = I:UseUnitSpell(spell, castRange, radius, 0, 0, {I:GetTarget()}, true);
 		if target ~= nil then
 			I:DebugTalk("搞人x1")
 			local AoELocation, stable = target:PredictLocation(delay);
@@ -237,7 +235,7 @@ function ConsiderAoEDebuff(I, spell, castRange, radius, delay)
 	end
 
 	if activeMode == BOT_MODE_RETREAT then
-		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, enemys);
+		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, enemys, true);
 		if AoELocation.count > 0 and not spell:IsUltimate() then
 			I:DebugTalk("随便搞x"..AoELocation.count)
 			return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc};
@@ -267,7 +265,7 @@ function ConsiderAoEBuff(I, spell, castRange, radius, delay)
 		local friendMode = friend:GetActiveMode();
 		if friendMode == BOT_MODE_RETREAT or 
 			friendMode == BOT_MODE_EVASIVE_MANEUVERS then
-			AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, friends);
+			AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, friends, false);
 			if AoELocation.count > 0 and #(I:GetNearbyHeroes(1580,true,BOT_MODE_NONE)) > 0 then
 				I:DebugTalk("不舒服x"..AoELocation.count)
 				return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc};
@@ -278,7 +276,7 @@ function ConsiderAoEBuff(I, spell, castRange, radius, delay)
 		 	friendMode == BOT_MODE_DEFEND_ALLY or
 		 	friendMode == BOT_MODE_ATTACK then
 			
-			AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, friends);
+			AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, friends, false);
 			if AoELocation.count > 0 and not I:LowMana() or AoELocation.count >= 2 then
 				I:DebugTalk("加加加x"..AoELocation.count)
 				return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc};
@@ -304,7 +302,7 @@ function ConsiderUnitNuke(I, spell, castRange, radius, maxHealth, spellType)
 	local creeps = I:GetNearbyCreeps(castRange,true);
 	
 	-- Kill secure
-	target = I:UseUnitSpell(spell, castRange, radius, maxHealth, spellType, enemys);
+	target = I:UseUnitSpell(spell, castRange, radius, maxHealth, spellType, enemys, true);
 	if target ~= nil then
 		I:DebugTalk("精致")
 		return {BOT_ACTION_DESIRE_HIGH, target};
@@ -315,7 +313,7 @@ function ConsiderUnitNuke(I, spell, castRange, radius, maxHealth, spellType)
 		activeMode == BOT_MODE_TEAM_ROAM or
 		activeMode == BOT_MODE_DEFEND_ALLY or
 		activeMode == BOT_MODE_ATTACK then
-	 	target = I:UseUnitSpell(spell, castRange, radius, 0, spellType, {I:GetTarget()});
+	 	target = I:UseUnitSpell(spell, castRange, radius, 0, spellType, {I:GetTarget()}, true);
 	 	if target ~= nil then
 	 		I:DebugTalk("干人")
 		 	return {BOT_ACTION_DESIRE_LOW, target};
@@ -325,7 +323,7 @@ function ConsiderUnitNuke(I, spell, castRange, radius, maxHealth, spellType)
 	-- Laning last hit when being harassed or is low
 	if activeMode == BOT_MODE_LANING and not spell:IsUltimate() then
 		if (not I:LowMana() and I:WasRecentlyDamagedByAnyHero(1.0)) or I:LowHealth() then
-			target = I:UseUnitSpell(spell, castRange, radius, maxHealth, spellType, creeps);
+			target = I:UseUnitSpell(spell, castRange, radius, maxHealth, spellType, creeps, true);
 			if target ~= nil then
 				I:DebugTalk("补刀")
 				return {BOT_ACTION_DESIRE_LOW, target};
@@ -358,7 +356,7 @@ function ConsiderUnitStun(I, spell, castRange, radius)
 	end
 	
 	-- Interrupt channeling within 1s walking
-	target = I:UseUnitSpell(spell, castRange, radius, 0, 0, channelingEnemys);
+	target = I:UseUnitSpell(spell, castRange, radius, 0, 0, channelingEnemys, true);
 	if target ~= nil and
 		(not spell:IsUltimate() or activeMode == BOT_MODE_ROAM or
 		activeMode == BOT_MODE_TEAM_ROAM or
@@ -373,12 +371,12 @@ function ConsiderUnitStun(I, spell, castRange, radius)
 		activeMode == BOT_MODE_TEAM_ROAM or
 		activeMode == BOT_MODE_DEFEND_ALLY or
 		activeMode == BOT_MODE_ATTACK then
-		target = I:UseUnitSpell(spell, castRange, radius, 0, 0, {utils.strongestDisabler(movingEnemys, true), utils.strongestUnit(movingEnemys, true), utils.weakestUnit(movingEnemys, true)});
+		target = I:UseUnitSpell(spell, castRange, radius, 0, 0, {utils.strongestDisabler(movingEnemys, true), utils.strongestUnit(movingEnemys, true), utils.weakestUnit(movingEnemys, true)}, true);
 		if target ~= nil then
 			I:DebugTalk("控关键英雄")
 			return {BOT_ACTION_DESIRE_HIGH, target};
 		end
-		target = I:UseUnitSpell(spell, castRange, radius, 0, 0, {I:GetTarget()});
+		target = I:UseUnitSpell(spell, castRange, radius, 0, 0, {I:GetTarget()}, true);
 	 	if target ~= nil and not target:IsDisabled() then
 	 		I:DebugTalk("晕人")
 		 	return {BOT_ACTION_DESIRE_MODERATE, target};
@@ -387,7 +385,7 @@ function ConsiderUnitStun(I, spell, castRange, radius)
 
 	-- If retreating, stun closest enemy within immediate cast range
 	if activeMode == BOT_MODE_RETREAT and not spell:IsUltimate() then
-		target = I:UseUnitSpell(spell, castRange, radius, 0, 0, movingEnemys);
+		target = I:UseUnitSpell(spell, castRange, radius, 0, 0, movingEnemys, true);
 		if target ~= nil then
 			I:DebugTalk("随便控")
 			return {BOT_ACTION_DESIRE_MODERATE, target};
@@ -419,12 +417,12 @@ function ConsiderUnitDebuff(I, spell, castRange, radius)
 		activeMode == BOT_MODE_TEAM_ROAM or
 		activeMode == BOT_MODE_DEFEND_ALLY or
 		activeMode == BOT_MODE_ATTACK then
-		target = I:UseUnitSpell(spell, castRange, radius, 0, 0, {utils.weakestUnit(movingEnemys, true), utils.strongestDisabler(movingEnemys, true), utils.strongestUnit(movingEnemys, true)});
+		target = I:UseUnitSpell(spell, castRange, radius, 0, 0, {utils.weakestUnit(movingEnemys, true), utils.strongestDisabler(movingEnemys, true), utils.strongestUnit(movingEnemys, true)}, true);
 		if target ~= nil then
 	 		I:DebugTalk("搞关键英雄")
 			return {BOT_ACTION_DESIRE_MODERATE, target};
 		end
-		target = I:UseUnitSpell(spell, castRange, radius, 0, 0, {I:GetTarget()});
+		target = I:UseUnitSpell(spell, castRange, radius, 0, 0, {I:GetTarget()}, true);
 	 	if target ~= nil and not target:IsDisabled() then
 	 		I:DebugTalk("搞人")
 		 	return {BOT_ACTION_DESIRE_MODERATE, target};
@@ -433,7 +431,7 @@ function ConsiderUnitDebuff(I, spell, castRange, radius)
 
 	-- If retreating, stun closest enemy within immediate cast range
 	if activeMode == BOT_MODE_RETREAT then
-		target = I:UseUnitSpell(spell, castRange, radius, 0, 0, movingEnemys);
+		target = I:UseUnitSpell(spell, castRange, radius, 0, 0, movingEnemys, true);
 		if target ~= nil then
 	 		I:DebugTalk("随便搞")
 			return {BOT_ACTION_DESIRE_LOW, target};
@@ -468,7 +466,7 @@ function ConsiderUnitSave(I, spell, castRange, radius, maxHealth)
 			friend:IsSilenced() or
 			friend:WasRecentlyDamagedByAnyHero(1.0) or
 			#(friend:GetIncomingTrackingProjectiles())>0) then
-			target = I:UseUnitSpell(spell, castRange, radius, maxHealth, 0, {friend});
+			target = I:UseUnitSpell(spell, castRange, radius, maxHealth, 0, {friend}, false);
 			if target ~= nil then
 	 		I:DebugTalk("救人")
 				return {BOT_ACTION_DESIRE_HIGH, target};
@@ -487,10 +485,10 @@ function ConsiderInvis(I, spell)
 	local enemys = I:GetNearbyHeroes(1200,true,BOT_MODE_NONE);
 
 	local activeMode = I:GetActiveMode();
-	if activeMode == BOT_MODE_RETREAT or 
-		activeMode == BOT_MODE_EVASIVE_MANEUVERS and
+	if (activeMode == BOT_MODE_RETREAT or 
+		activeMode == BOT_MODE_EVASIVE_MANEUVERS) and
 		I:WasRecentlyDamagedByAnyHero(3.0) and
-		#enemys > 0 then 
+		#enemys > 0 then
  		I:DebugTalk("无敌")
 		return {BOT_ACTION_DESIRE_LOW}; -- invis is the last resource, not high priority 
 	end
@@ -509,8 +507,10 @@ function ConsiderInvis(I, spell)
 end
 
 
-function AbilityUsageThink()
+function ItemUsageThink()
 	local I = GetBot();
+	if not I:CanUseItem() then return; end
+	local position = I:GetPlayerPosition();
 	
 end
 

@@ -76,7 +76,7 @@ function ConsiderStormBolt(I, spell)
 end
 
 function ConsiderWarcry(I, spell)
-	local castRange = 50;
+	local castRange = 0;
 	local radius = spell:GetSpecialValueInt("warcry_radius");
 	local damage = 0;
 	local spellType = 0;

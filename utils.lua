@@ -41,7 +41,7 @@ function CanCastSpellOnTarget(spell, target)
 	utils.CheckFlag(spell:GetTargetFlags(), ABILITY_TARGET_FLAG_NOT_MAGIC_IMMUNE_ALLIES));
 end
 
-function CDOTA_Bot_Script:FindAoEVector(bEnemies, bHeroes, vBaseLocation, nMaxDistanceFromBase, nWidth, fTimeInFuture, nMaxHealth )
+function CDOTA_Bot_Script:FindAoEVector(bEnemies, bHeroes, vBaseLocation, nMaxDistanceFromBase, nWidth, fTimeInFuture, nMaxHealth)
 	local AoEVector = {};
 	AoEVector.count = 0;
 	AoEVector.targetloc = nil;
@@ -90,7 +90,7 @@ function CDOTA_Bot_Script:FindAoEVector(bEnemies, bHeroes, vBaseLocation, nMaxDi
 end
 
 -- And by AoE, I mean AoE, not your half ass defination
-function CDOTA_Bot_Script:UseAoESpell(spell, baseLocation, range, radius, delay, maxHealth, spellType, units)
+function CDOTA_Bot_Script:UseAoESpell(spell, baseLocation, range, radius, delay, maxHealth, spellType, units, isEnemy)
 	if maxHealth == 0 then maxHealth = 100000; end
 
 	local AoELocation = {};
@@ -98,8 +98,7 @@ function CDOTA_Bot_Script:UseAoESpell(spell, baseLocation, range, radius, delay,
 	AoELocation.targetloc = nil;
 
 	for _, unit in ipairs(units) do
-		local friendly = unit:IsMyFriend();
-		if not friendly and spellType > 0 then
+		if isEnemy and spellType > 0 then
 			maxHealth = unit:GetActualIncomingDamage(maxHealth, spellType);
 		end
 		if maxHealth < 0 then
@@ -107,10 +106,15 @@ function CDOTA_Bot_Script:UseAoESpell(spell, baseLocation, range, radius, delay,
 		end
 		if CanCastSpellOnTarget(spell, unit) and
 			unit:GetHealth() <= maxHealth then
-			if utils.CheckFlag(spell:GetBehavior(), ABILITY_BEHAVIOR_AOE) then
-				AoELocation = self:FindAoELocation(not friendly, unit:IsHero(), baseLocation, range, radius, delay, maxHealth);
+			
+			if utils.CheckFlag(spell:GetBehavior(), ABILITY_BEHAVIOR_NO_TARGET) and range == 0 then
+				if unit:IsHero() then AoELocation.count = #(self:GetNearbyHeroes(radius, isEnemy, BOT_MODE_NONE)); else
+									  AoELocation.count = #(self:GetNearbyCreeps(radius, isEnemy)); end
+				AoELocation.targetloc = baseLocation;
+			elseif utils.CheckFlag(spell:GetBehavior(), ABILITY_BEHAVIOR_AOE) then
+				AoELocation = self:FindAoELocation(isEnemy, unit:IsHero(), baseLocation, range, radius, delay, maxHealth);
 			elseif utils.CheckFlag(spell:GetBehavior(), ABILITY_BEHAVIOR_POINT) then
-				AoELocation = self:FindAoEVector(not friendly, unit:IsHero(), baseLocation, range, radius, delay, maxHealth);
+				AoELocation = self:FindAoEVector(isEnemy, unit:IsHero(), baseLocation, range, radius, delay, maxHealth);
 			end
 
 			if AoELocation.count > 0 then
@@ -123,11 +127,11 @@ end
 
 
 
-function CDOTA_Bot_Script:UseUnitSpell(spell, range, radius, maxHealth, spellType, units)
+function CDOTA_Bot_Script:UseUnitSpell(spell, range, radius, maxHealth, spellType, units, isEnemy)
 	if maxHealth == 0 then maxHealth = 100000; end
 
 	for _, unit in ipairs(units) do
-		if not unit:IsMyFriend() and spellType > 0 then
+		if isEnemy and spellType > 0 then
 			maxHealth = unit:GetActualIncomingDamage(maxHealth, spellType);
 		end
 		if unit ~= nil then
@@ -162,7 +166,9 @@ end
 
 function CDOTA_Bot_Script:GetPlayerPosition()
 	for position = 1,5 do
-		if GetTeamMember(position) == self then return position; end
+		if GetTeamMember(position) == self then
+			return IsPlayerBot(position) and position or 1;
+		end
 	end
 	return nil;
 end
@@ -188,7 +194,7 @@ function CDOTA_Bot_Script:GetComboMana()
 	local manaCost = 0;
 	for i = 1, #spells do
 		local spell = self:GetAbilityByName(spells[i]);
-		if not spell:IsPassive() and spell:IsFullyCastable() and spell:GetAbilityDamage()>0 then
+		if not spell:IsPassive() and spell:IsCooldownReady() and spell:GetAbilityDamage()>0 then
 			manaCost = manaCost + spell:GetManaCost();
 		end
 	end
@@ -283,14 +289,17 @@ function CDOTA_Bot_Script:IsTrueHero()
 end
 
 function CDOTA_Bot_Script:CanAct()
-	return self:IsTrueHero() and not self:IsUsingAbility() and not self:IsChanneling() and not self:IsDisabled();
+	return self:IsTrueHero() and not self:IsUsingAbility() and not self:IsChanneling() and not self:IsDisabled() and not self:IsHexed();
 end
 
 function CDOTA_Bot_Script:CanCast()
-	return self:CanAct() and not self:IsSilenced() and not self:IsHexed();
+	return self:CanAct() and not self:IsSilenced();
 end
 function CDOTA_Bot_Script:CanHit()
 	return self:CanAct() and not self:IsDisarmed();
+end
+function CDOTA_Bot_Script:CanUseItem()
+	return self:CanAct() and not self:IsMuted();
 end
 
 function CDOTA_Bot_Script:PredictLocation(fTime)

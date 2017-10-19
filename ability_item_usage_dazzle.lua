@@ -15,15 +15,15 @@ local function GetAbilityGuide(I)
 	abilityLevelUp[8] = spells[2];
 	abilityLevelUp[9] = spells[2];
 	abilityLevelUp[10] = spells[2];
-	abilityLevelUp[11] = talents[1];
+	abilityLevelUp[11] = talents[2];
 	abilityLevelUp[12] = spells[4];
 	abilityLevelUp[13] = spells[1];
 	abilityLevelUp[14] = spells[1];
-	abilityLevelUp[15] = talents[4];
+	abilityLevelUp[15] = talents[3];
 	abilityLevelUp[16] = spells[1];
 	abilityLevelUp[18] = spells[4];
-	abilityLevelUp[20] = talents[6];
-	abilityLevelUp[25] = talents[7];
+	abilityLevelUp[20] = talents[5];
+	abilityLevelUp[25] = talents[8];
 	return abilityLevelUp;
 end
 

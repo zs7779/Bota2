@@ -74,7 +74,7 @@ function ConsiderGush(I, spell)
 end
 
 function ConsiderAnchorSmash(I, spell)
-	local castRange = 50;
+	local castRange = 0;
 	local radius = spell:GetAOERadius();
 	local damage = spell:GetAbilityDamage();
 	local spellType = spell:GetDamageType();
@@ -86,7 +86,7 @@ function ConsiderAnchorSmash(I, spell)
 end
 
 function ConsiderRavage(I, spell)
-	local castRange = 50;
+	local castRange = 0;
 	local radius = spell:GetAOERadius();
 	local damage = spell:GetAbilityDamage();
 	local spellType = spell:GetDamageType();
