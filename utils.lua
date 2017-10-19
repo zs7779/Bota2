@@ -31,14 +31,21 @@ function CDOTA_Bot_Script:DebugTalk(message)
 end
 
 ---------------------------------------------------------------------
+function ValidTarget(target)
+	return target ~= nil and target:CanBeSeen() and target:IsAlive() and not target:IsInvulnerable();
+end
 
-function CanCastSpellOnTarget(spell, target)
-	return spell:IsFullyCastable() and 
-	target:CanBeSeen() and target:IsAlive() and
-	not target:IsInvulnerable() and 
-	(not target:IsMagicImmune() or 
-	utils.CheckFlag(spell:GetTargetFlags(), ABILITY_TARGET_FLAG_MAGIC_IMMUNE_ENEMIES) or
-	utils.CheckFlag(spell:GetTargetFlags(), ABILITY_TARGET_FLAG_NOT_MAGIC_IMMUNE_ALLIES));
+function CDOTABaseAbility_BotScript:CanCastOnTarget(target)
+	return ValidTarget(target) and 
+	       not self:IsPassive() and
+	       self:IsCooldownReady() and
+	       (not target:IsMagicImmune() or
+	       utils.CheckFlag(self:GetTargetFlags(), ABILITY_TARGET_FLAG_MAGIC_IMMUNE_ENEMIES) or
+	       utils.CheckFlag(self:GetTargetFlags(), ABILITY_TARGET_FLAG_NOT_MAGIC_IMMUNE_ALLIES) or
+	       utils.CheckFlag(self:GetTargetFlags(), ABILITY_TARGET_FLAG_NONE));
+end
+function CDOTABaseAbility_BotScript:ReadyCastOnTarget(target)
+	return self:IsFullyCastable() and self:CanCastOnTarget(target);
 end
 
 function CDOTA_Bot_Script:FindAoEVector(bEnemies, bHeroes, vBaseLocation, nMaxDistanceFromBase, nWidth, fTimeInFuture, nMaxHealth)
@@ -104,7 +111,7 @@ function CDOTA_Bot_Script:UseAoESpell(spell, baseLocation, range, radius, delay,
 		if maxHealth < 0 then
 			maxHealth = unit:GetMaxHealth() - maxHealth;
 		end
-		if CanCastSpellOnTarget(spell, unit) and
+		if spell:ReadyCastOnTarget(unit) and
 			unit:GetHealth() <= maxHealth then
 			
 			if utils.CheckFlag(spell:GetBehavior(), ABILITY_BEHAVIOR_NO_TARGET) and range == 0 then
@@ -137,7 +144,7 @@ function CDOTA_Bot_Script:UseUnitSpell(spell, range, radius, maxHealth, spellTyp
 		if unit ~= nil then
 			local dist = GetUnitToUnitDistance(self, unit);
 			if dist > 0 and dist < range and
-				CanCastSpellOnTarget(spell, unit) and
+				spell:ReadyCastOnTarget(unit) and
 				unit:GetHealth() <= maxHealth then
 				-- print(GetUnitToUnitDistance(self, unit),range)
 				-- ***GetUnitToUnitDistance stopped working for some reason
@@ -206,7 +213,7 @@ function CDOTA_Bot_Script:GetComboDamageToTarget(target)
 	local totalDamage = 0;
 	for i = 1, #spells do
 		local spell = self:GetAbilityByName(spells[i]);
-		if not spell:IsPassive() and spell:IsFullyCastable() and spell:GetAbilityDamage()>0 then
+		if spell:CanCastOnTarget(target) and spell:GetAbilityDamage()>0 then
 			totalDamage = totalDamage + target:GetActualIncomingDamage(spell:GetAbilityDamage(),spell:GetDamageType());
 		end
 	end
@@ -248,15 +255,20 @@ function CDOTA_Bot_Script:TimeBeforeRescue()
 	return minTime;
 end
 
+function CDOTA_Bot_Script:GetFacingVector()
+    local radians = self:GetFacing() * math.pi / 180
+    local forward_vector = Vector(math.cos(radians), math.sin(radians))
+    return forward_vector
+end
 
 function CDOTA_Bot_Script:LowHealth()
 	return self:GetHealth()/self:GetMaxHealth() < 0.4;
 end
 function CDOTA_Bot_Script:noMana()
-	return self:GetMana()/self:GetMaxMana() < 0.2 or self:GetComboMana() == 0;
+	return self:GetMana()/self:GetMaxMana() < 0.2 and self:GetMana() < self:GetComboMana();
 end
 function CDOTA_Bot_Script:LowMana()
-	return self:noMana() or self:GetMana() < self:GetComboMana();
+	return self:GetMana()/self:GetMaxMana() < 0.5 or self:GetMana() < self:GetComboMana();
 end
 function CDOTA_Bot_Script:IsLow()
 	return self:LowHealth() and self:NoMana();
@@ -374,9 +386,10 @@ end
 
 function midPoint(vlocs)
 	-- vlocs need to be a strict array of Vectors, with no gap in between
-	if vlocs == nil or #vlocs == 0 then return nil; end
+	if vlocs == nil or #vlocs == 0 or vlocs[0].x == nil and vlocs[0]:GetLocation == nil then return nil; end
 	local mid = Vector(0,0);
 	for _, v in ipairs(vlocs) do
+		if v.x == nil then v = v:GetLocation(); end
 		mid.x = mid.x + v.x;
 		mid.y = mid.y + v.y;
 	end

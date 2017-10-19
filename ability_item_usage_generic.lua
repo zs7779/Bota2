@@ -70,10 +70,10 @@ function ConsiderAoENuke(I, spell, castRange, radius, maxHealth, spellType, dela
 	end
 	
 	-- If attacking, just go
-	if activeMode == BOT_MODE_ROAM or
+	if  activeMode == BOT_MODE_ATTACK or
+		activeMode == BOT_MODE_ROAM or
 		activeMode == BOT_MODE_TEAM_ROAM or
-		activeMode == BOT_MODE_DEFEND_ALLY or
-		activeMode == BOT_MODE_ATTACK then
+		activeMode == BOT_MODE_DEFEND_ALLY then
 		local target = I:UseUnitSpell(spell, castRange, radius, 0, spellType, {I:GetTarget()}, true);
 		if target ~= nil then
 			I:DebugTalk("干人x1")
@@ -156,20 +156,16 @@ function ConsiderAoEStun(I, spell, castRange, radius, delay)
 	
 	-- Interrupt channeling
 	AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, channelingEnemys, true);
-	if AoELocation.count > 0 and
-		(not spell:IsUltimate() or activeMode == BOT_MODE_ROAM or
-		activeMode == BOT_MODE_TEAM_ROAM or
-		activeMode == BOT_MODE_DEFEND_ALLY or
-		activeMode == BOT_MODE_ATTACK) then
+	if  AoELocation.count > 0 and not spell:IsUltimate() then
 		I:DebugTalk("打断x"..AoELocation.count)
 		return {BOT_ACTION_DESIRE_HIGH, AoELocation.targetloc};
 	end
 
 	-- If fighting, stun lowHP/strongest carry/best disabler that is not already disabled
-	if activeMode == BOT_MODE_ROAM or
+	if  activeMode == BOT_MODE_ATTACK or
+		activeMode == BOT_MODE_ROAM or
 		activeMode == BOT_MODE_TEAM_ROAM or
-		activeMode == BOT_MODE_DEFEND_ALLY or
-		activeMode == BOT_MODE_ATTACK then
+		activeMode == BOT_MODE_DEFEND_ALLY then
 		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, {utils.strongestDisabler(movingEnemys, true), utils.strongestUnit(movingEnemys, true), utils.weakestUnit(movingEnemys, true)}, true);
 
 		if AoELocation.count > 0 then
@@ -220,10 +216,10 @@ function ConsiderAoEDebuff(I, spell, castRange, radius, delay)
 	end
 	
 	-- If attacking, just go
-	if activeMode == BOT_MODE_ROAM or
+	if  activeMode == BOT_MODE_ATTACK or
+		activeMode == BOT_MODE_ROAM or
 		activeMode == BOT_MODE_TEAM_ROAM or
-		activeMode == BOT_MODE_DEFEND_ALLY or
-		activeMode == BOT_MODE_ATTACK then
+		activeMode == BOT_MODE_DEFEND_ALLY then
 		local target = I:UseUnitSpell(spell, castRange, radius, 0, 0, {I:GetTarget()}, true);
 		if target ~= nil then
 			I:DebugTalk("搞人x1")
@@ -271,10 +267,10 @@ function ConsiderAoEBuff(I, spell, castRange, radius, delay)
 				return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc};
 			end
 		end
-		if friendMode == BOT_MODE_ROAM or
+		if  friendMode == BOT_MODE_ATTACK or
+		    friendMode == BOT_MODE_ROAM or
 		 	friendMode == BOT_MODE_TEAM_ROAM or
-		 	friendMode == BOT_MODE_DEFEND_ALLY or
-		 	friendMode == BOT_MODE_ATTACK then
+		 	friendMode == BOT_MODE_DEFEND_ALLY then
 			
 			AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, friends, false);
 			if AoELocation.count > 0 and not I:LowMana() or AoELocation.count >= 2 then
@@ -309,10 +305,10 @@ function ConsiderUnitNuke(I, spell, castRange, radius, maxHealth, spellType)
 	end
 	
 	-- If have target, go
-	if activeMode == BOT_MODE_ROAM or
+	if  activeMode == BOT_MODE_ATTACK or
+		activeMode == BOT_MODE_ROAM or
 		activeMode == BOT_MODE_TEAM_ROAM or
-		activeMode == BOT_MODE_DEFEND_ALLY or
-		activeMode == BOT_MODE_ATTACK then
+		activeMode == BOT_MODE_DEFEND_ALLY then
 	 	target = I:UseUnitSpell(spell, castRange, radius, 0, spellType, {I:GetTarget()}, true);
 	 	if target ~= nil then
 	 		I:DebugTalk("干人")
@@ -357,20 +353,16 @@ function ConsiderUnitStun(I, spell, castRange, radius)
 	
 	-- Interrupt channeling within 1s walking
 	target = I:UseUnitSpell(spell, castRange, radius, 0, 0, channelingEnemys, true);
-	if target ~= nil and
-		(not spell:IsUltimate() or activeMode == BOT_MODE_ROAM or
-		activeMode == BOT_MODE_TEAM_ROAM or
-		activeMode == BOT_MODE_DEFEND_ALLY or
-		activeMode == BOT_MODE_ATTACK) then
+	if target ~= nil and not spell:IsUltimate() then
 		I:DebugTalk("打断")
 		return {BOT_ACTION_DESIRE_HIGH, target};
 	end
 
 	-- If fighting, stun lowHP/strongest carry/best disabler that is not already disabled
-	if activeMode == BOT_MODE_ROAM or
+	if  activeMode == BOT_MODE_ATTACK or
+		activeMode == BOT_MODE_ROAM or
 		activeMode == BOT_MODE_TEAM_ROAM or
-		activeMode == BOT_MODE_DEFEND_ALLY or
-		activeMode == BOT_MODE_ATTACK then
+		activeMode == BOT_MODE_DEFEND_ALLY then
 		target = I:UseUnitSpell(spell, castRange, radius, 0, 0, {utils.strongestDisabler(movingEnemys, true), utils.strongestUnit(movingEnemys, true), utils.weakestUnit(movingEnemys, true)}, true);
 		if target ~= nil then
 			I:DebugTalk("控关键英雄")
@@ -413,10 +405,10 @@ function ConsiderUnitDebuff(I, spell, castRange, radius)
 	end
 
 	-- If fighting, stun lowHP/strongest carry/best disabler that is not already disabled
-	if activeMode == BOT_MODE_ROAM or
+	if  activeMode == BOT_MODE_ATTACK or
+		activeMode == BOT_MODE_ROAM or
 		activeMode == BOT_MODE_TEAM_ROAM or
-		activeMode == BOT_MODE_DEFEND_ALLY or
-		activeMode == BOT_MODE_ATTACK then
+		activeMode == BOT_MODE_DEFEND_ALLY then
 		target = I:UseUnitSpell(spell, castRange, radius, 0, 0, {utils.weakestUnit(movingEnemys, true), utils.strongestDisabler(movingEnemys, true), utils.strongestUnit(movingEnemys, true)}, true);
 		if target ~= nil then
 	 		I:DebugTalk("搞关键英雄")
@@ -480,7 +472,7 @@ end
 
 function ConsiderInvis(I, spell)
 	if not spell:IsFullyCastable() or not I:CanCast() or I:IsInvisible() then
-		return {BOT_ACTION_DESIRE_NONE, ""};
+		return {BOT_ACTION_DESIRE_NONE};
 	end
 	local enemys = I:GetNearbyHeroes(1200,true,BOT_MODE_NONE);
 
@@ -506,14 +498,98 @@ function ConsiderInvis(I, spell)
 	return {BOT_ACTION_DESIRE_NONE};
 end
 
+function ConsiderBlink(I, spell, distance)
+	if not spell:IsFullyCastable() or not I:CanCast() or I:IsInvisible() then
+		return {BOT_ACTION_DESIRE_NONE, ""};
+	end
+	local activeMode = I:GetActiveMode();
 
-function ItemUsageThink()
-	local I = GetBot();
-	if not I:CanUseItem() then return; end
-	local position = I:GetPlayerPosition();
+	local enemys = I:GetNearbyHeroes(1200,true,BOT_MODE_NONE);
+	local badPlace = utils.midPoint(enemys);
 	
+	if (activeMode == BOT_MODE_ATTACK or
+		activeMode == BOT_MODE_ROAM or
+		activeMode == BOT_MODE_TEAM_ROAM or
+		activeMode == BOT_MODE_LANING) then
+		-- save blink for the jump
+		local target = I:UseUnitSpell(spell, dsitance, 0, 0, 0, {I:GetTarget()}, true);
+		--*** find location that's close to target but far from other enemies <- dunno how to
+		I:DebugTalk("跳跳")
+		return {BOT_ACTION_DESIRE_HIGH, (target:GetLocation() - badPlace)/GetUnitToLocationDistance(target, badPlace)*200};
+	end
+
+	if (activeMode == BOT_MODE_RETREAT or
+		activeMode == BOT_MODE_EVASIVE_MANEUVERS) and
+		I:WasRecentlyDamagedByAnyHero(3.0) and
+		#enemys > 0 then
+		
+ 		I:DebugTalk("不舒服")
+		return {BOT_ACTION_DESIRE_MODERATE, (I:GetLocation() - badPlace)/GetUnitToLocationDistance(I, badPlace)*distance};
+	end
+	
+	if spell:GetCooldown() < 8 and
+		(activeMode == BOT_MODE_SECRET_SHOP or
+		activeMode == BOT_MODE_SIDE_SHOP or
+		activeMode == BOT_MODE_RUNE or
+		activeMode == BOT_MODE_ASSEMBLE or
+		activeMode == BOT_MODE_FARM or
+		activeMode == BOT_MODE_WARD) and
+		#enemys == 0 then
+ 		I:DebugTalk("赶路")
+		return {BOT_ACTION_DESIRE_LOW, I:GetFacingVector()*distance}; -- ***<- it can't be distance. what can it be?
+	end
 end
 
+function FakeItemUsageThink() -- <- because I can't program blink.
+	local I = GetBot();
+	if not I:CanUseItem() or I:IsInvisible() then return; end
+	for i = 0,5 do
+		local item = I:GetItemInSlot(i);
+		ConsiderItem[item:GetName()](I, item);
+	end
+end
+
+ConsiderItem["item_tango"] = function(I,tango)
+	local tangoCharge = tango:GetCurrentCharges();
+
+	-- Give tango to mid, carry, offlane
+	if DotaTime() < 0 and I:GetPlayerPosition() == 5 and
+		I:DistanceFromFountain() < 300 then
+		if tangoCharge >= 8 then
+			friend = GetTeamMember(2);
+			I:ActionQueue_UseAbilityOnEntity(tango, friend);
+			I:ActionQueue_UseAbilityOnEntity(tango, friend);
+		elseif tangoCharge >= 6 then
+			for position = 1,3,2 do
+				friend = GetTeamMember(position);
+				I:ActionQueue_UseAbilityOnEntity(tango, friend);
+				I:ActionQueue_UseAbilityOnEntity(tango, friend);
+			end
+		end
+	end
+
+	if I:GetMaxHealth() - I:GetHealth() > 125 and I:DistanceFromFountain() > 2000 then
+		local trees = I:GetNearbyTrees(1500);
+		if trees[1] ~= nil then
+			I:Action_UseAbilityOnTree(tango, trees[1]);
+		end
+	end
+end
+ConsiderItem["item_tango_single"] = ConsiderItem["item_tango"];
+ConsiderItem["item_enchanted_mango"] = function(I,mango)
+	local activeMode = I:GetActiveMode();
+	if  activeMode == BOT_MODE_ATTACK or
+		activeMode == BOT_MODE_ROAM or
+		activeMode == BOT_MODE_TEAM_ROAM or
+		activeMode == BOT_MODE_DEFEND_ALLY then
+		local target = I:GetTarget();
+		if  ValidTarget(target) and
+			I:GetComboDamageToTarget(target) and
+			I:GetComboMana() - I:GetMana() <= 150 then
+			I:Action_UseAbility(mango);
+		end
+	end
+end
 
 BotsInit = require( "game/botsinit" );
 local ability_item_usage_generic = BotsInit.CreateGeneric();
