@@ -88,12 +88,12 @@ function ConsiderAoENuke(I, spell, castRange, radius, maxHealth, spellType, dela
 	-- If high mana and high health, try last hit + harass enemy hero
 	if activeMode == BOT_MODE_LANING and not spell:IsUltimate() then
 		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, maxHealth, spellType, creeps, true);
-		if AoELocation.count >= 2 and not I:LowMana()  or
+		if AoELocation.count >= 2 and not I:IsLowMana()  or
 			AoELocation.count > 0 and
-			(not I:LowMana() and 
-				(I:WasRecentlyDamagedByAnyHero(1.0) or
-					AoEHarass(I, spell, myLocation, AoELocation.targetloc, castRange, radius, delay)) or
-			I:LowHealth()) then
+			(not I:IsLowMana() and 
+			(I:WasRecentlyDamagedByAnyHero(1.0) or
+			AoEHarass(I, spell, myLocation, AoELocation.targetloc, castRange, radius, delay)) or
+			I:IsLowHealth()) then
 			I:DebugTalk("补刀x"..AoELocation.count)
 			return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc}; 
 		end
@@ -102,8 +102,8 @@ function ConsiderAoENuke(I, spell, castRange, radius, maxHealth, spellType, dela
 	-- If farming, use aoe to get multiple last hits
 	if activeMode == BOT_MODE_FARM and not spell:IsUltimate() then
 		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, maxHealth, spellType, creeps, true);
-		if AoELocation.count >= 2 and not I:LowMana() or
-			AoELocation.count > 0 and I:LowHealth() then
+		if AoELocation.count >= 2 and not I:IsLowMana() or
+			AoELocation.count > 0 and I:IsLowHealth() then
 			I:DebugTalk("伐木x"..AoELocation.count)
 			return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc}; 
 		end
@@ -113,8 +113,8 @@ function ConsiderAoENuke(I, spell, castRange, radius, maxHealth, spellType, dela
 	if activeMode >= BOT_MODE_PUSH_TOWER_TOP and
 		activeMode <= BOT_MODE_DEFEND_TOWER_BOT and not spell:IsUltimate() then
 		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, spellType, laneCreeps, true);
-		if AoELocation.count >= 2 and not I:LowMana() or
-			AoELocation.count > 0 and I:LowHealth() then
+		if AoELocation.count >= 2 and not I:IsLowMana() or
+			AoELocation.count > 0 and I:IsLowHealth() then
 			I:DebugTalk("推线x"..AoELocation.count)
 			return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc}; 
 		end
@@ -273,7 +273,7 @@ function ConsiderAoEBuff(I, spell, castRange, radius, delay)
 		 	friendMode == BOT_MODE_DEFEND_ALLY then
 			
 			AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, friends, false);
-			if AoELocation.count > 0 and not I:LowMana() or AoELocation.count >= 2 then
+			if AoELocation.count > 0 and not I:IsLowMana() or AoELocation.count >= 2 then
 				I:DebugTalk("加加加x"..AoELocation.count)
 				return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc};
 			end
@@ -318,7 +318,7 @@ function ConsiderUnitNuke(I, spell, castRange, radius, maxHealth, spellType)
 
 	-- Laning last hit when being harassed or is low
 	if activeMode == BOT_MODE_LANING and not spell:IsUltimate() then
-		if (not I:LowMana() and I:WasRecentlyDamagedByAnyHero(1.0)) or I:LowHealth() then
+		if (not I:IsLowMana() and I:WasRecentlyDamagedByAnyHero(1.0)) or I:IsLowHealth() then
 			target = I:UseUnitSpell(spell, castRange, radius, maxHealth, spellType, creeps, true);
 			if target ~= nil then
 				I:DebugTalk("补刀")
@@ -453,7 +453,7 @@ function ConsiderUnitSave(I, spell, castRange, radius, maxHealth)
 		if maxHealth < 0 then
 			maxHealth = friend:GetMaxHealth() - maxHealth;
 		end
-		if friend:IsTrueHero() and friend:GetHealth() < maxHealth and
+		if  friend:IsTrueHero() and friend:GetHealth() < maxHealth and
 		    (friend:IsImmobile() or 
 			friend:IsSilenced() or
 			friend:WasRecentlyDamagedByAnyHero(1.0) or
@@ -479,7 +479,7 @@ function ConsiderInvis(I, spell)
 	local activeMode = I:GetActiveMode();
 	if (activeMode == BOT_MODE_RETREAT or 
 		activeMode == BOT_MODE_EVASIVE_MANEUVERS) and
-		I:WasRecentlyDamagedByAnyHero(3.0) and
+	   (I:WasRecentlyDamagedByAnyHero(3.0) or #(I:GetIncomingTrackingProjectiles())>0) and
 		#enemys > 0 then
  		I:DebugTalk("无敌")
 		return {BOT_ACTION_DESIRE_LOW}; -- invis is the last resource, not high priority 
@@ -520,7 +520,7 @@ function ConsiderBlink(I, spell, distance)
 
 	if (activeMode == BOT_MODE_RETREAT or
 		activeMode == BOT_MODE_EVASIVE_MANEUVERS) and
-		I:WasRecentlyDamagedByAnyHero(3.0) and
+	   (I:WasRecentlyDamagedByAnyHero(3.0) or #(I:GetIncomingTrackingProjectiles())>0) and
 		#enemys > 0 then
 		
  		I:DebugTalk("不舒服")
@@ -528,7 +528,7 @@ function ConsiderBlink(I, spell, distance)
 	end
 	
 	if spell:GetCooldown() < 8 and
-		(activeMode == BOT_MODE_SECRET_SHOP or
+	   (activeMode == BOT_MODE_SECRET_SHOP or
 		activeMode == BOT_MODE_SIDE_SHOP or
 		activeMode == BOT_MODE_RUNE or
 		activeMode == BOT_MODE_ASSEMBLE or
@@ -549,11 +549,27 @@ function FakeItemUsageThink() -- <- because I can't program blink.
 	end
 end
 
+local ConsiderItem = {};
+ConsiderItem["item_courier"] = function(I, dunkey)
+	I:Action_UseAbility(dunkey);
+end
+ConsiderItem["item_flying_courier"] = function(I, flyDunkey)
+	for i = 1,#GetNumCouriers() do
+		if not IsFlyingCourier(GetCourier(i)) then
+			I:Action_UseAbility(flyDunkey);
+			return;
+		end
+	end
+end
+ConsiderItem["item_tome_of_knowledge"] = function(I, dunkey)
+	I:Action_UseAbility(dunkey);
+end
+
 ConsiderItem["item_tango"] = function(I,tango)
 	local tangoCharge = tango:GetCurrentCharges();
 
 	-- Give tango to mid, carry, offlane
-	if DotaTime() < 0 and I:GetPlayerPosition() == 5 and
+	if DotaTime() < -20 and I:GetPlayerPosition() == 5 and
 		I:DistanceFromFountain() < 300 then
 		if tangoCharge >= 8 then
 			friend = GetTeamMember(2);
@@ -576,6 +592,14 @@ ConsiderItem["item_tango"] = function(I,tango)
 	end
 end
 ConsiderItem["item_tango_single"] = ConsiderItem["item_tango"];
+ConsiderItem["item_faerie_fire"] = function(I, fire)
+	if  I:GetHealth() < 100 or
+		I:GetHealth() < 300 and
+		(I:WasRecentlyDamagedByAnyHero(1.0) or
+		#(I:GetIncomingTrackingProjectiles()) > 0) then
+		I:Action_UseAbility(fire);
+	end
+end
 ConsiderItem["item_enchanted_mango"] = function(I,mango)
 	local activeMode = I:GetActiveMode();
 	if  activeMode == BOT_MODE_ATTACK or
@@ -589,7 +613,151 @@ ConsiderItem["item_enchanted_mango"] = function(I,mango)
 			I:Action_UseAbility(mango);
 		end
 	end
+	-- ***also consider blink/speed boost/invis/tp abilities
 end
+ConsiderItem["item_soul_ring"] = ConsiderItem["item_enchanted_mango"];
+ConsiderItem["item_magic_stick"] = function(I, stick)
+	ConsiderItem["item_faerie_fire"](I, stick);
+	if not I:CanUseItem() or I:IsInvisible() then return; end
+	ConsiderItem["item_enchanted_mango"](I, stick);
+	if not I:CanUseItem() or I:IsInvisible() then return; end
+	local stickRegen = stick::GetCurrentCharges() * 15;
+	if (utils.LowHealth(I:GetHealth(), I:GetMaxHealth()) or utils.LowMana(I:GetMana(), I:GetMaxMana())) and
+	   (not utils.LowHealth(I:GetHealth()+stickRegen, I:GetMaxHealth()) and not utils.LowMana(I:GetMana()+stickRegen, I:GetMaxMana())) then
+	   I:Action_UseAbility(stick);
+	end
+end
+ConsiderItem["item_magic_wand"] = ConsiderItem["item_magic_stick"];
+ConsiderItem["item_cheese"] = function(I, cheese)
+	local activeMode = I:GetActiveMode();
+	if  activeMode == BOT_MODE_ATTACK or
+		activeMode == BOT_MODE_ROAM or
+		activeMode == BOT_MODE_TEAM_ROAM or
+		activeMode == BOT_MODE_DEFEND_ALLY then
+		local target = I:GetTarget();
+		if  ValidTarget(target) and
+			I:GetComboDamageToTarget(target) and
+			I:IsNoMana() then
+			I:Action_UseAbility(cheese);
+			return;
+		end
+	end
+	if (activeMode == BOT_MODE_RETREAT or
+		activeMode == BOT_MODE_EVASIVE_MANEUVERS) and
+	   (I:WasRecentlyDamagedByAnyHero(3.0) or #(I:GetIncomingTrackingProjectiles())>0) and
+		#enemys > 0 then
+		I:Action_UseAbility(cheese);
+	end
+end
+
+
+ConsiderItem["item_quelling_blade"] = function(I, chop)
+	-- ***consider monkey and treant
+	if not IsLocationPassable(I:ClosestBuilding():GetLocation()) then
+		for _, tree in ipairs(GetNearbyTrees(200)) do
+			if IsFacingLocation(GetTreeLocation(tree), 36) then
+				I:Action_UseAbilityOnTree(chop, tree);
+				return;
+			end
+		end
+	end
+end
+ConsiderItem["item_bfury"] = ConsiderItem["item_quelling_blade"];
+ConsiderItem["item_iron_talon"] = function(I, talon)
+	if I:GetActiveMode() == BOT_MODE_FARM then
+		local creeps = utils.weakestSort(I:GetNearbyCreeps(500));
+		I:Action_UseAbilityOnEntity(talon, creeps[#creeps]);
+		return;
+	end
+	ConsiderItem["item_quelling_blade"](I, talon);
+end
+
+
+ConsiderItem["item_arcane_boots"]
+ConsiderItem["item_mekansm"]
+ConsiderItem["item_guardian_greaves"]
+
+ConsiderItem["item_crimson_guard"]
+ConsiderItem["item_hood_of_defiance"]
+ConsiderItem["item_pipe"]
+
+
+ConsiderItem["item_black_king_bar"]
+ConsiderItem["item_blade_mail"]
+ConsiderItem["item_manta"]
+ConsiderItem["item_bloodstone"]
+ConsiderItem["item_satanic"]
+ConsiderItem["item_armlet"]
+
+
+ConsiderItem["item_phase_boots"]
+ConsiderItem["item_mask_of_madness"]
+ConsiderItem["item_butterfly"]
+
+
+ConsiderItem["item_cyclone"]
+ConsiderItem["item_diffusal_blade"]
+ConsiderItem["item_diffusal_blade_2"]
+ConsiderItem["item_rod_of_atos"]
+ConsiderItem["item_orchid"]
+ConsiderItem["item_bloodthorn"]
+ConsiderItem["item_abyssal_blade"]
+ConsiderItem["item_sheepstick"]
+
+
+ConsiderItem["item_urn_of_shadows"]
+ConsiderItem["item_veil_of_discord"]
+ConsiderItem["item_dagon"]
+ConsiderItem["item_dagon_2"]
+ConsiderItem["item_dagon_3"]
+ConsiderItem["item_dagon_4"]
+ConsiderItem["item_dagon_5"]
+ConsiderItem["item_shivas_guard"]
+
+
+ConsiderItem["item_force_staff"]
+ConsiderItem["item_hurricane_pike"]
+
+
+ConsiderItem["item_ethereal_blade"]
+ConsiderItem["item_ghost"]
+ConsiderItem["item_glimmer_cape"]
+ConsiderItem["item_lotus_orb"]
+ConsiderItem["item_medallion_of_courage"]
+ConsiderItem["item_heavens_halberd"]
+ConsiderItem["item_solar_crest"]
+ConsiderItem["item_mjollnir"]
+
+
+ConsiderItem["item_shadow_amulet"]
+ConsiderItem["item_invis_sword"]
+ConsiderItem["item_silver_edge"]
+
+
+ConsiderItem["item_necronomicon"]
+ConsiderItem["item_necronomicon_2"]
+ConsiderItem["item_necronomicon_3"]
+
+ConsiderItem["item_radiance"]
+ConsiderItem["item_refresher"]
+
+
+ConsiderItem["item_hand_of_midas"]
+ConsiderItem["item_helm_of_the_dominator"]
+
+-- Unimplemented
+ConsiderItem["item_flask"]
+ConsiderItem["item_clarity"]
+ConsiderItem["item_bottle"]
+ConsiderItem["item_blink"]
+ConsiderItem["item_power_treads"]
+ConsiderItem["item_smoke_of_deceit"]
+ConsiderItem["item_tpscroll"]
+ConsiderItem["item_travel_boots"]
+ConsiderItem["item_travel_boots_2"]
+ConsiderItem["item_ward_observer"]
+ConsiderItem["item_ward_sentry"]
+
 
 BotsInit = require( "game/botsinit" );
 local ability_item_usage_generic = BotsInit.CreateGeneric();

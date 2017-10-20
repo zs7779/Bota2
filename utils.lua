@@ -256,22 +256,36 @@ function CDOTA_Bot_Script:TimeBeforeRescue()
 end
 
 function CDOTA_Bot_Script:GetFacingVector()
-    local radians = self:GetFacing() * math.pi / 180
-    local forward_vector = Vector(math.cos(radians), math.sin(radians))
-    return forward_vector
+    local radians = self:GetFacing() * math.pi / 180;
+    return Vector(math.cos(radians), math.sin(radians));
 end
 
-function CDOTA_Bot_Script:LowHealth()
-	return self:GetHealth()/self:GetMaxHealth() < 0.4;
+function NoHealth(currHealth, maxHealth)
+	return currHealth/maxHealth < 0.2 or currHealth <= 100;
 end
-function CDOTA_Bot_Script:noMana()
-	return self:GetMana()/self:GetMaxMana() < 0.2 and self:GetMana() < self:GetComboMana();
+function LowHealth(currHealth, maxHealth)
+	return currHealth/maxHealth < 0.6;
 end
-function CDOTA_Bot_Script:LowMana()
-	return self:GetMana()/self:GetMaxMana() < 0.5 or self:GetMana() < self:GetComboMana();
+function LowMana(currMana, maxMana)
+	return currHealth/maxHealth < 0.4;
+end
+function NoMana(currMana, maxMana)
+	return currHealth/maxHealth < 0.2;
+end
+function CDOTA_Bot_Script:IsNoHealth()
+	return NoHealth(self:GetHealth(), self:GetMaxHealth());
+end
+function CDOTA_Bot_Script:IsLowHealth()
+	return LowHealth(self:GetHealth(), self:GetMaxHealth());
+end
+function CDOTA_Bot_Script:IsNoMana()
+	return NoMana(self:GetMana(), self:GetMaxMana()) and self:GetMana() < self:GetComboMana();
+end
+function CDOTA_Bot_Script:IsLowMana()
+	return LowMana(self:GetMana(), self:GetMaxMana()) or self:GetMana() < self:GetComboMana();
 end
 function CDOTA_Bot_Script:IsLow()
-	return self:LowHealth() and self:NoMana();
+	return self:IsLowHealth() and self:IsNoMana();
 end
 
 function CDOTA_Bot_Script:OnRune(runes)
@@ -321,6 +335,18 @@ function CDOTA_Bot_Script:PredictLocation(fTime)
 		return stability*location + (1.0-stability)*self:GetLocation(), false;
 	end
 	return location, true;
+end
+
+function CDOTA_Bot_Script:ClosestBuilding()
+	unitType = I:IsMyFriend() and UNIT_LIST_ALLIED_BUILDINGS or UNIT_LIST_ENEMY_BUILDINGS;
+	local buildings = GetUnitList(unitType);
+	local minDist = 100000;
+	local closest = nil;
+	for _, building in ipairs(buildings) do
+		local dist = GetUnitToUnitDistance(I,building);
+		if dist < minDist then minDist = dist; closest = building; end
+	end
+	return closest, minDist;
 end
 
 
