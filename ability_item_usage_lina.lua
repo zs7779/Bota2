@@ -2,7 +2,7 @@ require(GetScriptDirectory() ..  "/utils")
 ability_item_usage_generic = dofile( GetScriptDirectory().."/ability_item_usage_generic" )
 
 local function GetAbilityGuide(I)
-	local spells, talents = unpack(I:GetAbilities()); --*** need test if unpack exist
+	local spells, talents = I:GetAbilities(); --*** need test if unpack exist
 
 	local abilityLevelUp = {};
 	abilityLevelUp[1] = spells[1];
@@ -39,8 +39,9 @@ function AbilityLevelUpThink()
 end
 
 function AbilityUsageThink()
+	-- print(convars)
 	local I = GetBot();
-	local spells = I:GetAbilities()[1];
+	local spells = I:GetAbilities();
 	
 	local DragonSlave = I:GetAbilityByName(spells[1]);
 	local LightStrikeArray = I:GetAbilityByName(spells[2]);

@@ -2,7 +2,7 @@ require(GetScriptDirectory() ..  "/utils")
 ability_item_usage_generic = dofile( GetScriptDirectory().."/ability_item_usage_generic" )
 
 local function GetAbilityGuide(I)
-	local spells, talents = unpack(I:GetAbilities());
+	local spells, talents = I:GetAbilities();
 
 	local abilityLevelUp = {};
 	abilityLevelUp[1] = spells[3];
@@ -40,7 +40,7 @@ end
 
 function AbilityUsageThink()
 	local I = GetBot();
-	local spells = I:GetAbilities()[1];
+	local spells = I:GetAbilities();
 	
 	local PoisonTouch = I:GetAbilityByName(spells[1]);
 	local ShallowGrave = I:GetAbilityByName(spells[2]);
@@ -99,7 +99,7 @@ function ConsiderShadowWave(I, spell)
 	local considerHeal = ability_item_usage_generic.ConsiderUnitSave(I, spell, castRange, radius, -damage*2);
 	if considerHeal[1] > 0 then	return considerHeal; end
 	-- *** consider heal bomb. told you dazzle is hard
-	return ability_item_usage_generic.ConsiderUnitSave(I, spell, castRange, radius, -damage*2);
+	return ability_item_usage_generic.ConsiderUnitSave(I, spell, castRange, radius, 300);
 end
 
 function ConsiderWeave(I, spell)

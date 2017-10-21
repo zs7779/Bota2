@@ -2,7 +2,7 @@ require(GetScriptDirectory() ..  "/utils")
 ability_item_usage_generic = dofile( GetScriptDirectory().."/ability_item_usage_generic" )
 
 local function GetAbilityGuide(I)
-	local spells, talents = unpack(I:GetAbilities());
+	local spells, talents = I:GetAbilities();
 
 	local abilityLevelUp = {};
 	abilityLevelUp[1] = spells[1];
@@ -40,15 +40,15 @@ end
 
 function AbilityUsageThink()
 	local I = GetBot();
-	local spells = I:GetAbilities()[1];
+	local spells = I:GetAbilities();
 	
 	local Burrowstrike = I:GetAbilityByName(spells[1]);
 	local SandStorm = I:GetAbilityByName(spells[2]);
 	local Epicenter = I:GetAbilityByName(spells[4]);
 	-- print(spells[1],spells[2],spells[3],spells[4])
 	local BurrowstrikeDesire, BurrowstrikeLoc = unpack(ConsiderBurrowstrike(I, Burrowstrike));
-	local SandStormDesire = ConsiderSandStorm(I, SandStorm)[1];
-	local EpicenterDesire = ConsiderEpicenter(I, Epicenter)[1];
+	local SandStormDesire = unpack(ConsiderSandStorm(I, SandStorm));
+	local EpicenterDesire = unpack(ConsiderEpicenter(I, Epicenter));
 
 	if BurrowstrikeDesire > 0 then
 		I:Action_UseAbilityOnLocation(Burrowstrike, BurrowstrikeLoc);

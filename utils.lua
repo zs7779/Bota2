@@ -90,7 +90,6 @@ function CDOTA_Bot_Script:FindAoEVector(bEnemies, bHeroes, vBaseLocation, nMaxDi
 	
 	AoEVector.count = #targets;
 	AoEVector.targetloc = utils.midPoint(targets);
-	if AoEVector.count>0 then	DebugDrawCircle( AoEVector.targetloc, 100, 255, 0, 255 ); end
 	-- There is no guarantee this midPoint actually covers all targets...
 	-- Drawing tells me it is guaranteed, but I have trouble proving it mathematically..
 	return AoEVector;
@@ -193,11 +192,11 @@ function CDOTA_Bot_Script:GetAbilities()
 			end
 		end
 	end
-	return {spells, talents};
+	return spells, talents;
 end
 
 function CDOTA_Bot_Script:GetComboMana()
-	local spells = self:GetAbilities()[1];
+	local spells = self:GetAbilities();
 	local manaCost = 0;
 	for i = 1, #spells do
 		local spell = self:GetAbilityByName(spells[i]);
@@ -209,7 +208,7 @@ function CDOTA_Bot_Script:GetComboMana()
 end
 function CDOTA_Bot_Script:GetComboDamageToTarget(target)
 	-- ***How do you consider duration? and toggle?
-	local spells = self:GetAbilities()[1];
+	local spells = self:GetAbilities();
 	local totalDamage = 0;
 	for i = 1, #spells do
 		local spell = self:GetAbilityByName(spells[i]);
@@ -229,7 +228,7 @@ function CDOTA_Bot_Script:EstimateDamageToTarget(target)
 		estimatedDamage = estimatedDamage + 
 		target:GetActualIncomingDamage(self:GetAttackDamage(),DAMAGE_TYPE_PHYSICAL) *
 		(1.0 - target:GetEvasion()) *
-		(self:GetStunDuration(true) + 0.5*self:GetSlowDuration(true) + 2 + target:TimeBeforeRescue());
+		(self:GetStunDuration(true) + 0.5*self:GetSlowDuration(true) + 3);-- + target:TimeBeforeRescue());
 	end
 end
 
@@ -267,10 +266,10 @@ function LowHealth(currHealth, maxHealth)
 	return currHealth/maxHealth < 0.6;
 end
 function LowMana(currMana, maxMana)
-	return currHealth/maxHealth < 0.4;
+	return currMana/maxMana < 0.4;
 end
 function NoMana(currMana, maxMana)
-	return currHealth/maxHealth < 0.2;
+	return currMana/maxMana < 0.2;
 end
 function CDOTA_Bot_Script:IsNoHealth()
 	return NoHealth(self:GetHealth(), self:GetMaxHealth());
@@ -412,7 +411,7 @@ end
 
 function midPoint(vlocs)
 	-- vlocs need to be a strict array of Vectors, with no gap in between
-	if vlocs == nil or #vlocs == 0 or vlocs[0].x == nil and vlocs[0]:GetLocation == nil then return nil; end
+	if vlocs == nil or #vlocs == 0 or vlocs[1].x == nil and vlocs[1].GetLocation == nil then return nil; end
 	local mid = Vector(0,0);
 	for _, v in ipairs(vlocs) do
 		if v.x == nil then v = v:GetLocation(); end

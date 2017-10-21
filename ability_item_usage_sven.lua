@@ -2,7 +2,7 @@ require(GetScriptDirectory() ..  "/utils")
 ability_item_usage_generic = dofile( GetScriptDirectory().."/ability_item_usage_generic" )
 
 local function GetAbilityGuide(I)
-	local spells, talents = unpack(I:GetAbilities());
+	local spells, talents = I:GetAbilities();
 
 	local abilityLevelUp = {};
 	abilityLevelUp[1] = spells[1];
@@ -40,15 +40,15 @@ end
 
 function AbilityUsageThink()
 	local I = GetBot();
-	local spells = I:GetAbilities()[1];
+	local spells = I:GetAbilities();
 	
 	local StormBolt = I:GetAbilityByName(spells[1]);
 	local Warcry = I:GetAbilityByName(spells[3]);
 	local GodsStrength = I:GetAbilityByName(spells[4]);
 	
 	local StormBoltDesire, StormBoltTarget = unpack(ConsiderStormBolt(I, StormBolt));
-	local WarcryDesire = ConsiderWarcry(I, Warcry)[1];
-	local GodsStrengthDesire = ConsiderGodsStrength(I, GodsStrength)[1];
+	local WarcryDesire = unpack(ConsiderWarcry(I, Warcry));
+	local GodsStrengthDesire = unpack(ConsiderGodsStrength(I, GodsStrength));
 
 	if StormBoltDesire > 0 then
 		I:Action_UseAbilityOnEntity(StormBolt, StormBoltTarget);

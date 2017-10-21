@@ -283,6 +283,40 @@ function ConsiderAoEBuff(I, spell, castRange, radius, delay)
 	return {BOT_ACTION_DESIRE_NONE};
 end
 
+function ConsiderAoESave(I, spell, castRange, radius, maxHealth)
+	if not spell:IsFullyCastable() or not I:CanCast() then
+		return {BOT_ACTION_DESIRE_NONE};
+	end
+	if maxHealth == 0 then maxHealth = 100000; end
+	local activeMode = I:GetActiveMode();
+	local myLocation = I:GetLocation();
+
+	-- GetNearby sorts units from close to far
+	local friends;
+	if radius >= 1600 then 
+		friends = I:GetFarHeroes(radius,false,BOT_MODE_NONE);
+	else
+		friends = I:GetNearbyHeroes(radius,false,BOT_MODE_NONE); --<-- does GetNearby include yourself?
+		friends[#friends+1] = I;
+	end
+	
+	friend = weakestSort(friends)[1];
+	if  friend:IsTrueHero() and friend:GetMaxHealth() - friend:GetHealth() > 220 and
+	    (friend:IsImmobile() or 
+		friend:IsSilenced() or
+		friend:WasRecentlyDamagedByAnyHero(1.0) or
+		#(friend:GetIncomingTrackingProjectiles())>0) then
+		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, maxHealth, 0, friends, false);
+		if  AoELocation.count > 0 and (friend:IsNoHealth() or not I:IsLowMana()) or
+		    AoELocation.count >= 2 then
+			I:DebugTalk("救人x"..AoELocation.count)
+			return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc};
+		end
+	end
+
+	return {BOT_ACTION_DESIRE_NONE};
+end
+
 -- Unit
 -- ***some unit target spells also have radius
 function ConsiderUnitNuke(I, spell, castRange, radius, maxHealth, spellType)
@@ -449,22 +483,22 @@ function ConsiderUnitSave(I, spell, castRange, radius, maxHealth)
 		friends[#friends+1] = I;
 	end
 	
-	for _, friend in ipairs(richestSort(friends)) do
-		if maxHealth < 0 then
-			maxHealth = friend:GetMaxHealth() - maxHealth;
-		end
-		if  friend:IsTrueHero() and friend:GetHealth() < maxHealth and
-		    (friend:IsImmobile() or 
-			friend:IsSilenced() or
-			friend:WasRecentlyDamagedByAnyHero(1.0) or
-			#(friend:GetIncomingTrackingProjectiles())>0) then
-			target = I:UseUnitSpell(spell, castRange, radius, maxHealth, 0, {friend}, false);
-			if target ~= nil then
-	 		I:DebugTalk("救人")
-				return {BOT_ACTION_DESIRE_HIGH, target};
-			end
+	friend = weakestSort(friends)[1];
+	if maxHealth < 0 then
+		maxHealth = friend:GetMaxHealth() - maxHealth;
+	end
+	if  friend:IsTrueHero() and friend:GetHealth() - friend:GetHealth() > 220 and
+	    (friend:IsImmobile() or 
+		friend:IsSilenced() or
+		friend:WasRecentlyDamagedByAnyHero(1.0) or
+		#(friend:GetIncomingTrackingProjectiles())>0) then
+		target = I:UseUnitSpell(spell, castRange, radius, maxHealth, 0, {friend}, false);
+		if target ~= nil then
+ 		I:DebugTalk("救人")
+			return {BOT_ACTION_DESIRE_HIGH, target};
 		end
 	end
+	
 
 	return {BOT_ACTION_DESIRE_NONE};
 end
@@ -500,7 +534,7 @@ end
 
 function ConsiderBlink(I, spell, distance)
 	if not spell:IsFullyCastable() or not I:CanCast() or I:IsInvisible() then
-		return {BOT_ACTION_DESIRE_NONE, ""};
+		return {BOT_ACTION_DESIRE_NONE};
 	end
 	local activeMode = I:GetActiveMode();
 
@@ -608,8 +642,9 @@ ConsiderItem["item_enchanted_mango"] = function(I,mango)
 		activeMode == BOT_MODE_DEFEND_ALLY then
 		local target = I:GetTarget();
 		if  ValidTarget(target) and
-			I:GetComboDamageToTarget(target) and
-			I:GetComboMana() - I:GetMana() <= 150 then
+			I:EstimateDamageToTarget(target) and
+			I:GetComboMana() - I:GetMana() <= 150 and
+			I:GetMaxMana() - I:GetMana() <= 150 then
 			I:Action_UseAbility(mango);
 		end
 	end
@@ -618,14 +653,17 @@ end
 ConsiderItem["item_soul_ring"] = ConsiderItem["item_enchanted_mango"];
 ConsiderItem["item_magic_stick"] = function(I, stick)
 	ConsiderItem["item_faerie_fire"](I, stick);
-	if not I:CanUseItem() or I:IsInvisible() then return; end
-	ConsiderItem["item_enchanted_mango"](I, stick);
-	if not I:CanUseItem() or I:IsInvisible() then return; end
-	local stickRegen = stick::GetCurrentCharges() * 15;
-	if (utils.LowHealth(I:GetHealth(), I:GetMaxHealth()) or utils.LowMana(I:GetMana(), I:GetMaxMana())) and
-	   (not utils.LowHealth(I:GetHealth()+stickRegen, I:GetMaxHealth()) and not utils.LowMana(I:GetMana()+stickRegen, I:GetMaxMana())) then
-	   I:Action_UseAbility(stick);
+	if boots:IsFullyCastable() and I:CanUseItem() and not I:IsInvisible() then
+		ConsiderItem["item_enchanted_mango"](I, stick);
 	end
+	if boots:IsFullyCastable() and I:CanUseItem() and not I:IsInvisible() then
+		local stickRegen = stick:GetCurrentCharges() * 15;
+		if (utils.LowHealth(I:GetHealth(), I:GetMaxHealth()) or utils.LowMana(I:GetMana(), I:GetMaxMana())) and
+		   (not utils.LowHealth(I:GetHealth()+stickRegen, I:GetMaxHealth()) and not utils.LowMana(I:GetMana()+stickRegen, I:GetMaxMana())) then
+		   I:Action_UseAbility(stick);
+		end
+	end
+	
 end
 ConsiderItem["item_magic_wand"] = ConsiderItem["item_magic_stick"];
 ConsiderItem["item_cheese"] = function(I, cheese)
@@ -673,90 +711,105 @@ ConsiderItem["item_iron_talon"] = function(I, talon)
 end
 
 
-ConsiderItem["item_arcane_boots"]
-ConsiderItem["item_mekansm"]
-ConsiderItem["item_guardian_greaves"]
+ConsiderItem["item_arcane_boots"] = function(I, boots)
+	if I:GetComboMana() - I:GetMana() <= 250 and
+	   I:GetMaxMana() - I:GetMana() <= 250 then
+	   I:Action_UseAbility(boots);
+	end
+end
+ConsiderItem["item_mekansm"] = function(I, mekansm)
+	if ConsiderAoESave(I, mekansm, 0, 900, -300) > 0 then
+		I:Action_UseAbility(mekansm);
+		return;
+	end
+end
+ConsiderItem["item_guardian_greaves"] = function(I, boots)
+	ConsiderItem["item_mekansm"](I, boots);
+	if boots:IsFullyCastable() and I:CanUseItem() and not I:IsInvisible() then
+		ConsiderItem["item_arcane_boots"](I, boots);
+	end
+end
 
-ConsiderItem["item_crimson_guard"]
-ConsiderItem["item_hood_of_defiance"]
-ConsiderItem["item_pipe"]
-
-
-ConsiderItem["item_black_king_bar"]
-ConsiderItem["item_blade_mail"]
-ConsiderItem["item_manta"]
-ConsiderItem["item_bloodstone"]
-ConsiderItem["item_satanic"]
-ConsiderItem["item_armlet"]
-
-
-ConsiderItem["item_phase_boots"]
-ConsiderItem["item_mask_of_madness"]
-ConsiderItem["item_butterfly"]
-
-
-ConsiderItem["item_cyclone"]
-ConsiderItem["item_diffusal_blade"]
-ConsiderItem["item_diffusal_blade_2"]
-ConsiderItem["item_rod_of_atos"]
-ConsiderItem["item_orchid"]
-ConsiderItem["item_bloodthorn"]
-ConsiderItem["item_abyssal_blade"]
-ConsiderItem["item_sheepstick"]
+-- ConsiderItem["item_crimson_guard"]
+-- ConsiderItem["item_hood_of_defiance"]
+-- ConsiderItem["item_pipe"]
 
 
-ConsiderItem["item_urn_of_shadows"]
-ConsiderItem["item_veil_of_discord"]
-ConsiderItem["item_dagon"]
-ConsiderItem["item_dagon_2"]
-ConsiderItem["item_dagon_3"]
-ConsiderItem["item_dagon_4"]
-ConsiderItem["item_dagon_5"]
-ConsiderItem["item_shivas_guard"]
+-- ConsiderItem["item_black_king_bar"]
+-- ConsiderItem["item_blade_mail"]
+-- ConsiderItem["item_manta"]
+-- ConsiderItem["item_bloodstone"]
+-- ConsiderItem["item_satanic"]
+-- ConsiderItem["item_armlet"]
 
 
-ConsiderItem["item_force_staff"]
-ConsiderItem["item_hurricane_pike"]
+-- ConsiderItem["item_phase_boots"]
+-- ConsiderItem["item_mask_of_madness"]
+-- ConsiderItem["item_butterfly"]
 
 
-ConsiderItem["item_ethereal_blade"]
-ConsiderItem["item_ghost"]
-ConsiderItem["item_glimmer_cape"]
-ConsiderItem["item_lotus_orb"]
-ConsiderItem["item_medallion_of_courage"]
-ConsiderItem["item_heavens_halberd"]
-ConsiderItem["item_solar_crest"]
-ConsiderItem["item_mjollnir"]
+-- ConsiderItem["item_cyclone"]
+-- ConsiderItem["item_diffusal_blade"]
+-- ConsiderItem["item_diffusal_blade_2"]
+-- ConsiderItem["item_rod_of_atos"]
+-- ConsiderItem["item_orchid"]
+-- ConsiderItem["item_bloodthorn"]
+-- ConsiderItem["item_abyssal_blade"]
+-- ConsiderItem["item_sheepstick"]
 
 
-ConsiderItem["item_shadow_amulet"]
-ConsiderItem["item_invis_sword"]
-ConsiderItem["item_silver_edge"]
+-- ConsiderItem["item_urn_of_shadows"]
+-- ConsiderItem["item_veil_of_discord"]
+-- ConsiderItem["item_dagon"]
+-- ConsiderItem["item_dagon_2"]
+-- ConsiderItem["item_dagon_3"]
+-- ConsiderItem["item_dagon_4"]
+-- ConsiderItem["item_dagon_5"]
+-- ConsiderItem["item_shivas_guard"]
 
 
-ConsiderItem["item_necronomicon"]
-ConsiderItem["item_necronomicon_2"]
-ConsiderItem["item_necronomicon_3"]
-
-ConsiderItem["item_radiance"]
-ConsiderItem["item_refresher"]
+-- ConsiderItem["item_force_staff"]
+-- ConsiderItem["item_hurricane_pike"]
 
 
-ConsiderItem["item_hand_of_midas"]
-ConsiderItem["item_helm_of_the_dominator"]
+-- ConsiderItem["item_ethereal_blade"]
+-- ConsiderItem["item_ghost"]
+-- ConsiderItem["item_glimmer_cape"]
+-- ConsiderItem["item_lotus_orb"]
+-- ConsiderItem["item_medallion_of_courage"]
+-- ConsiderItem["item_heavens_halberd"]
+-- ConsiderItem["item_solar_crest"]
+-- ConsiderItem["item_mjollnir"]
 
--- Unimplemented
-ConsiderItem["item_flask"]
-ConsiderItem["item_clarity"]
-ConsiderItem["item_bottle"]
-ConsiderItem["item_blink"]
-ConsiderItem["item_power_treads"]
-ConsiderItem["item_smoke_of_deceit"]
-ConsiderItem["item_tpscroll"]
-ConsiderItem["item_travel_boots"]
-ConsiderItem["item_travel_boots_2"]
-ConsiderItem["item_ward_observer"]
-ConsiderItem["item_ward_sentry"]
+
+-- ConsiderItem["item_shadow_amulet"]
+-- ConsiderItem["item_invis_sword"]
+-- ConsiderItem["item_silver_edge"]
+
+
+-- ConsiderItem["item_necronomicon"]
+-- ConsiderItem["item_necronomicon_2"]
+-- ConsiderItem["item_necronomicon_3"]
+
+-- ConsiderItem["item_radiance"]
+-- ConsiderItem["item_refresher"]
+
+
+-- ConsiderItem["item_hand_of_midas"]
+-- ConsiderItem["item_helm_of_the_dominator"]
+
+-- -- Unimplemented
+-- ConsiderItem["item_flask"]
+-- ConsiderItem["item_clarity"]
+-- ConsiderItem["item_bottle"]
+-- ConsiderItem["item_blink"]
+-- ConsiderItem["item_power_treads"]
+-- ConsiderItem["item_smoke_of_deceit"]
+-- ConsiderItem["item_tpscroll"]
+-- ConsiderItem["item_travel_boots"]
+-- ConsiderItem["item_travel_boots_2"]
+-- ConsiderItem["item_ward_observer"]
+-- ConsiderItem["item_ward_sentry"]
 
 
 BotsInit = require( "game/botsinit" );

@@ -2,7 +2,7 @@ require(GetScriptDirectory() ..  "/utils")
 ability_item_usage_generic = dofile( GetScriptDirectory().."/ability_item_usage_generic" )
 
 local function GetAbilityGuide(I)
-	local spells, talents = unpack(I:GetAbilities()); --*** need test if unpack exist
+	local spells, talents = I:GetAbilities(); --*** need test if unpack exist
 
 	local abilityLevelUp = {};
 	abilityLevelUp[1] = spells[1];
@@ -40,7 +40,7 @@ end
 
 function AbilityUsageThink()
 	local I = GetBot();
-	local spells = I:GetAbilities()[1];
+	local spells = I:GetAbilities();
 	
 	local BreatheFire = I:GetAbilityByName(spells[1]);
 	local DragonTail = I:GetAbilityByName(spells[2]);
@@ -48,7 +48,7 @@ function AbilityUsageThink()
 	
 	local BreatheFireDesire, BreatheFireLoc = unpack(ConsiderBreatheFire(I, BreatheFire));
 	local DragonTailDesire, DragonTailTarget = unpack(ConsiderDragonTail(I, DragonTail));
-	local ElderDragonFormDesire = ConsiderElderDragonForm(I, ElderDragonForm);
+	local ElderDragonFormDesire = unpack(ConsiderElderDragonForm(I, ElderDragonForm));
 
 	if ElderDragonFormDesire > 0 then
 		I:Action_UseAbility(ElderDragonForm);
@@ -81,7 +81,7 @@ end
 
 function ConsiderElderDragonForm(I, spell)
 	if not spell:IsFullyCastable() or not I:CanCast() then
-		return BOT_ACTION_DESIRE_NONE, nil;
+		return {BOT_ACTION_DESIRE_NONE};
 	end
 	local activeMode = I:GetActiveMode();
 
@@ -90,18 +90,18 @@ function ConsiderElderDragonForm(I, spell)
 		activeMode <= BOT_MODE_PUSH_TOWER_BOT then
 		local towers = I:GetNearbyTowers(400, true);
 		if #towers > 0 then 
-			return BOT_ACTION_DESIRE_MODERATE; 
+			return {BOT_ACTION_DESIRE_MODERATE}; 
 		end
 	end
 	
 	if activeMode == BOT_MODE_ROAM or
 		 activeMode == BOT_MODE_TEAM_ROAM or
 		 activeMode == BOT_MODE_ATTACK then
-		 local target = I:GetTarget();
+		 local target = I:UseUnitSpell(spell, 300, 0, 0, 0, {I:GetTarget()});
 		 if utils.GetLocationToLocationDistance(self:GetLocation(), unit:GetLocation()) <= 300 and not I:IsLow() then 
-		 	return BOT_ACTION_DESIRE_MODERATE; 
+		 	return {BOT_ACTION_DESIRE_MODERATE}; 
 		 end
 	 end
 	
-	return BOT_ACTION_DESIRE_NONE;
+	return {BOT_ACTION_DESIRE_NONE};
 end
