@@ -9,7 +9,8 @@ require(GetScriptDirectory() ..  "/utils")
 -- 2. close to lone enemy
 -- 3. where friend outnumber enemy (have tp == is there)
 -- 4. where creeps are hitting enemy tower
--- 5. where enemy are taking objectives
+-- 5. where enemy are taking objectivesi
+-- 6. steal roshan
 
 -- Do?
 -- mode_assemble_generic
@@ -25,22 +26,32 @@ require(GetScriptDirectory() ..  "/utils")
 --    initiator/blinker -> (b)
 --    other -> (c)
 
-function CDOTA_Bot_Script:IsStrong()
+-- determine who is ready to fight
+function CDOTA_Bot_Script:IsCoolDownReady()
+	-- if tolerance == nil or tolerance < 0 then tolerance = 0; end
 	local spells = self:GetAbilities();
 	for _, spell in ipairs(spells) do
-		if spell:GetCooldownTimeRemaining() > 15 then
+		if not spell:IsPassive() and not spell:IsCooldownReady()then
 			return false;
 		end
 	end
-	return self:GetHealth()/self:GetMaxHealth() >= 0.9 and
-	       not self:IsLowMana() and (self.haveKeyItem or self.haveKeyLevel);
+	return true;
 end
+
+function CDOTA_Bot_Script:RegenNeeded()
+	return self:GetMaxHealth() * 0.9 - self:GetHealth(), self:GetComboMana() - self:GetMana();
+end
+
+
 
 function ConsiderTeamRoam()
 	for position = 1,5 do
 		local friend = GetTeamMember(position);
-		if friend:IsStrong() then
-			
+		if friend:IsCoolDownReady() then
+			local healthRegen, manaRegen = friend:RegenNeeded();
+			if friend.shrine and healthRegen <= 450 and manaRegen <= 200 then
+				--
+			end
 		end
 	end
 end
