@@ -284,6 +284,21 @@ end
 function CDOTA_Bot_Script:IsLow()
 	return self:IsLowHealth() and self:IsNoMana();
 end
+function CDOTA_Bot_Script:WantHeal()
+	return self:GetMaxHealth() - self:GetHealth() >= 400 and self:GetMaxHealth() - self:GetHealth() <= 1000;
+end
+function CDOTA_Bot_Script:WantMana()
+	return self:GetMaxMana() - self:GetMana() >= 200 and self:GetComboMana() - self:GetMana() <= 500;
+end
+
+function CDOTA_Bot_Script:HaveTp()
+	local slot = FindItemSlot("item_travel_boots_2");
+	if slot == -1 then slot = FindItemSlot("item_travel_boots"); end
+	if slot == -1 then slot = FindItemSlot("item_tpscroll"); end
+	if slot == -1 then return false; end
+	local Tp = GetItemInSlot(slot);
+	return Tp:IsFullyCastable();
+end
 
 function CDOTA_Bot_Script:OnRune(runes)
 	for i = 1, #runes do
@@ -307,8 +322,10 @@ function CDOTA_Bot_Script:IsImmune()
 	return self:IsMagicImmune() or self:IsInvulnerable();
 end
 
-function CDOTA_Bot_Script:IsTrueHero()
-	return self:IsAlive() and not self:IsIllusion();
+function CDOTA_Bot_Script:IsTrueHero() -- *** if taking too much damage then is illusion
+	return self:IsAlive() and not self:IsIllusion() and
+	       self:GetActualIncomingDamage(100, DAMAGE_TYPE_PHYSICAL) < 200 and
+	       self:GetActualIncomingDamage(100, DAMAGE_TYPE_MAGICAL) < 200;
 end
 
 function CDOTA_Bot_Script:CanAct()
