@@ -4,14 +4,14 @@ function AoEHarass(I, spell, baseLocation, targetlocation, range, radius, delay)
 	if range > 1580 then range = 1580; end
 	local enemys = I:GetNearbyHeroes(range, true, BOT_MODE_NONE);
 
-	if utils.CheckFlag(spell:GetBehavior(), ABILITY_BEHAVIOR_AOE) then
+	if utils.CheckBit(spell:GetBehavior(), ABILITY_BEHAVIOR_AOE) then
 		for _, enemy in ipairs(enemys) do
 			local predLoc = enemy:PredictLocation(delay);
 			if utils.GetLocationToLocationDistance(predLoc, targetlocation) < radius then
 				return true;
 			end
 		end
-	elseif utils.CheckFlag(spell:GetBehavior(), ABILITY_BEHAVIOR_POINT) then
+	elseif utils.CheckBit(spell:GetBehavior(), ABILITY_BEHAVIOR_POINT) then
 		for _, enemy in ipairs(enemys) do
 			local predLoc = enemy:PredictLocation(delay);
 			local distToLine = PointToLineDistance(baseLocation, targetlocation, predLoc);
@@ -241,7 +241,7 @@ function ConsiderAoEDebuff(I, spell, castRange, radius, delay)
 	return {BOT_ACTION_DESIRE_NONE};
 end
 
-function ConsiderAoEBuff(I, spell, castRange, radius, delay)
+function ConsiderAoEBuff(I, spell, castRange, radius, maxHealth)
 	if not spell:IsFullyCastable() or not I:CanCast() then
 		return {BOT_ACTION_DESIRE_NONE};
 	end
@@ -249,20 +249,22 @@ function ConsiderAoEBuff(I, spell, castRange, radius, delay)
 	local myLocation = I:GetLocation();
 
 	-- GetNearby sorts units from close to far
-	local friends;
+	local friends = {};
 	if radius >= 1600 then 
 		friends = I:GetFarHeroes(radius,false,BOT_MODE_NONE);
 	else
 		friends = I:GetNearbyHeroes(radius,false,BOT_MODE_NONE); --<-- does GetNearby include yourself?
 	end
-	friends[#friends+1] = I;
-	
+	if #friends == 0 then
+		return {BOT_ACTION_DESIRE_NONE};
+	end
+	local enemys = I:GetNearbyHeroes(1500,true,BOT_MODE_NONE);
 	for _, friend in ipairs(friends) do
 		local friendMode = friend:GetActiveMode();
 		if friendMode == BOT_MODE_RETREAT or 
 			friendMode == BOT_MODE_EVASIVE_MANEUVERS then
-			AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, friends, false);
-			if AoELocation.count > 0 and #(I:GetNearbyHeroes(1580,true,BOT_MODE_NONE)) > 0 then
+			AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, 0, maxHealth, 0, friends, false);
+			if AoELocation.count > 0 and #enemys > 0 then
 				I:DebugTalk("不舒服x"..AoELocation.count)
 				return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc};
 			end
@@ -272,8 +274,8 @@ function ConsiderAoEBuff(I, spell, castRange, radius, delay)
 		 	friendMode == BOT_MODE_TEAM_ROAM or
 		 	friendMode == BOT_MODE_DEFEND_ALLY then
 			
-			AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, 0, 0, friends, false);
-			if AoELocation.count > 0 and not I:IsLowMana() or AoELocation.count >= 2 then
+			AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, 0, maxHealth, 0, friends, false);
+			if AoELocation.count > 0 and #enemys > 0 and not I:IsLowMana() or AoELocation.count >= 2 then
 				I:DebugTalk("加加加x"..AoELocation.count)
 				return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc};
 			end
@@ -292,22 +294,28 @@ function ConsiderAoESave(I, spell, castRange, radius, maxHealth)
 	local myLocation = I:GetLocation();
 
 	-- GetNearby sorts units from close to far
-	local friends;
+	local friends = {};
 	if radius >= 1600 then 
 		friends = I:GetFarHeroes(radius,false,BOT_MODE_NONE);
 	else
 		friends = I:GetNearbyHeroes(radius,false,BOT_MODE_NONE); --<-- does GetNearby include yourself?
-		friends[#friends+1] = I;
 	end
-	
-	friend = weakestSort(friends)[1];
+	if #friends == 0 then
+		return {BOT_ACTION_DESIRE_NONE};
+	end
+	local enemys = I:GetNearbyHeroes(1500,true,BOT_MODE_NONE);
+
+	local friend = utils.weakestSort(friends)[1];
 	if  friend:IsTrueHero() and friend:GetMaxHealth() - friend:GetHealth() > 220 and
 	    (friend:IsImmobile() or 
 		friend:IsSilenced() or
 		friend:WasRecentlyDamagedByAnyHero(1.0) or
-		#(friend:GetIncomingTrackingProjectiles())>0) then
+		#(friend:GetIncomingTrackingProjectiles())>0 or
+		#enemys > 0 or
+		friend:IsNoHealth() or
+		not I:IsLowMana() and spell:IsSpammable()) then
 		AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, maxHealth, 0, friends, false);
-		if  AoELocation.count > 0 and (friend:IsNoHealth() or not I:IsLowMana()) or
+		if  AoELocation.count > 0 and (friend:IsNoHealth() or not I:IsLowMana() and spell:IsSpammable()) or
 		    AoELocation.count >= 2 then
 			I:DebugTalk("救人x"..AoELocation.count)
 			return {BOT_ACTION_DESIRE_LOW, AoELocation.targetloc};
@@ -471,7 +479,6 @@ function ConsiderUnitSave(I, spell, castRange, radius, maxHealth)
 	if not spell:IsFullyCastable() or not I:CanCast() then
 		return {BOT_ACTION_DESIRE_NONE};
 	end
-	local target;
 	local activeMode = I:GetActiveMode();
 	if maxHealth == 0 then maxHealth = 100000; end
 	-- GetNearby sorts units from close to far
@@ -480,22 +487,28 @@ function ConsiderUnitSave(I, spell, castRange, radius, maxHealth)
 		friends = I:GetFarHeroes(castRange,false,BOT_MODE_NONE);
 	else
 		friends = I:GetNearbyHeroes(castRange,false,BOT_MODE_NONE);
-		friends[#friends+1] = I;
 	end
-	
-	friend = weakestSort(friends)[1];
+	if #friends == 0 then
+		return {BOT_ACTION_DESIRE_NONE};
+	end
+	local enemys = I:GetNearbyHeroes(1500,true,BOT_MODE_NONE);
+	local friend = utils.weakestSort(friends)[1];
 	if maxHealth < 0 then
 		maxHealth = friend:GetMaxHealth() - maxHealth;
 	end
-	if  friend:IsTrueHero() and friend:GetHealth() - friend:GetHealth() > 220 and
+	if  friend:IsTrueHero() and friend:GetMaxHealth() - friend:GetHealth() > 220 and
 	    (friend:IsImmobile() or 
 		friend:IsSilenced() or
 		friend:WasRecentlyDamagedByAnyHero(1.0) or
-		#(friend:GetIncomingTrackingProjectiles())>0) then
-		target = I:UseUnitSpell(spell, castRange, radius, maxHealth, 0, {friend}, false);
-		if target ~= nil then
- 		I:DebugTalk("救人")
-			return {BOT_ACTION_DESIRE_HIGH, target};
+		#(friend:GetIncomingTrackingProjectiles())>0 or
+		#enemys > 0 or
+		friend:IsNoHealth() or
+		not I:IsLowMana() and spell:IsSpammable()) then
+
+		friend = I:UseUnitSpell(spell, castRange, radius, maxHealth, 0, {friend}, false);
+		if friend ~= nil then
+ 			I:DebugTalk("救人")
+			return {BOT_ACTION_DESIRE_HIGH, friend};
 		end
 	end
 	
@@ -574,7 +587,69 @@ function ConsiderBlink(I, spell, distance)
 	end
 end
 
-function FakeItemUsageThink() -- <- because I can't program blink.
+
+function CourierUsageThink()
+	local I = GetBot();
+	local courier;
+
+	-- think of buying multiple couriers if human exist. only use last one
+	if GetNumCouriers() > 0 then
+		courier = GetCourier(0);
+	end
+	if courier == nil or
+	   not I:IsTrueHero() or I:HasModifier("modifier_arc_warden_tempest_double") then
+		return;
+	end
+	local state = GetCourierState(courier);
+	if state == COURIER_STATE_DEAD then return; end
+	-- deliver or goto secret shop. you always walk to sideshop
+	if state == COURIER_STATE_AT_BASE then
+		courier.mustReturn = nil;
+		if I:GetStashValue() >= 350 and courier:HaveSlot() then
+			I:ActionImmediate_Courier(courier, COURIER_ACTION_TAKE_STASH_ITEMS);
+			return;
+		end
+		if I:GetCourierValue()+I:GetStashValue() >= 350 then
+			I:ActionImmediate_Courier(courier, COURIER_ACTION_TAKE_AND_TRANSFER_ITEMS);
+			return;
+		end
+		if I.secretShopMode and I:GetActiveMode() ~= BOT_MODE_SECRET_SHOP then
+			I:ActionImmediate_Courier(courier, COURIER_ACTION_SECRET_SHOP);
+			return;
+		end
+	end
+	-- waiting at shop/evading enemy kinda state
+	if state == COURIER_STATE_IDLE then
+		if courier.idleTime == nil then
+			courier.idleTime = GameTime();
+		elseif GameTime() - courier.idleTime > 10 then
+			I:ActionImmediate_Courier(courier, COURIER_ACTION_RETURN);
+			courier.idleTime = nil;
+			return;
+		end
+	end
+	local courierBurst;
+	if IsFlyingCourier(courier) then
+		courierBurst = courier:GetAbilityByName("courier_burst");
+		if (courier:GetHealth() < courier:GetMaxHealth() or
+		   	 courier:GetNearbyHeroes(900,true,BOT_MODE_NONE) ~= nil or
+		   	 #(courier:GetIncomingTrackingProjectiles()) > 0) then
+			if courier:CanCast() and courierBurst:IsFullyCastable() then
+		    	I:ActionImmediate_Courier(courier, COURIER_ACTION_BURST);
+		    end
+		    if state == COURIER_STATE_IDLE then
+		    	I:ActionImmediate_Courier(courier, COURIER_ACTION_RETURN);
+		    	return;
+		    end
+		end
+	end
+end
+
+
+-- only check the ones bot dont use well
+-- wand/stick/mana boot/armlet/soul ring
+-- maybe put manaboot and mek somewhere in assemble
+function FakeItemUsageThink() -- <- because I can't program blink
 	local I = GetBot();
 	if not I:CanUseItem() or I:IsInvisible() then return; end
 	for i = 0,5 do
@@ -606,12 +681,12 @@ ConsiderItem["item_tango"] = function(I,tango)
 	if DotaTime() < -20 and I:GetPlayerPosition() == 5 and
 		I:DistanceFromFountain() < 300 then
 		if tangoCharge >= 8 then
-			friend = GetTeamMember(2);
+			local friend = GetTeamMember(2);
 			I:ActionQueue_UseAbilityOnEntity(tango, friend);
 			I:ActionQueue_UseAbilityOnEntity(tango, friend);
 		elseif tangoCharge >= 6 then
 			for position = 1,3,2 do
-				friend = GetTeamMember(position);
+				local friend = GetTeamMember(position);
 				I:ActionQueue_UseAbilityOnEntity(tango, friend);
 				I:ActionQueue_UseAbilityOnEntity(tango, friend);
 			end
@@ -730,9 +805,38 @@ ConsiderItem["item_guardian_greaves"] = function(I, boots)
 	end
 end
 
--- ConsiderItem["item_crimson_guard"]
--- ConsiderItem["item_hood_of_defiance"]
--- ConsiderItem["item_pipe"]
+ConsiderItem["item_crimson_guard"] = function(I, crimson)
+	if ConsiderAoEBuff(I, mekansm, 0, 900, -50) > 0 then
+		I:Action_UseAbility(mekansm);
+		return;
+	end
+end
+ConsiderItem["item_hood_of_defiance"] = function(I, hood)
+	if ConsiderAoEBuff(I, hood, 0, 900, -50) > 0 then
+		I:Action_UseAbility(hood);
+		return;
+	end
+end
+ConsiderItem["item_pipe"] = function(I, pipe)
+	if ConsiderAoEBuff(I, pipe, 0, 900, -50) > 0 then
+		I:Action_UseAbility(pipe);
+		return;
+	end
+end
+
+-- ConsiderItem["item_urn_of_shadows"]
+-- ConsiderItem["item_veil_of_discord"]
+-- ConsiderItem["item_dagon"]
+-- ConsiderItem["item_dagon_2"]
+-- ConsiderItem["item_dagon_3"]
+-- ConsiderItem["item_dagon_4"]
+-- ConsiderItem["item_dagon_5"]
+-- ConsiderItem["item_shivas_guard"]
+
+
+-- ConsiderItem["item_shadow_amulet"]
+-- ConsiderItem["item_invis_sword"]
+-- ConsiderItem["item_silver_edge"]
 
 
 -- ConsiderItem["item_black_king_bar"]
@@ -748,6 +852,10 @@ end
 -- ConsiderItem["item_butterfly"]
 
 
+-- ConsiderItem["item_force_staff"]
+-- ConsiderItem["item_hurricane_pike"]
+
+
 -- ConsiderItem["item_cyclone"]
 -- ConsiderItem["item_diffusal_blade"]
 -- ConsiderItem["item_diffusal_blade_2"]
@@ -758,20 +866,6 @@ end
 -- ConsiderItem["item_sheepstick"]
 
 
--- ConsiderItem["item_urn_of_shadows"]
--- ConsiderItem["item_veil_of_discord"]
--- ConsiderItem["item_dagon"]
--- ConsiderItem["item_dagon_2"]
--- ConsiderItem["item_dagon_3"]
--- ConsiderItem["item_dagon_4"]
--- ConsiderItem["item_dagon_5"]
--- ConsiderItem["item_shivas_guard"]
-
-
--- ConsiderItem["item_force_staff"]
--- ConsiderItem["item_hurricane_pike"]
-
-
 -- ConsiderItem["item_ethereal_blade"]
 -- ConsiderItem["item_ghost"]
 -- ConsiderItem["item_glimmer_cape"]
@@ -780,11 +874,6 @@ end
 -- ConsiderItem["item_heavens_halberd"]
 -- ConsiderItem["item_solar_crest"]
 -- ConsiderItem["item_mjollnir"]
-
-
--- ConsiderItem["item_shadow_amulet"]
--- ConsiderItem["item_invis_sword"]
--- ConsiderItem["item_silver_edge"]
 
 
 -- ConsiderItem["item_necronomicon"]

@@ -2,16 +2,11 @@ _G._savedEnv = getfenv()
 module("utils", package.seeall)
 -- 
 
--- gxc's code
--- created by date: 2017/03/16
--- nBehavior = hAbility:GetTargetTeam, GetTargetType, GetTargetFlags or GetBehavior function returns
--- nFlag = Ability Target Teams, Ability Target Types, Ability Target Flags or Ability Behavior Bitfields constant
--- ***behaviors and flags can be combined.. thats why they are all 2^x.. you know.. binary code 000111011
-function CheckFlag( nBehavior, nFlag )
-	if ( nFlag == 0 ) then
-		if ( nBehavior == 0 ) then return true; else return false; end
+function CheckBit(flag, bit)
+	if bit == 0 then
+		return flag == 0;
 	end
-	return ( (nBehavior / nFlag) % 2 ) >= 1;
+	return math.floor(flag/bit) % 2 == 1;
 end
 
 
@@ -40,12 +35,15 @@ function CDOTABaseAbility_BotScript:CanCastOnTarget(target)
 	       not self:IsPassive() and
 	       self:IsCooldownReady() and
 	       (not target:IsMagicImmune() or
-	       utils.CheckFlag(self:GetTargetFlags(), ABILITY_TARGET_FLAG_MAGIC_IMMUNE_ENEMIES) or
-	       utils.CheckFlag(self:GetTargetFlags(), ABILITY_TARGET_FLAG_NOT_MAGIC_IMMUNE_ALLIES) or
-	       utils.CheckFlag(self:GetTargetFlags(), ABILITY_TARGET_FLAG_NONE));
+	       utils.CheckBit(self:GetTargetFlags(), ABILITY_TARGET_FLAG_MAGIC_IMMUNE_ENEMIES) or
+	       utils.CheckBit(self:GetTargetFlags(), ABILITY_TARGET_FLAG_NOT_MAGIC_IMMUNE_ALLIES) or
+	       utils.CheckBit(self:GetTargetFlags(), ABILITY_TARGET_FLAG_NONE));
 end
 function CDOTABaseAbility_BotScript:ReadyCastOnTarget(target)
 	return self:IsFullyCastable() and self:CanCastOnTarget(target);
+end
+function CDOTABaseAbility_BotScript:IsSpammable()
+	return self:GetCooldown() <= 10;
 end
 
 function CDOTA_Bot_Script:FindAoEVector(bEnemies, bHeroes, vBaseLocation, nMaxDistanceFromBase, nWidth, fTimeInFuture, nMaxHealth)
@@ -113,13 +111,13 @@ function CDOTA_Bot_Script:UseAoESpell(spell, baseLocation, range, radius, delay,
 		if spell:ReadyCastOnTarget(unit) and
 			unit:GetHealth() <= maxHealth then
 			
-			if utils.CheckFlag(spell:GetBehavior(), ABILITY_BEHAVIOR_NO_TARGET) and range == 0 then
+			if utils.CheckBit(spell:GetBehavior(), ABILITY_BEHAVIOR_NO_TARGET) and range == 0 then
 				if unit:IsHero() then AoELocation.count = #(self:GetNearbyHeroes(radius, isEnemy, BOT_MODE_NONE)); else
 									  AoELocation.count = #(self:GetNearbyCreeps(radius, isEnemy)); end
 				AoELocation.targetloc = baseLocation;
-			elseif utils.CheckFlag(spell:GetBehavior(), ABILITY_BEHAVIOR_AOE) then
+			elseif utils.CheckBit(spell:GetBehavior(), ABILITY_BEHAVIOR_AOE) then
 				AoELocation = self:FindAoELocation(isEnemy, unit:IsHero(), baseLocation, range, radius, delay, maxHealth);
-			elseif utils.CheckFlag(spell:GetBehavior(), ABILITY_BEHAVIOR_POINT) then
+			elseif utils.CheckBit(spell:GetBehavior(), ABILITY_BEHAVIOR_POINT) then
 				AoELocation = self:FindAoEVector(isEnemy, unit:IsHero(), baseLocation, range, radius, delay, maxHealth);
 			end
 
@@ -142,7 +140,7 @@ function CDOTA_Bot_Script:UseUnitSpell(spell, range, radius, maxHealth, spellTyp
 		end
 		if unit ~= nil then
 			local dist = GetUnitToUnitDistance(self, unit);
-			if dist > 0 and dist < range and
+			if unit == self or dist > 0 and dist < range and
 				spell:ReadyCastOnTarget(unit) and
 				unit:GetHealth() <= maxHealth then
 				-- print(GetUnitToUnitDistance(self, unit),range)
@@ -346,6 +344,17 @@ function CDOTA_Bot_Script:ClosestBuilding()
 		if dist < minDist then minDist = dist; closest = building; end
 	end
 	return closest, minDist;
+end
+
+
+function CDOTA_Bot_Script:HaveSlot()
+	local I = GetBot();
+	for slot = 0,8 do
+		if not I:GetItemInSlot(slot) then
+			return true;
+		end
+	end
+	return false;
 end
 
 

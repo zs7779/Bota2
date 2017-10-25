@@ -1,48 +1,62 @@
 require(GetScriptDirectory() ..  "/utils")
 ability_item_usage_generic = dofile( GetScriptDirectory().."/ability_item_usage_generic" )
 
+local abilityGuide = {};
+
 local function GetAbilityGuide(I)
 	local spells, talents = I:GetAbilities(); --*** need test if unpack exist
 
-	local abilityLevelUp = {};
-	abilityLevelUp[1] = spells[1];
-	abilityLevelUp[2] = spells[3];
-	abilityLevelUp[3] = spells[1];
-	abilityLevelUp[4] = spells[2];
-	abilityLevelUp[5] = spells[1];
-	abilityLevelUp[6] = spells[4];
-	abilityLevelUp[7] = spells[1];
-	abilityLevelUp[8] = spells[2];
-	abilityLevelUp[9] = spells[2];
-	abilityLevelUp[10] = talents[2];
-	abilityLevelUp[11] = spells[2];
-	abilityLevelUp[12] = spells[4];
-	abilityLevelUp[13] = spells[3];
-	abilityLevelUp[14] = spells[3];
-	abilityLevelUp[15] = talents[3];
-	abilityLevelUp[16] = spells[3];
-	abilityLevelUp[18] = spells[4];
-	abilityLevelUp[20] = talents[6];
-	abilityLevelUp[25] = talents[8];
-	return abilityLevelUp;
+	abilityGuide = {
+		talents[8],
+		talents[6],
+		spells[4],
+		spells[3],
+		talents[3],
+		spells[3],
+		spells[3],
+		spells[4],
+		spells[2],
+		talents[2],
+		spells[2],
+		spells[2],
+		spells[1],
+		spells[4],
+		spells[1],
+		spells[2],
+		spells[1],
+		spells[3],
+		spells[1]
+	};
 end
 
 function AbilityLevelUpThink()
 	local I = GetBot();
-	if I:GetAbilityPoints() < 1 then return; end
-	local guide = GetAbilityGuide(I);
+	-- print(#abilityGuide)
+	if I:GetAbilityPoints() == 0 then return; end
+	if #abilityGuide == 0 then
+		GetAbilityGuide(I);
+	end
 	local myLevel = I:GetLevel();
-	local ability = I:GetAbilityByName(guide[myLevel]);
-	if ability ~= nil and ability:CanAbilityBeUpgraded() then
-		I:ActionImmediate_LevelAbility(guide[myLevel]);
+	local ability = I:GetAbilityByName(abilityGuide[#abilityGuide]);
+	
+	if  ability ~= nil and
+		ability:CanAbilityBeUpgraded() and
+		ability:GetHeroLevelRequiredToUpgrade() <= myLevel then
+		local abilityLevel = ability:GetLevel();
+		if ability:GetMaxLevel() > abilityLevel then
+			I:ActionImmediate_LevelAbility(ability:GetName());
+			I:DebugTalk("升级"..ability:GetName())
+			table.remove(abilityGuide);
+		else -- bugged, ability already max level
+			table.remove(abilityGuide);
+		end
 	end
 end
 
 function AbilityUsageThink()
-	-- print(convars)
 	local I = GetBot();
 	local spells = I:GetAbilities();
-	
+
 	local DragonSlave = I:GetAbilityByName(spells[1]);
 	local LightStrikeArray = I:GetAbilityByName(spells[2]);
 	local LagunaBlade = I:GetAbilityByName(spells[4]);
