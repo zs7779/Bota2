@@ -288,7 +288,7 @@ function CDOTA_Bot_Script:WantHeal()
 	return self:GetMaxHealth() - self:GetHealth() >= 400 and self:GetMaxHealth() - self:GetHealth() <= 1000;
 end
 function CDOTA_Bot_Script:WantMana()
-	return self:GetMaxMana() - self:GetMana() >= 200 and self:GetComboMana() - self:GetMana() <= 500;
+	return self:GetMaxMana() - self:GetMana() >= 200;
 end
 
 function CDOTA_Bot_Script:HaveTp()
@@ -328,7 +328,8 @@ function CDOTA_Bot_Script:IsTrueHero() -- *** if taking too much damage then is 
 	       self:GetActualIncomingDamage(100, DAMAGE_TYPE_MAGICAL) < 200;
 end
 
-function CDOTA_Bot_Script:CanAct()
+function CDOTA_Bot_Script:CanAct() -- or if GetCurrentActiveAbility( ) gives mana drain/sandstorm/upheaval/tornado
+	-- or use modifier?
 	return self:IsTrueHero() and not self:IsUsingAbility() and not self:IsChanneling() and not self:IsDisabled() and not self:IsHexed();
 end
 
@@ -372,6 +373,13 @@ function CDOTA_Bot_Script:HaveSlot()
 		end
 	end
 	return false;
+end
+function CDOTA_Bot_Script:GetItem(name)
+	local slot = self:FindItemSlot(name);
+	if slot ~= -1 then
+		return I:GetItemInSlot(slot);
+	end
+	return nil;
 end
 
 
