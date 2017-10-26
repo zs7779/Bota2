@@ -264,10 +264,10 @@ function LowHealth(currHealth, maxHealth)
 	return currHealth/maxHealth < 0.6;
 end
 function LowMana(currMana, maxMana)
-	return currMana/maxMana < 0.4;
+	return currMana/maxMana < 0.35;
 end
 function NoMana(currMana, maxMana)
-	return currMana/maxMana < 0.2;
+	return currMana/maxMana < 0.15;
 end
 function CDOTA_Bot_Script:IsNoHealth()
 	return NoHealth(self:GetHealth(), self:GetMaxHealth());
@@ -276,10 +276,10 @@ function CDOTA_Bot_Script:IsLowHealth()
 	return LowHealth(self:GetHealth(), self:GetMaxHealth());
 end
 function CDOTA_Bot_Script:IsNoMana()
-	return NoMana(self:GetMana(), self:GetMaxMana()) and self:GetMana() < self:GetComboMana();
+	return NoMana(self:GetMana(), self:GetMaxMana()) and self:GetComboMana()-self:GetMana() >= 250;
 end
 function CDOTA_Bot_Script:IsLowMana()
-	return LowMana(self:GetMana(), self:GetMaxMana()) or self:GetMana() < self:GetComboMana();
+	return LowMana(self:GetMana(), self:GetMaxMana()) or self:GetComboMana()-self:GetMana() >= 150;
 end
 function CDOTA_Bot_Script:IsLow()
 	return self:IsLowHealth() and self:IsNoMana();
@@ -292,11 +292,11 @@ function CDOTA_Bot_Script:WantMana()
 end
 
 function CDOTA_Bot_Script:HaveTp()
-	local slot = FindItemSlot("item_travel_boots_2");
-	if slot == -1 then slot = FindItemSlot("item_travel_boots"); end
-	if slot == -1 then slot = FindItemSlot("item_tpscroll"); end
+	local slot = self:FindItemSlot("item_travel_boots_2");
+	if slot == -1 then slot = self:FindItemSlot("item_travel_boots"); end
+	if slot == -1 then slot = self:FindItemSlot("item_tpscroll"); end
 	if slot == -1 then return false; end
-	local Tp = GetItemInSlot(slot);
+	local Tp = self:GetItemInSlot(slot);
 	return Tp:IsFullyCastable();
 end
 
@@ -366,7 +366,7 @@ end
 
 function CDOTA_Bot_Script:HaveSlot()
 	local I = GetBot();
-	for slot = 0,8 do
+	for slot = 0,5 do
 		if not I:GetItemInSlot(slot) then
 			return true;
 		end

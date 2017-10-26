@@ -96,7 +96,7 @@ function ConsiderSandStorm(I, spell)
 	local damage = 0;
 	local spellType = 0;
 	local delay = 0;
-	return ability_item_usage_generic.ConsiderInvis(I, spell);
+	return ability_item_usage_generic.ConsiderInvis(I, spell, false);
 end
 
 function ConsiderEpicenter(I, spell)

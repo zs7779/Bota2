@@ -517,29 +517,32 @@ function ConsiderUnitSave(I, spell, castRange, radius, maxHealth)
 end
 
 
-function ConsiderInvis(I, spell)
+function ConsiderInvis(I, spell, offensive)
 	if not spell:IsFullyCastable() or not I:CanCast() or I:IsInvisible() then
 		return {BOT_ACTION_DESIRE_NONE};
 	end
 	local enemys = I:GetNearbyHeroes(1200,true,BOT_MODE_NONE);
 
 	local activeMode = I:GetActiveMode();
-	if (activeMode == BOT_MODE_RETREAT or 
-		activeMode == BOT_MODE_EVASIVE_MANEUVERS) and
-	   (I:WasRecentlyDamagedByAnyHero(3.0) or #(I:GetIncomingTrackingProjectiles())>0) and
-		#enemys > 0 then
- 		I:DebugTalk("无敌")
-		return {BOT_ACTION_DESIRE_LOW}; -- invis is the last resource, not high priority 
+	if not offensive then
+		if (activeMode == BOT_MODE_RETREAT or 
+			activeMode == BOT_MODE_EVASIVE_MANEUVERS) and
+		   (I:WasRecentlyDamagedByAnyHero(3.0) or #(I:GetIncomingTrackingProjectiles())>0) and
+			#enemys > 0 then
+	 		I:DebugTalk("无敌")
+			return {BOT_ACTION_DESIRE_LOW}; -- invis is the last resource, not high priority 
+		end
 	end
-	
-	if (activeMode == BOT_MODE_ATTACK or
-		activeMode == BOT_MODE_ROAM or
-		activeMode == BOT_MODE_TEAM_ROAM or
-		activeMode == BOT_MODE_RUNE or
-		activeMode == BOT_MODE_WARD) and
-		#enemys > 0 then
- 		I:DebugTalk("隐身")
-		return {BOT_ACTION_DESIRE_LOW};
+	if offensive then
+		if (activeMode == BOT_MODE_ATTACK or
+			activeMode == BOT_MODE_ROAM or
+			activeMode == BOT_MODE_TEAM_ROAM or
+			activeMode == BOT_MODE_RUNE or
+			activeMode == BOT_MODE_WARD) and
+			#enemys > 0 then
+	 		I:DebugTalk("隐身")
+			return {BOT_ACTION_DESIRE_LOW};
+		end
 	end
 	
 	return {BOT_ACTION_DESIRE_NONE};
@@ -632,7 +635,6 @@ function CourierUsageThink()
 	if IsFlyingCourier(courier) then
 		courierBurst = courier:GetAbilityByName("courier_burst");
 		if (courier:GetHealth() < courier:GetMaxHealth() or
-		   	 courier:GetNearbyHeroes(900,true,BOT_MODE_NONE) ~= nil or
 		   	 #(courier:GetIncomingTrackingProjectiles()) > 0) then
 			if courier:CanCast() and courierBurst:IsFullyCastable() then
 		    	I:ActionImmediate_Courier(courier, COURIER_ACTION_BURST);
@@ -647,7 +649,7 @@ end
 
 
 -- only check the ones bot dont use well
--- wand/stick/mana boot/armlet/soul ring
+-- wand/stick/mana boot/armlet/soul ring/salve/mango
 -- maybe put manaboot and mek somewhere in assemble
 function FakeItemUsageThink() -- <- because I can't program blink
 	local I = GetBot();

@@ -16,9 +16,9 @@ function PurchaseItem(I, shoppingGuide, trash)
 	local itemCost = GetItemCost(item);
 	if I:GetGold() > itemCost then
 		if not I:HaveSlot() and
-			I:DistanceFromSecretShop() == 0 or
-			I:DistanceFromSideShop() == 0 or
-			I:DistanceFromFountain() == 0 then
+			(I:DistanceFromSecretShop() == 0 or
+ 			 I:DistanceFromSideShop() == 0 or
+ 			 I:DistanceFromFountain() == 0) then
 			SellItem(I, trash);
 		end
 
@@ -90,16 +90,18 @@ function SellItem(I, trash)
 	};
 	for slot = 0,16 do
 		local item = I:GetItemInSlot(slot);
-		for _, good in ipairs(consumableGoods) do
-			if item:GetName() == good then
-				ActionImmediate_SellItem(item);
-				return;
+		if item ~= nil then
+			for _, good in ipairs(consumableGoods) do
+				if item:GetName() == good then
+					I:ActionImmediate_SellItem(item);
+					return;
+				end
 			end
-		end
-		if item:GetName() == trash[#trash] then
-			ActionImmediate_SellItem(item);
-			table.remove(trash);
-			return; -- sell just one, see if space available
+			if item:GetName() == trash[#trash] then
+				I:ActionImmediate_SellItem(item);
+				table.remove(trash);
+				return; -- sell just one, see if space available
+			end
 		end
 	end
 end
