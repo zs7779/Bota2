@@ -78,7 +78,7 @@ function ConsiderShrine(I, position)
 		I.shrineTime = nil;
 	end
 	if I.shrine then
-		if I:IsLowHealth() or I:IsLowMana() then
+		if I:IsLowHealth() or I:IsNoMana() then
 			return 0.8;
 		else
 			return 0.7;
@@ -86,9 +86,9 @@ function ConsiderShrine(I, position)
 	end
 	local team = GetTeam();
 	local enemys = I:GetNearbyHeroes(1200,true,BOT_MODE_NONE);
-	if (I:IsLowHealth() or I:IsLowMana()) and position <= 3 and not I.shrine then -- I need shrine and I'm core or I'm underattack
+	if (I:IsLowHealth() or I:IsNoMana()) and position <= 3 and not I.shrine then -- I need shrine and I'm core or I'm underattack
 		local dist = I:DistanceFromFountain();
-		for shrine = SHRINE_BASE_1, SHRINE_JUNGLE_2 do
+		for i = SHRINE_BASE_1, SHRINE_JUNGLE_2 do
 			local shrine = GetShrine(team, i);
 			if shrine ~= nil and GetShrineCooldown(shrine) < 10 then
 				local thisDist = GetUnitToUnitDistance(I, shrine);
@@ -119,9 +119,9 @@ function ConsiderShrine(I, position)
 	return 0;
 end
 
-function ConsiderTeamRoam(I, position)
+-- function ConsiderTeamRoam(I, position)
 
-end
+-- end
 
 function Think()
 	local I = GetBot();

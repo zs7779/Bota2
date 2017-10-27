@@ -353,12 +353,12 @@ function CDOTA_Bot_Script:PredictLocation(fTime)
 end
 
 function CDOTA_Bot_Script:ClosestBuilding()
-	unitType = I:IsMyFriend() and UNIT_LIST_ALLIED_BUILDINGS or UNIT_LIST_ENEMY_BUILDINGS;
+	unitType = self:IsMyFriend() and UNIT_LIST_ALLIED_BUILDINGS or UNIT_LIST_ENEMY_BUILDINGS;
 	local buildings = GetUnitList(unitType);
 	local minDist = 100000;
 	local closest = nil;
 	for _, building in ipairs(buildings) do
-		local dist = GetUnitToUnitDistance(I,building);
+		local dist = GetUnitToUnitDistance(self,building);
 		if dist < minDist then minDist = dist; closest = building; end
 	end
 	return closest, minDist;
@@ -366,9 +366,8 @@ end
 
 
 function CDOTA_Bot_Script:HaveSlot()
-	local I = GetBot();
 	for slot = 0,5 do
-		if not I:GetItemInSlot(slot) then
+		if not self:GetItemInSlot(slot) then
 			return true;
 		end
 	end
@@ -377,7 +376,7 @@ end
 function CDOTA_Bot_Script:GetItem(name)
 	local slot = self:FindItemSlot(name);
 	if slot ~= -1 then
-		return I:GetItemInSlot(slot);
+		return self:GetItemInSlot(slot);
 	end
 	return nil;
 end

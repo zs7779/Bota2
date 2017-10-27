@@ -45,7 +45,6 @@ function AbilityLevelUpThink()
 		local abilityLevel = ability:GetLevel();
 		if ability:GetMaxLevel() > abilityLevel then
 			I:ActionImmediate_LevelAbility(ability:GetName());
-			I:DebugTalk("升级"..ability:GetName())
 			table.remove(abilityGuide);
 		else -- bugged, ability already max level
 			table.remove(abilityGuide);
@@ -79,7 +78,7 @@ end
 
 function ConsiderDragonSlave(I, spell)
 	local castRange = spell:GetCastRange();
-	local radius = spell:GetSpecialValueInt("dragon_slave_width_initial");
+	local radius = spell:GetSpecialValueInt("dragon_slave_width_end");
 	local damage = spell:GetAbilityDamage();
 	local spellType = spell:GetDamageType();
 	local delay = spell:GetCastPoint();
