@@ -26,7 +26,6 @@ local itemGuide =
 	"item_wind_lace", -- *1 Tranquil
 	"item_ring_of_regen",
 
-	"item_smoke_of_deceit",
 	"item_boots", -- 1
 	"item_clarity",
 	"item_tango"
@@ -36,6 +35,7 @@ local trash = {
 }
 
 function ItemPurchaseThink()
+	item_purchase_generic.ItemPurchaseThink();
 	local I = GetBot();
 	item_purchase_generic.PurchaseItem(I, itemGuide, trash);
 end

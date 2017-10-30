@@ -78,7 +78,7 @@ function AbilityUsageThink()
 	if WeaveDesire > 0 then
 		I:Action_UseAbilityOnLocation(Weave, WeaveLoc);
 	end
-	
+	ability_item_usage_generic.SwapItemThink(I);
 end
 
 function ConsiderPoisonTouch(I, spell)

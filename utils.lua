@@ -264,10 +264,10 @@ function LowHealth(currHealth, maxHealth)
 	return currHealth/maxHealth < 0.6;
 end
 function LowMana(currMana, maxMana)
-	return currMana/maxMana < 0.35;
+	return currMana/maxMana < 0.4;
 end
 function NoMana(currMana, maxMana)
-	return currMana/maxMana < 0.15;
+	return currMana/maxMana < 0.2;
 end
 function CDOTA_Bot_Script:IsNoHealth()
 	return NoHealth(self:GetHealth(), self:GetMaxHealth());
@@ -276,7 +276,7 @@ function CDOTA_Bot_Script:IsLowHealth()
 	return LowHealth(self:GetHealth(), self:GetMaxHealth());
 end
 function CDOTA_Bot_Script:IsNoMana()
-	return NoMana(self:GetMana(), self:GetMaxMana()) and self:GetComboMana()-self:GetMana() >= 250;
+	return NoMana(self:GetMana(), self:GetMaxMana()) or self:GetComboMana()-self:GetMana() >= 250;
 end
 function CDOTA_Bot_Script:IsLowMana()
 	return LowMana(self:GetMana(), self:GetMaxMana()) or self:GetComboMana()-self:GetMana() >= 150;
@@ -292,18 +292,28 @@ function CDOTA_Bot_Script:WantMana()
 end
 
 function CDOTA_Bot_Script:HaveTp()
-	local slot = self:FindItemSlot("item_travel_boots_2");
-	if slot == -1 then slot = self:FindItemSlot("item_travel_boots"); end
-	if slot == -1 then slot = self:FindItemSlot("item_tpscroll"); end
-	if slot == -1 then return false; end
-	local Tp = self:GetItemInSlot(slot);
-	return Tp:IsFullyCastable();
+	Tps = {
+		"item_travel_boots_2",
+		"item_travel_boots",
+		"item_tpscroll"
+	}
+	local slot = -1;
+	for _, Tp in ipairs(Tps) do
+		slot = self:FindItemSlot(Tp);	
+		if slot ~= -1 then break; end
+	end
+	if slot == -1 then
+		return 100000;
+	else
+		local Tp = self:GetItemInSlot(slot);
+		return Tp:GetCooldownTimeRemaining();
+	end
 end
 
 function CDOTA_Bot_Script:OnRune(runes)
 	for i = 1, #runes do
 		local rune = runes[i];
-		if GetRuneStatus(rune) == RUNE_STATUS_AVAILABLE and GetUnitToLocationDistance(self,GetRuneSpawnLocation(rune)) < 100 then
+		if GetRuneStatus(rune) == RUNE_STATUS_AVAILABLE and GetUnitToLocationDistance(self,GetRuneSpawnLocation(rune)) < 200 then
 			return rune;
 		end
 	end
@@ -323,9 +333,8 @@ function CDOTA_Bot_Script:IsImmune()
 end
 
 function CDOTA_Bot_Script:IsTrueHero() -- *** if taking too much damage then is illusion
-	return self:IsAlive() and not self:IsIllusion() and
-	       self:GetActualIncomingDamage(100, DAMAGE_TYPE_PHYSICAL) < 200 and
-	       self:GetActualIncomingDamage(100, DAMAGE_TYPE_MAGICAL) < 200;
+	return self:IsAlive() and not self:IsIllusion() and self:CanBeSeen() and
+	       self:GetActualIncomingDamage(100, DAMAGE_TYPE_PURE) < 200;
 end
 
 function CDOTA_Bot_Script:CanAct() -- or if GetCurrentActiveAbility( ) gives mana drain/sandstorm/upheaval/tornado

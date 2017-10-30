@@ -63,12 +63,12 @@ function GetDesire()
 	local position = I:GetPlayerPosition();
 	local hasBottle = (I:FindItemSlot( "item_bottle" ) ~= -1);
 
-	if (not I:IsAlive()) or I:IsUsingAbility() or I:IsChanneling() then return 0; end
+	if not I:IsTrueHero() or I:IsUsingAbility() or I:IsChanneling() then return 0; end
     if DibsHaveBeenCalled() then return 0; end
 
     local rune = I:OnRune(safeRunes[GetTeam()]);
 	if rune ~= nil then 
-		return 0.99;
+		return 1.00;
 	end
 
 	local friends = I:GetNearbyHeroes(1200,false,BOT_MODE_NONE);
@@ -78,7 +78,7 @@ function GetDesire()
 		return 0.4;
 	end
 
-	if #enemys > 1 then return 0.0; end
+	if #enemys > #friends then return 0.0; end
     
     local runes = PendingRunes(safeRunes[GetTeam()]);
     if #runes == 0 then return 0; end

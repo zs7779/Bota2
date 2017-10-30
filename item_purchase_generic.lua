@@ -106,7 +106,35 @@ function SellItem(I, trash)
 	end
 end
 
+function BuySupportItem(I)
+	local detectionItems = {
+		"item_gem",
+		"item_ward_sentry"
+	};
+	if GetNumCouriers() == 0 and
+	   I:GetGold() >= GetItemCost("item_courier") then
+		local purchaseResult = I:ActionImmediate_PurchaseItem("item_courier");
+	elseif not IsFlyingCourier(GetCourier(0)) and
+	   GetItemStockCount("item_flying_courier") >= 0 and
+	   I:GetGold() >= GetItemCost("item_flying_courier")then
+		local purchaseResult = I:ActionImmediate_PurchaseItem("item_flying_courier");
+	end
+	
+	if GetItemStockCount("item_ward_observer") >= 0 and
+	   I:GetGold() > GetItemCost("item_ward_observer") then
+	   purchaseResult = I:ActionImmediate_PurchaseItem("item_ward_observer");
+	end
+end
+
+function ItemPurchaseThink()
+	local I = GetBot();
+	if I:GetPlayerPosition() == 5 then
+		BuySupportItem(I);
+	end
+end
+
 BotsInit = require( "game/botsinit" );
 local item_purchase_generic = BotsInit.CreateGeneric();
 item_purchase_generic.PurchaseItem = PurchaseItem;
+item_purchase_generic.ItemPurchaseThink = ItemPurchaseThink;
 return item_purchase_generic;

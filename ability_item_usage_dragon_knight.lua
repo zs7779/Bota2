@@ -73,7 +73,7 @@ function AbilityUsageThink()
 	if BreatheFireDesire > 0 then
 		I:Action_UseAbilityOnLocation(BreatheFire, BreatheFireLoc);
 	end
-	
+	ability_item_usage_generic.SwapItemThink(I);
 end
 
 function ConsiderBreatheFire(I, spell)

@@ -73,7 +73,7 @@ function AbilityUsageThink()
 	if DragonSlaveDesire > BOT_ACTION_DESIRE_NONE then
 		I:Action_UseAbilityOnLocation(DragonSlave, DragonSlaveLoc);
 	end
-	
+	ability_item_usage_generic.SwapItemThink(I);	
 end
 
 function ConsiderDragonSlave(I, spell)

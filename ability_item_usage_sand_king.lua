@@ -74,7 +74,7 @@ function AbilityUsageThink()
 	if EpicenterDesire > 0 then
 		I:Action_UseAbility(Epicenter);
 	end
-	
+	ability_item_usage_generic.SwapItemThink(I);	
 end
 
 function ConsiderBurrowstrike(I, spell)

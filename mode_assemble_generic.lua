@@ -73,9 +73,10 @@ function ConsiderManaBoots(I, position)
 end
 
 function ConsiderShrine(I, position)
-	if I.shrine and GetShrineCooldown(I.shrine) > 10 and not IsShrineHealing(I.shrine) then
+	if not I:IsTrueHero() or I.shrine and GetShrineCooldown(I.shrine) > 10 and not IsShrineHealing(I.shrine) then
 		I.shrine = nil;
 		I.shrineTime = nil;
+		return 0;
 	end
 	if I.shrine then
 		if I:IsLowHealth() or I:IsNoMana() then
@@ -101,18 +102,18 @@ function ConsiderShrine(I, position)
 			end
 			shrine = nil; --< is this really necessary why is lua so weird
 		end
-		if I.shrine and not (#enemys > 0 and I:WasRecentlyDamagedByAnyHero(3.0)) then -- I have my shrine, who wants to come? pingpingping I do
-			for P = 1,5 do
-				local friend = GetTeamMember(P);
-				if P ~= position and friend ~= nil and friend:IsTrueHero() and
-				   ((friend:WantHeal() or friend:WantMana()) and
-				    (GetUnitToUnitDistance(friend, I.shrine)/friend:GetCurrentMovementSpeed() <= math.min(I.shrineTime,20) or
-				     friend:HaveTp()) or
-				    (friend:IsLowHealth() or friend:IsLowMana()) and
-				    (GetUnitToUnitDistance(friend, I.shrine)/friend:GetCurrentMovementSpeed() <= I.shrineTime or
-				     friend:HaveTp())) then
-					friend.shrine = I.shrine;
-				end
+	end
+	if I.shrine and I.shrineTime then -- I have my shrine, who wants to come? pingpingping I do
+		for P = 1,5 do
+			local friend = GetTeamMember(P);
+			if P ~= position and friend ~= nil and friend:IsTrueHero() and not friend.shrine and
+			   ((friend:WantHeal() or friend:WantMana()) and
+			    (GetUnitToUnitDistance(friend, I.shrine)/friend:GetCurrentMovementSpeed() <= math.min(I.shrineTime,20) or
+			     friend:HaveTp() <= I.shrineTime) or
+			    (friend:IsLowHealth() or friend:IsLowMana()) and
+			    (GetUnitToUnitDistance(friend, I.shrine)/friend:GetCurrentMovementSpeed() <= I.shrineTime or
+			     friend:HaveTp() <= I.shrineTime)) then
+				friend.shrine = I.shrine;
 			end
 		end
 	end
@@ -159,8 +160,13 @@ function ManaBootsThink(I)
 end
 
 function ShrineThink(I)
+	if not I:IsTrueHero() or I.shrine and GetShrineCooldown(I.shrine) > 10 and not IsShrineHealing(I.shrine) then
+		I.shrine = nil;
+		I.shrineTime = nil;
+		return;
+	end
 	local enemys = I:GetNearbyHeroes(1200,true,BOT_MODE_NONE);
-	if  GetUnitToUnitDistance(I, I.shrine) > 300 then
+	if GetUnitToUnitDistance(I, I.shrine) > 500 then
 		I:Action_MoveToUnit(I.shrine); --< maybe add return here?
 	end
 	if GetShrineCooldown(I.shrine) == 0 then

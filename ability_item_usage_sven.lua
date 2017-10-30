@@ -73,7 +73,7 @@ function AbilityUsageThink()
 	if GodsStrengthDesire > 0 then
 		I:Action_UseAbility(GodsStrength);
 	end
-	
+	ability_item_usage_generic.SwapItemThink(I);	
 end
 
 function ConsiderStormBolt(I, spell)

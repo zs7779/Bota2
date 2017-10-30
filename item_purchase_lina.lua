@@ -54,6 +54,7 @@ local trash = {
 }
 
 function ItemPurchaseThink()
+	item_purchase_generic.ItemPurchaseThink();
 	local I = GetBot();
 	item_purchase_generic.PurchaseItem(I, itemGuide, trash);
 end

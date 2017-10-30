@@ -35,19 +35,16 @@ local itemGuide =
 	"item_magic_stick", -- 2
 	"item_boots", -- 1
 
-	"item_ward_sentry",
-	"item_ward_observer",
-	"item_ward_observer",
 	"item_clarity",
 	"item_tango",
 	"item_tango",
-	"item_courier"
 };
 local trash = {
 	"item_magic_stick",
 }
 
 function ItemPurchaseThink()
+	item_purchase_generic.ItemPurchaseThink();
 	local I = GetBot();
 	item_purchase_generic.PurchaseItem(I, itemGuide, trash);
 end

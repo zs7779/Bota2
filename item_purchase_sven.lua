@@ -33,8 +33,6 @@ local itemGuide =
 	"item_belt_of_strength", -- *3 treads
 	"item_gloves",
 	"item_boots", -- 3 boot
-	"item_slippers", -- *1 pms
-	"item_slippers",
 	"item_quelling_blade", -- 2
 
 	"item_clarity",
@@ -49,6 +47,7 @@ local trash = {
 }
 
 function ItemPurchaseThink()
+	item_purchase_generic.ItemPurchaseThink();
 	local I = GetBot();
 	item_purchase_generic.PurchaseItem(I, itemGuide, trash);
 end

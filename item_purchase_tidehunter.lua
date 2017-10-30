@@ -7,37 +7,34 @@ local itemGuide =
 	"item_boots", -- *3 bot
 	"item_recipe_travel_boots",
 
-	"item_recipe_shivas_guard", -- *4 shivas
+	"item_recipe_shivas_guard", -- *3 shivas
 	"item_mystic_staff",
-	"item_platemail", -- *4
-	"item_recipe_refresher", -- *3 refresher
+	"item_platemail", -- *3
+	"item_recipe_refresher", -- *1 refresher
 	"item_void_stone",
 	"item_void_stone",
 	"item_ring_of_health",
-	"item_ring_of_health", -- *3
-	"item_recipe_force_staff", --*6 force
+	"item_ring_of_health", -- *1
+	"item_recipe_force_staff", --*5 force
 	"item_ring_of_health",
-	"item_staff_of_wizardry", -- 6
-	"item_recipe_guardian_greaves", --*2+6 greaves
-	"item_blink", -- *1
-	"item_recipe_mekansm", --* 6 mek
+	"item_staff_of_wizardry", -- 5
+	"item_recipe_guardian_greaves", --*2+5 greaves
+	"item_blink", -- 6
+	"item_recipe_mekansm", --* 5 mek
 	"item_recipe_headdress",
 	"item_branches",
 	"item_ring_of_regen",
-    "item_recipe_buckler", --*6 buckler
+    "item_recipe_buckler", --*5 buckler
 	"item_branches";
-	"item_chainmail", -- 6
-	"item_recipe_pipe", --*5 pipe
+	"item_chainmail", -- 5
+	"item_recipe_pipe", --*4 pipe
 	"item_recipe_headdress",
 	"item_branches",
 	"item_ring_of_regen",
-	"item_ring_of_regen", -- *5 hood
+	"item_ring_of_regen", -- *4 hood
 	"item_ring_of_health",
-	"item_cloak", -- 5
+	"item_cloak", -- 4
 	"item_energy_booster", --*2 Manaboot
-	"item_recipe_soul_ring", --*4 soulring
-	"item_sobi_mask",
-	"item_ring_of_regen", -- 4
 	"item_magic_stick", -- 3
 	"item_boots", -- 2 boot
 	"item_recipe_iron_talon", -- *1 talon
@@ -55,6 +52,7 @@ local trash = {
 }
 
 function ItemPurchaseThink()
+	item_purchase_generic.ItemPurchaseThink();
 	local I = GetBot();
 	item_purchase_generic.PurchaseItem(I, itemGuide, trash);
 end

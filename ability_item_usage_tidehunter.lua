@@ -73,6 +73,7 @@ function AbilityUsageThink()
 	if GushDesire > 0 then
 		I:Action_UseAbilityOnEntity(Gush, GushTarget);
 	end
+	ability_item_usage_generic.SwapItemThink(I);
 end
 
 function ConsiderGush(I, spell)

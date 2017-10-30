@@ -57,10 +57,12 @@ function ConsiderAoENuke(I, spell, castRange, radius, maxHealth, spellType, dela
 	local myLocation = I:GetLocation();
 
 	-- GetNearby sorts units from close to far
-	if castRange >= 1600 then castRange = 1580; end
-	local enemys = I:GetNearbyHeroes(castRange,true,BOT_MODE_NONE);
-	local creeps = I:GetNearbyCreeps(castRange,true);
-	local laneCreeps = I:GetNearbyLaneCreeps(castRange,true);
+	if castRange > 1600 then castRange = 1600; end
+	if radius > 1600 then radius = 1600; end
+	local searchRadius = math.min(castRange+radius, 1600);
+	local enemys = I:GetNearbyHeroes(searchRadius,true,BOT_MODE_NONE);
+	local creeps = I:GetNearbyCreeps(searchRadius,true);
+	local laneCreeps = I:GetNearbyLaneCreeps(searchRadius,true);
 
 	-- AoE kill secure
 	AoELocation = I:UseAoESpell(spell, myLocation, castRange, radius, delay, maxHealth, spellType, enemys, true);
@@ -141,8 +143,10 @@ function ConsiderAoEStun(I, spell, castRange, radius, delay)
 	local myLocation = I:GetLocation();
 
 	-- GetNearby sorts units from close to far
-	if castRange >= 1600 then castRange = 1580; end
-	local enemys = I:GetNearbyHeroes(castRange,true,BOT_MODE_NONE);
+	if castRange > 1600 then castRange = 1600; end
+	if radius > 1600 then radius = 1600; end
+	local searchRadius = math.min(castRange+radius, 1600);
+	local enemys = I:GetNearbyHeroes(searchRadius,true,BOT_MODE_NONE);
 	local movingEnemys = {}
 	local channelingEnemys = {};
 	for i, enemy in ipairs(enemys) do
@@ -202,9 +206,10 @@ function ConsiderAoEDebuff(I, spell, castRange, radius, delay)
 	local activeMode = I:GetActiveMode();
 	local myLocation = I:GetLocation();
 
-	if castRange >= 1600 then castRange = 1580; end
-	-- GetNearby sorts units from close to far
-	local enemys = I:GetNearbyHeroes(castRange,true,BOT_MODE_NONE);
+	if castRange > 1600 then castRange = 1600; end
+	if radius > 1600 then radius = 1600; end
+	local searchRadius = math.min(castRange+radius, 1600);
+	local enemys = I:GetNearbyHeroes(searchRadius,true,BOT_MODE_NONE);
 
 	-- Add if not BOT_MODE_RETREAT, go ahead if can hit multiple heroes
 	if activeMode ~= BOT_MODE_RETREAT then
@@ -335,9 +340,11 @@ function ConsiderUnitNuke(I, spell, castRange, radius, maxHealth, spellType)
 	local activeMode = I:GetActiveMode();
 
 	-- GetNearby sorts units from close to far
-	if castRange >= 1600 then castRange = 1580; end
-	local enemys = I:GetNearbyHeroes(castRange,true,BOT_MODE_NONE);
-	local creeps = I:GetNearbyCreeps(castRange,true);
+	if castRange > 1600 then castRange = 1600; end
+	if radius > 1600 then radius = 1600; end
+	local searchRadius = math.min(castRange+radius, 1600);
+	local enemys = I:GetNearbyHeroes(searchRadius,true,BOT_MODE_NONE);
+	local creeps = I:GetNearbyCreeps(searchRadius,true);
 	
 	-- Kill secure
 	target = I:UseUnitSpell(spell, castRange, radius, maxHealth, spellType, enemys, true);
@@ -380,8 +387,10 @@ function ConsiderUnitStun(I, spell, castRange, radius)
 	local activeMode = I:GetActiveMode();
 	
 	-- GetNearby sorts units from close to far
-	if castRange >= 1600 then castRange = 1580; end
-	local enemys = I:GetNearbyHeroes(castRange,true,BOT_MODE_NONE);
+	if castRange > 1600 then castRange = 1600; end
+	if radius > 1600 then radius = 1600; end
+	local searchRadius = math.min(castRange+radius, 1600);
+	local enemys = I:GetNearbyHeroes(searchRadius,true,BOT_MODE_NONE);
 	local movingEnemys = {}
 	local channelingEnemys = {};
 	for i, enemy in ipairs(enemys) do
@@ -437,8 +446,10 @@ function ConsiderUnitDebuff(I, spell, castRange, radius)
 	local activeMode = I:GetActiveMode();
 
 	-- GetNearby sorts units from close to far
-	if castRange >= 1600 then castRange = 1580; end
-	local enemys = I:GetNearbyHeroes(castRange,true,BOT_MODE_NONE);
+	if castRange > 1600 then castRange = 1600; end
+	if radius > 1600 then radius = 1600; end
+	local searchRadius = math.min(castRange+radius, 1600);
+	local enemys = I:GetNearbyHeroes(searchRadius,true,BOT_MODE_NONE);
 	local movingEnemys = {}
 	for i, enemy in ipairs(enemys) do
 		if not enemy:IsImmobile() then
@@ -548,6 +559,7 @@ function ConsiderInvis(I, spell, offensive)
 	return {BOT_ACTION_DESIRE_NONE};
 end
 
+--*** I'm thinking if offensive blink can be simulated by aoe nuke
 function ConsiderBlink(I, spell, distance)
 	if not spell:IsFullyCastable() or not I:CanCast() or I:IsInvisible() then
 		return {BOT_ACTION_DESIRE_NONE};
@@ -608,11 +620,11 @@ function CourierUsageThink()
 	-- deliver or goto secret shop. you always walk to sideshop
 	if state == COURIER_STATE_AT_BASE then
 		courier.mustReturn = nil;
-		if I:GetStashValue() >= 350 and courier:HaveSlot() then
+		if I:GetStashValue() >= 325 and courier:HaveSlot() then
 			I:ActionImmediate_Courier(courier, COURIER_ACTION_TAKE_STASH_ITEMS);
 			return;
 		end
-		if I:GetCourierValue()+I:GetStashValue() >= 350 then
+		if I:GetCourierValue()+I:GetStashValue() >= 325 then
 			I:ActionImmediate_Courier(courier, COURIER_ACTION_TAKE_AND_TRANSFER_ITEMS);
 			return;
 		end
@@ -647,17 +659,111 @@ function CourierUsageThink()
 	end
 end
 
+function IsConsumable(item)
+	local consumableGoods = {
+		"item_smoke_of_deceit",
+		"item_tpscroll",
+		"item_enchanted_mango",
+		"item_tango",
+		"item_faerie_fire",
+		"item_flask",
+		"item_clarity"
+	};
+	for _, goody in ipairs(consumableGoods) do
+		if item:GetName() == goody then
+			return true;
+		end
+	end
+	return false;
+end
+function IsBoot(item)
+	if item:GetName():find("boots") ~= nil then
+		return true;
+	else
+		return false;
+	end
+end
+function IsRecipe(item)
+	if item:GetName():find("recipe") ~= nil then
+		return true;
+	else
+		return false;
+	end
+end
+
+function SwapItemThink(I)
+	if not I:IsTrueHero() then
+		return;
+	end
+	if not I:HaveSlot() then
+		for i = 6,8 do
+			local item1 = I:GetItemInSlot(i);
+			if item1 and IsBoot(item1) then
+		   	    local minCost = 10000;
+		   	    local minj = -1;
+				for j = 0,5 do
+					item2 = I:GetItemInSlot(j);
+					if item2 then
+						if IsConsumable(item2) or IsRecipe(item2) then
+							I:ActionImmediate_SwapItems(i,j);
+							return;
+						end
+						local cost = GetItemCost(item2:GetName());
+						if cost < minCost then
+							minCost = cost;
+							minj = j;
+						end
+					end
+				end
+				if minj ~= -1 then
+					I:ActionImmediate_SwapItems(i,minj);
+					return;
+				end
+			end
+		end
+		for i = 6,8 do
+			local item1 = I:GetItemInSlot(i);
+			if item1 and not IsConsumable(item1) and not IsRecipe(item1) then
+		   	    local minCost = GetItemCost(item1:GetName());
+		   	    local minj = -1;
+				for j = 0,5 do
+					item2 = I:GetItemInSlot(j);
+					if item2 then
+						if IsConsumable(item2) or IsRecipe(item2) then
+							I:ActionImmediate_SwapItems(i,j);
+							return;
+						end
+						local cost = GetItemCost(item2:GetName());
+						if IsBoot(item2) then cost = 10000; end
+						if cost < minCost then
+							minCost = cost;
+							minj = j;
+						end
+					end
+				end
+				if minj ~= -1 then
+					I:ActionImmediate_SwapItems(i,minj);
+					return;
+				end
+			end
+		end
+	end
+end
+
+
 
 -- only check the ones bot dont use well
 -- wand/stick/mana boot/armlet/soul ring/salve/mango
 -- maybe put manaboot and mek somewhere in assemble
 function FakeItemUsageThink() -- <- because I can't program blink
 	local I = GetBot();
-	if not I:CanUseItem() or I:IsInvisible() then return; end
-	for i = 0,5 do
-		local item = I:GetItemInSlot(i);
-		ConsiderItem[item:GetName()](I, item);
-	end
+	-- if not I:CanUseItem() or I:IsInvisible() then return; end
+	-- for i = 0,5 do
+	-- 	local item = I:GetItemInSlot(i);
+	-- 	if item ~= nil and ConsiderItem[item:GetName()] ~= nil then
+	-- 		ConsiderItem[item:GetName()](I, item);
+	-- 	end
+	-- end
 end
 
 local ConsiderItem = {};
@@ -914,4 +1020,5 @@ ability_item_usage_generic.ConsiderUnitStun = ConsiderUnitStun;
 ability_item_usage_generic.ConsiderUnitDebuff = ConsiderUnitDebuff;
 ability_item_usage_generic.ConsiderUnitSave = ConsiderUnitSave;
 ability_item_usage_generic.ConsiderInvis = ConsiderInvis;
+ability_item_usage_generic.SwapItemThink = SwapItemThink;
 return ability_item_usage_generic;
