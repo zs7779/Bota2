@@ -52,7 +52,7 @@ function CDOTA_Bot_Script:FindAoEVector(bEnemies, bHeroes, vBaseLocation, nMaxDi
 	AoEVector.targetloc = nil;
 	if nMaxHealth == 0 then nMaxHealth = 100000; end
 
-	nMaxDistanceFromBase = math.min(1580, nMaxDistanceFromBase);
+	nMaxDistanceFromBase = Min(1580, nMaxDistanceFromBase);
 	local tmpUnits = bHeroes and self:GetNearbyHeroes(nMaxDistanceFromBase, bEnemies, BOT_MODE_NONE) or
 	                          self:GetNearbyCreeps(nMaxDistanceFromBase, bEnemies);
     local units = {};
@@ -444,6 +444,29 @@ function nextTower(nTeam, towerList)
 		if T ~= nil then return T; end
 	end
     return nil;
+end
+
+function GetNextTowers(nTeam)
+	local towers = {};
+	for iTower = TOWER_TOP_1, TOWER_TOP_3
+		if GetTower(nTeam, iTower) ~= nil then
+			towers[1] = iTower;
+			break;
+		end
+	end
+	for iTower = TOWER_MID_1, TOWER_MID_3
+		if GetTower(nTeam, iTower) ~= nil then
+			towers[2] = iTower;
+			break;
+		end
+	end
+	for iTower = TOWER_BOT_1, TOWER_BOT_3
+		if GetTower(nTeam, iTower) ~= nil then
+			towers[3] = iTower;
+			break;
+		end
+	end
+	return towers;
 end
 
 function GetLocationToLocationDistance(vloc1, vloc2)

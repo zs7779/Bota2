@@ -108,7 +108,7 @@ function ConsiderShrine(I, position)
 			local friend = GetTeamMember(P);
 			if P ~= position and friend ~= nil and friend:IsTrueHero() and not friend.shrine and
 			   ((friend:WantHeal() or friend:WantMana()) and
-			    (GetUnitToUnitDistance(friend, I.shrine)/friend:GetCurrentMovementSpeed() <= math.min(I.shrineTime,20) or
+			    (GetUnitToUnitDistance(friend, I.shrine)/friend:GetCurrentMovementSpeed() <= Min(I.shrineTime,20) or
 			     friend:HaveTp() <= I.shrineTime) or
 			    (friend:IsLowHealth() or friend:IsLowMana()) and
 			    (GetUnitToUnitDistance(friend, I.shrine)/friend:GetCurrentMovementSpeed() <= I.shrineTime or

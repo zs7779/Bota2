@@ -74,7 +74,7 @@ function GetDesire()
 	local friends = I:GetNearbyHeroes(1200,false,BOT_MODE_NONE);
 	local enemys = I:GetNearbyHeroes(1200,true,BOT_MODE_NONE);
 
-	if DotaTime()<=0.5 and (position == 1 or position == 2) and #friends>=#enemys then
+	if DotaTime()<=0.5 and (position == 1 or position == 3) and #friends>=#enemys then
 		return 0.4;
 	end
 
@@ -108,9 +108,15 @@ function Think()
 	end
 
 	-- Find first rune before time 0:00
-	if DotaTime()<=0.5 and position < 3 then
-		I:Action_MoveToLocation(GetRuneSpawnLocation(safeRunes[GetTeam()][position]));
-		return;
+	if DotaTime()<=0.5 then
+		if position == 1 then
+			I:Action_MoveToLocation(GetRuneSpawnLocation(safeRunes[GetTeam()][1]));
+			return;
+		end
+		if position == 3 then
+			I:Action_MoveToLocation(GetRuneSpawnLocation(safeRunes[GetTeam()][2]));
+			return;
+		end
 	end
 
 	-- Check nearest rune

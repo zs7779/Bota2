@@ -1,8 +1,10 @@
 require(GetScriptDirectory() ..  "/utils")
 
+local itemParts = {};
+
 function PurchaseItem(I, shoppingGuide, trash)
 	if I == nil or not I:IsTrueHero() then return; end
-	if #shoppingGuide == 0 then
+	if #shoppingGuide == 0 and #itemParts == 0 then
 		I:SetNextItemPurchaseValue(0);
 		return;
 	end
@@ -13,7 +15,20 @@ function PurchaseItem(I, shoppingGuide, trash)
 	end
 
 	local item = shoppingGuide[#shoppingGuide];
-	local itemCost = GetItemCost(item);
+	if #shoppingGuide > 0 and #itemParts == 0 then
+		itemParts = GetItemParts(item); --- <- This may not even exist
+		table.remove(shoppingGuide);
+	end
+	local part;
+	if #itemParts > 0 then
+		part = itemParts[#itemParts];
+	end
+	if part == nil then
+		I:SetNextItemPurchaseValue(0);
+		return;
+	end
+	
+	local itemCost = GetItemCost(part);
 	if I:GetGold() > itemCost then
 		if not I:HaveSlot() and
 			(I:DistanceFromSecretShop() == 0 or
@@ -24,46 +39,46 @@ function PurchaseItem(I, shoppingGuide, trash)
 
 		local purchaseResult = 0;
 		-- if item is in secret shop or in nearby side shop
-		if IsItemPurchasedFromSecretShop(item) then
+		if IsItemPurchasedFromSecretShop(part) then
 			if I:DistanceFromSecretShop() == 0 then -- at shop
 				if I:HaveSlot() then
-					purchaseResult = I:ActionImmediate_PurchaseItem(item);
+					purchaseResult = I:ActionImmediate_PurchaseItem(part);
 				else
 					SellItem(I, trash);
 				end
 			elseif courier ~= nil and courier:DistanceFromSecretShop() == 0 and courier:HaveSlot() then
-				purchaseResult = courier:ActionImmediate_PurchaseItem(item);
+				purchaseResult = courier:ActionImmediate_PurchaseItem(part);
 			else -- walk if have slot else dunkey
 				I.secretShopMode = true;
 			end
-		elseif IsItemPurchasedFromSideShop(item) and I:DistanceFromSideShop() < 2000 then
+		elseif IsItemPurchasedFromSideShop(part) and I:DistanceFromSideShop() < 2000 then
 			if I:DistanceFromSideShop() == 0 then
 				if I:HaveSlot() then
-					purchaseResult = I:ActionImmediate_PurchaseItem(item);
+					purchaseResult = I:ActionImmediate_PurchaseItem(part);
 				else
 					SellItem(I, trash);
 				end
 			elseif courier ~= nil and courier:DistanceFromSecretShop() == 0 and courier:HaveSlot() then
-				purchaseResult = courier:ActionImmediate_PurchaseItem(item);
+				purchaseResult = courier:ActionImmediate_PurchaseItem(part);
 			else -- walk
 				I.sideShopMode = true;
 			end
 		else
 			if I:DistanceFromFountain() == 0 then
 				if I:HaveSlot() then
-					purchaseResult = I:ActionImmediate_PurchaseItem(item);
+					purchaseResult = I:ActionImmediate_PurchaseItem(part);
 				else
 					SellItem(I, trash);
 				end
 			elseif courier ~= nil and courier:DistanceFromSecretShop() == 0 and courier:HaveSlot() then
-				purchaseResult = courier:ActionImmediate_PurchaseItem(item);
+				purchaseResult = courier:ActionImmediate_PurchaseItem(part);
 			else
-				purchaseResult = I:ActionImmediate_PurchaseItem(item);
+				purchaseResult = I:ActionImmediate_PurchaseItem(part);
 			end
 		end
 
 		if purchaseResult == PURCHASE_ITEM_SUCCESS then
-			table.remove(shoppingGuide);
+			table.remove(itemParts);
 			purchaseResult = 0;
 			I.secretShopMode = nil;
 			I.sideShopMode = nil;

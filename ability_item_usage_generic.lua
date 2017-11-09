@@ -59,7 +59,7 @@ function ConsiderAoENuke(I, spell, castRange, radius, maxHealth, spellType, dela
 	-- GetNearby sorts units from close to far
 	if castRange > 1600 then castRange = 1600; end
 	if radius > 1600 then radius = 1600; end
-	local searchRadius = math.min(castRange+radius, 1600);
+	local searchRadius = Min(castRange+radius, 1600);
 	local enemys = I:GetNearbyHeroes(searchRadius,true,BOT_MODE_NONE);
 	local creeps = I:GetNearbyCreeps(searchRadius,true);
 	local laneCreeps = I:GetNearbyLaneCreeps(searchRadius,true);
@@ -145,7 +145,7 @@ function ConsiderAoEStun(I, spell, castRange, radius, delay)
 	-- GetNearby sorts units from close to far
 	if castRange > 1600 then castRange = 1600; end
 	if radius > 1600 then radius = 1600; end
-	local searchRadius = math.min(castRange+radius, 1600);
+	local searchRadius = Min(castRange+radius, 1600);
 	local enemys = I:GetNearbyHeroes(searchRadius,true,BOT_MODE_NONE);
 	local movingEnemys = {}
 	local channelingEnemys = {};
@@ -208,7 +208,7 @@ function ConsiderAoEDebuff(I, spell, castRange, radius, delay)
 
 	if castRange > 1600 then castRange = 1600; end
 	if radius > 1600 then radius = 1600; end
-	local searchRadius = math.min(castRange+radius, 1600);
+	local searchRadius = Min(castRange+radius, 1600);
 	local enemys = I:GetNearbyHeroes(searchRadius,true,BOT_MODE_NONE);
 
 	-- Add if not BOT_MODE_RETREAT, go ahead if can hit multiple heroes
@@ -342,7 +342,7 @@ function ConsiderUnitNuke(I, spell, castRange, radius, maxHealth, spellType)
 	-- GetNearby sorts units from close to far
 	if castRange > 1600 then castRange = 1600; end
 	if radius > 1600 then radius = 1600; end
-	local searchRadius = math.min(castRange+radius, 1600);
+	local searchRadius = Min(castRange+radius, 1600);
 	local enemys = I:GetNearbyHeroes(searchRadius,true,BOT_MODE_NONE);
 	local creeps = I:GetNearbyCreeps(searchRadius,true);
 	
@@ -389,7 +389,7 @@ function ConsiderUnitStun(I, spell, castRange, radius)
 	-- GetNearby sorts units from close to far
 	if castRange > 1600 then castRange = 1600; end
 	if radius > 1600 then radius = 1600; end
-	local searchRadius = math.min(castRange+radius, 1600);
+	local searchRadius = Min(castRange+radius, 1600);
 	local enemys = I:GetNearbyHeroes(searchRadius,true,BOT_MODE_NONE);
 	local movingEnemys = {}
 	local channelingEnemys = {};
@@ -448,7 +448,7 @@ function ConsiderUnitDebuff(I, spell, castRange, radius)
 	-- GetNearby sorts units from close to far
 	if castRange > 1600 then castRange = 1600; end
 	if radius > 1600 then radius = 1600; end
-	local searchRadius = math.min(castRange+radius, 1600);
+	local searchRadius = Min(castRange+radius, 1600);
 	local enemys = I:GetNearbyHeroes(searchRadius,true,BOT_MODE_NONE);
 	local movingEnemys = {}
 	for i, enemy in ipairs(enemys) do
