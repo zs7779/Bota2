@@ -110,7 +110,6 @@ function CDOTA_Bot_Script:UseAoESpell(spell, baseLocation, range, radius, delay,
 		end
 		if spell:ReadyCastOnTarget(unit) and
 			unit:GetHealth() <= maxHealth then
-			
 			if utils.CheckBit(spell:GetBehavior(), ABILITY_BEHAVIOR_NO_TARGET) and range == 0 then
 				if unit:IsHero() then AoELocation.count = #(self:GetNearbyHeroes(radius, isEnemy, BOT_MODE_NONE)); else
 									  AoELocation.count = #(self:GetNearbyCreeps(radius, isEnemy)); end
@@ -180,9 +179,9 @@ end
 function CDOTA_Bot_Script:GetAbilities()
 	local spells = {};
 	local talents = {};
-	for i = 0,23 do
+	for i = 0,25 do
 		local ability = self:GetAbilityInSlot(i);
-		if ability ~= nil then
+		if ability ~= nil and ability:GetName() ~= "generic_hidden" then
 			if ability:IsTalent() then
 				talents[#talents+1] = ability:GetName();
 			else
@@ -389,6 +388,34 @@ function CDOTA_Bot_Script:GetItem(name)
 	end
 	return nil;
 end
+function GetItemOnUnit(I, itemName, checkList) -- in case I is a courier? dunno if courier are BOT_Script object...
+	if I == nil then return nil; end
+	for slot = 0,16 do
+		local ignore = false;
+		if checkList ~= nil then
+			for _, c in ipairs(checkList) do
+				if c == slot then
+					ignore = true;
+					break;
+				end
+			end
+		end
+		if not ignore then
+			local item = I:GetItemInSlot(slot);
+			if item ~= nil and item:GetName() == itemName then
+				return item, slot;
+			end
+		end
+	end
+	return nil;
+end
+function HaveItem(itemName, I, courier, checkList)
+	if checkList == nil then checkList = {[I]={},['courier']={}}; end
+	local item, slot = GetItemOnUnit(I, itemName, checkList[I]);
+	if item then return item, I, slot; end
+	item, slot = GetItemOnUnit(courier, itemName, checkList['courier']);
+	return item, courier, slot;
+end
 
 
 function weakestSort(units)
@@ -448,19 +475,19 @@ end
 
 function GetNextTowers(nTeam)
 	local towers = {};
-	for iTower = TOWER_TOP_1, TOWER_TOP_3
+	for iTower = TOWER_TOP_1, TOWER_TOP_3 do
 		if GetTower(nTeam, iTower) ~= nil then
 			towers[1] = iTower;
 			break;
 		end
 	end
-	for iTower = TOWER_MID_1, TOWER_MID_3
+	for iTower = TOWER_MID_1, TOWER_MID_3 do
 		if GetTower(nTeam, iTower) ~= nil then
 			towers[2] = iTower;
 			break;
 		end
 	end
-	for iTower = TOWER_BOT_1, TOWER_BOT_3
+	for iTower = TOWER_BOT_1, TOWER_BOT_3 do
 		if GetTower(nTeam, iTower) ~= nil then
 			towers[3] = iTower;
 			break;

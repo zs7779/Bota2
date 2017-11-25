@@ -73,7 +73,9 @@ function ConsiderManaBoots(I, position)
 end
 
 function ConsiderShrine(I, position)
-	if not I:IsTrueHero() or I.shrine and GetShrineCooldown(I.shrine) > 10 and not IsShrineHealing(I.shrine) then
+	if not I:IsTrueHero() or 
+		I.shrine and GetShrineCooldown(I.shrine) > 10 and not IsShrineHealing(I.shrine) or
+		not I:IsLowHealth() and not I:IsNoMana() and not I:WantHeal() and not I:WantMana() then
 		I.shrine = nil;
 		I.shrineTime = nil;
 		return 0;

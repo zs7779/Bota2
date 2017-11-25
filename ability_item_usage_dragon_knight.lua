@@ -3,30 +3,35 @@ ability_item_usage_generic = dofile( GetScriptDirectory().."/ability_item_usage_
 
 local abilityGuide = {};
 
-local function GetAbilityGuide(I)
-	local spells, talents = I:GetAbilities(); --*** need test if unpack exist
+function GetAbilityGuide(I)
+	local spells, talents = I:GetAbilities(); 
 
 	abilityGuide = {
-		talents[8],
-	 	talents[6],
-	 	spells[4],
-	 	spells[2],
-	 	talents[4],
-		spells[2],
-		spells[2],
-		spells[4],
-		spells[3],
-		talents[2],
-		spells[3],
-		spells[1],
-		spells[1],
-		spells[4],
-		spells[2],
-		spells[1],
-		spells[3],
-		spells[3],
-		spells[1]
+		--   levels  =  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
+		-- u  pgrade =  1  3  1  3  2  4  1  1  3  T  3  4  2  2  T  2  -  4  -  T  -  -  -  -  T
+		[spells[1]]  = {1, 1, 2, 2, 2, 2, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4},
+		[spells[2]]  = {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4},
+		[spells[3]]  = {0, 1, 1, 2, 2, 2, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4},
+		[spells[4]]  = {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3},
+		[talents[2]] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+		[talents[4]] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+		[talents[6]] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
+		[talents[8]] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 	};
+end
+
+function GetNextUpgrade(I, level)
+	for abilityName, abilityLevel in pairs(abilityGuide) do
+		if abilityName ~= nil then
+			local ability = I:GetAbilityByName(abilityName);
+			if ability:CanAbilityBeUpgraded() and
+		   	   ability:GetHeroLevelRequiredToUpgrade() <= level and
+		   	   ability:GetLevel() < abilityLevel[level] then
+		   	   return abilityName;
+		   	end
+		end
+	end
+	return nil;
 end
 
 function AbilityLevelUpThink()
@@ -36,19 +41,10 @@ function AbilityLevelUpThink()
 	if #abilityGuide == 0 then
 		GetAbilityGuide(I);
 	end
-	local myLevel = I:GetLevel();
-	local ability = I:GetAbilityByName(abilityGuide[#abilityGuide]);
+	local upgradeAbility = GetNextUpgrade(I, I:GetLevel());
 	
-	if  ability ~= nil and
-		ability:CanAbilityBeUpgraded() and
-		ability:GetHeroLevelRequiredToUpgrade() <= myLevel then
-		local abilityLevel = ability:GetLevel();
-		if ability:GetMaxLevel() > abilityLevel then
-			I:ActionImmediate_LevelAbility(ability:GetName());
-			table.remove(abilityGuide);
-		else -- bugged, ability already max level
-			table.remove(abilityGuide);
-		end
+	if upgradeAbility ~= nil then
+		I:ActionImmediate_LevelAbility(upgradeAbility);
 	end
 end
 

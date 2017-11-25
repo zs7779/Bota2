@@ -1,50 +1,61 @@
 require( GetScriptDirectory().."/utils" ) 
 item_purchase_generic = dofile( GetScriptDirectory().."/item_purchase_generic" )
 
-local itemGuide = 
-{ 
-	"item_recipe_travel_boots_2",
-	"item_boots", -- *3 bot
-	"item_recipe_travel_boots",
+local itemGuide = {};
 
-	"item_recipe_sphere", --*3 linken
-	"item_ring_of_health",
-	"item_void_stone",
-	"item_ultimate_orb", --*3
-	"item_recipe_lotus_orb", --*2 lotus
-	"item_ring_of_health",
-	"item_void_stone",
-	"item_platemail", --*2 
-	"item_talisman_of_evasion", -- *6 solar crest
-	"item_sobi_mask", -- *6 Medallion
-	"item_blight_stone",
-	"item_chainmail", -- 6
-	"item_recipe_force_staff", --*5 force
-	"item_ring_of_health",
-	"item_staff_of_wizardry", -- 5
-	"item_shadow_amulet", -- *4invincible
-	"item_cloak", -- 4
-	"item_recipe_urn_of_shadows", --*3 urn
-	"item_circlet",
-	"item_ring_of_protection",
-	"item_infused_raindrop", -- 3
-	"item_branches", -- *2 wand
-	"item_branches",
-	"item_circlet",
-	"item_energy_booster", -- * 1 arcane
-	"item_magic_stick", -- 2
-	"item_boots", -- 1
-
-	"item_clarity",
-	"item_tango",
-	"item_tango",
-};
-local trash = {
-	"item_magic_stick",
-}
+function GetItemGuide(itemLists)
+	if itemLists == nil then return; end
+	for listName, list in pairs(itemLists) do
+		itemGuide[listName] = {};
+		local totalCost = 0;
+		for _, item in ipairs(list) do
+			totalCost = totalCost + GetItemCost(item);
+			table.insert(itemGuide[listName], {['cost']=totalCost, ['item']=item});
+		end
+	end
+end
 
 function ItemPurchaseThink()
+	local itemLists = {
+		[1] = {
+			"item_tango",
+			"item_clarity",
+		},
+		[2] = {
+			"item_arcane_boots", -- 1 arcane
+			"item_magic_wand", -- 2 wand
+		},
+		[3] = {
+			"item_arcane_boots", -- 1 arcane
+			"item_glimmer_cape", -- 4 glim
+			"item_urn_of_shadows", --3 urn
+			"item_force_staff", --4 force
+			"item_lotus_orb", --*2 lotus
+		},
+		[4] = {
+			"item_travel_boots", -- *3 bot2
+			"item_glimmer_cape", -- 4 glim
+			"item_force_staff", --4 force
+			"item_lotus_orb", --*2 lotus
+			"item_urn_of_shadows", --3 urn
+			"item_solar_crest", -- 6 solar crest
+		},
+	};
+	if GetGameState() < GAME_STATE_PRE_GAME then return; end
+	if #itemGuide == 0 then
+		GetItemGuide(itemLists);
+	end
 	item_purchase_generic.ItemPurchaseThink();
 	local I = GetBot();
-	item_purchase_generic.PurchaseItem(I, itemGuide, trash);
+	if DotaTime() < 0 then
+		item_purchase_generic.PurchaseItem(I, itemGuide[1]);
+		return;
+	end
+	for list = 2,3 do
+		if I:GetNetWorth() < itemGuide[list][#itemGuide[list]]['cost'] then
+			item_purchase_generic.PurchaseItem(I, itemGuide[list]);
+			return;
+		end
+	end
+	item_purchase_generic.PurchaseItem(I, itemGuide[4]);
 end

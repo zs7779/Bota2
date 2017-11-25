@@ -1,53 +1,67 @@
 require( GetScriptDirectory().."/utils" ) 
 item_purchase_generic = dofile( GetScriptDirectory().."/item_purchase_generic" )
 
-local itemGuide = 
-{ 
-	"item_recipe_refresher",
-	"item_void_stone",
-	"item_void_stone",
-	"item_ring_of_health",
-	"item_ring_of_health",
-	"item_recipe_travel_boots_2",
-	
-	"item_boots", -- *3 bot
-	"item_recipe_travel_boots",
-	"item_hyperstone",
-	"item_hyperstone", 
+local itemGuide = {};
 
-	"item_recipe_greater_crit",
-	"item_demon_edge",
-	"item_recipe_lesser_crit",
-    "item_blades_of_attack",
-	"item_broadsword";  -- *2 crystal
-	"item_chainmail", -- *1 assault
-	"item_recipe_assault",
-	"item_platemail",
-	"item_hyperstone", -- *1
-	"item_recipe_black_king_bar", -- *6 bkb
-	"item_mithril_hammer",
-	"item_ogre_axe", -- 6
-	"item_blink", -- 5
-	"item_quarterstaff", --*4 MoM
-	"item_lifesteal", --4 morbid mask
-	"item_belt_of_strength", -- *3 treads
-	"item_gloves",
-	"item_boots", -- 3 boot
-	"item_quelling_blade", -- 2
-
-	"item_clarity",
-	"item_enchanted_mango",
-	"item_flask",
-	"item_stout_shield", -- 1
-	"item_tango"
-};
-local trash = {
-	"item_quelling_blade",
-	"item_stout_shield",
-}
+function GetItemGuide(itemLists)
+	if itemLists == nil then return; end
+	for listName, list in pairs(itemLists) do
+		itemGuide[listName] = {};
+		local totalCost = 0;
+		for _, item in ipairs(list) do
+			totalCost = totalCost + GetItemCost(item);
+			table.insert(itemGuide[listName], {['cost']=totalCost, ['item']=item});
+		end
+	end
+end
 
 function ItemPurchaseThink()
+	local itemLists = {
+		[1] = {
+			"item_tango",
+			"item_stout_shield",
+			"item_clarity",
+			"item_enchanted_mango",
+			"item_flask",
+		},
+		[2] = {
+			"item_stout_shield", -- 1
+			"item_quelling_blade", -- 2
+			"item_power_treads", -- 3 boot
+			"item_mask_of_madness", --4 MoM
+		},
+		[3] = {
+			"item_power_treads", -- 3 boot	
+			"item_mask_of_madness", --4 MoM
+			"item_blink", -- 5
+			"item_black_king_bar", -- 6 bkb
+			"item_greater_crit", -- *1 crit
+		},
+		[3] = {
+			"item_travel_boots", -- *3 bot2
+			"item_mask_of_madness", --4 MoM
+			"item_blink", -- 5
+			"item_black_king_bar", -- 6 bkb
+			"item_greater_crit", -- *1 crit
+			"item_assault", -- *2 assault
+		},
+	};
+	if GetGameState() < GAME_STATE_PRE_GAME then return; end
+	if #itemGuide == 0 then
+		GetItemGuide(itemLists);
+	end
 	item_purchase_generic.ItemPurchaseThink();
+	
 	local I = GetBot();
-	item_purchase_generic.PurchaseItem(I, itemGuide, trash);
+	if DotaTime() < 0 then
+		item_purchase_generic.PurchaseItem(I, itemGuide[1]);
+		return;
+	end
+	for list = 2,3 do
+		if I:GetNetWorth() < itemGuide[list][#itemGuide[list]]['cost'] then
+			item_purchase_generic.PurchaseItem(I, itemGuide[list]);
+			return;
+		end
+	end
+	item_purchase_generic.PurchaseItem(I, itemGuide[4]);
 end

@@ -3,12 +3,12 @@ require(GetScriptDirectory() ..  "/utils")
 local safeRunes={};
 safeRunes[TEAM_RADIANT]={
     RUNE_BOUNTY_1,
-    RUNE_BOUNTY_2,
+    RUNE_BOUNTY_3,
     RUNE_POWERUP_1,
     RUNE_POWERUP_2
 	};
 safeRunes[TEAM_DIRE]={
-    RUNE_BOUNTY_3,
+    RUNE_BOUNTY_2,
     RUNE_BOUNTY_4,
     RUNE_POWERUP_1,
     RUNE_POWERUP_2
@@ -83,8 +83,8 @@ function GetDesire()
     local runes = PendingRunes(safeRunes[GetTeam()]);
     if #runes == 0 then return 0; end
 
-	if NearestRune(I,runes) < 2500 and position ~= 1 and position ~= 2 or NearestRune(I,runes) < 1200 then
-		return 0.25;
+	if NearestRune(I,runes) < 2500 and position ~= 1 and position ~= 2 or NearestRune(I,runes) < 1500 then
+		return 0.35;
 	end
 
 	if hasBottle then
@@ -109,11 +109,11 @@ function Think()
 
 	-- Find first rune before time 0:00
 	if DotaTime()<=0.5 then
-		if position == 1 then
+		if position == 3 then
 			I:Action_MoveToLocation(GetRuneSpawnLocation(safeRunes[GetTeam()][1]));
 			return;
 		end
-		if position == 3 then
+		if position == 1 then
 			I:Action_MoveToLocation(GetRuneSpawnLocation(safeRunes[GetTeam()][2]));
 			return;
 		end

@@ -30,7 +30,9 @@ function TeamThink()
 		initializeLastSeen();
 		return;
 	end
-
+	if GetGameState() <= GAME_STATE_PRE_GAME or DotaTime() < -30 then
+		return {0, 0, 0};
+	end
 	-- last seen location and power
 	for _, enemy in ipairs(GetUnitList(UNIT_LIST_ENEMY_HEROES)) do
 		if enemy:IsTrueHero() and enemy:IsAlive() then
@@ -99,48 +101,55 @@ end
 -- so the fewer the enemies show the less you want to push?
 -- how is that different from farm
 -- then the more people you have the more you want to push
-function UpdatePushLaneDesires()
-	local pushDesire = {0.2,0.2,0.2}
-	local team = GetTeam();
-	local enemyTeam = GetOpposingTeam();
-	local laneFront = {};
-	for lane = LANE_TOP, LANE_BOT do
-		laneFront[lane] = GetLaneFrontAmount(Team, lane, false);
-	end
-	if laneFront[lane] > 0.6 then
-		if friendTotalPower*PushRiskFactor > enemyTotalPower then
-			pushDesire[lane] = (laneFront[lane]-0.6)/0.4*0.9;
-		else
-			pushDesire[lane] = Max((1.0-laneFront[lane])/0.4 * friendPowerAtLane[lane]*PushRiskFactor/enemyPowerAtLane[lane], 1.0);
-		end
-	end
-	return pushDesire;
-end
+-- function UpdatePushLaneDesires()
+-- 	if GetGameState() <= GAME_STATE_PRE_GAME or DotaTime() < -30 then
+-- 		return {0, 0, 0};
+-- 	end
+-- 	local pushDesire = {0.2,0.2,0.2}
+-- 	local team = GetTeam();
+-- 	local enemyTeam = GetOpposingTeam();
+-- 	local laneFront = {};
+-- 	for lane = LANE_TOP, LANE_BOT do
+-- 		laneFront[lane] = GetLaneFrontAmount(team, lane, false);
+-- 		if laneFront[lane] > 0.6 then
+-- 			if friendTotalPower*PushRiskFactor > enemyTotalPower then
+-- 				pushDesire[lane] = (laneFront[lane]-0.6)/0.4*0.9;
+-- 			else
+-- 				pushDesire[lane] = Max((1.0-laneFront[lane])/0.4 * friendPowerAtLane[lane]*PushRiskFactor/enemyPowerAtLane[lane], 1.0);
+-- 			end
+-- 		end
+-- 	end
+	
+-- 	return pushDesire;
+-- end
 
 -- you want to defend when enemy are close to your tower
 -- but the fewer enemies show the more defensive you are (aoe from long distance)
 -- For defence if you are outgunned, there is still creep wave cutting
 -- probably only apply to high ground def? risky
-function UpdateDefendLaneDesires()
-	local defDesire = {0.3, 0.3, 0.3};
-	local team = GetTeam();
-	local enemyTeam = GetOpposingTeam();
-	local laneFront = {};
-	local nextTower = utils.GetNextTowers(team);
-	local hgTower = {TOWER_TOP_3, TOWER_MID_3, TOWER_BOT_3};
-	for lane = LANE_TOP, LANE_BOT do
-		laneFront[lane] = GetLaneFrontAmount(enemyTeam, lane, false);
-		if laneFront[lane] < 0.4 then
-			if friendTotalPower*DefRiskFactor > enemyTotalPower or
-			   nextTower[lane] == hgTower[lane] then
-				defDesire[lane] = Max((0.4-laneFront[lane])/0.3, 1.0);
-			else
-				defDesire[lane] = Max((0.4-laneFront[lane])/0.5 * friendPowerAtLane[lane]*DefRiskFactor/enemyPowerAtLane[lane], 1.0);
-			end
-		end
-	end
-	return defDesire;
-end
+-- function UpdateDefendLaneDesires()
+-- 	if GetGameState() <= GAME_STATE_PRE_GAME or DotaTime() < -30 then
+-- 		return {0, 0, 0};
+-- 	end
+-- 	local defDesire = {0.3, 0.3, 0.3};
+-- 	local team = GetTeam();
+-- 	local enemyTeam = GetOpposingTeam();
+-- 	local laneFront = {};
+-- 	local nextTower = utils.GetNextTowers(team);
+-- 	local hgTower = {TOWER_TOP_3, TOWER_MID_3, TOWER_BOT_3};
+-- 	for lane = LANE_TOP, LANE_BOT do
+-- 		laneFront[lane] = GetLaneFrontAmount(enemyTeam, lane, false);
+-- 		if laneFront[lane] < 0.4 then
+-- 			if friendTotalPower*DefRiskFactor > enemyTotalPower or
+-- 			   nextTower[lane] == hgTower[lane] then
+-- 				defDesire[lane] = Max((0.4-laneFront[lane])/0.3, 1.0);
+-- 			else
+-- 				defDesire[lane] = Max((0.4-laneFront[lane])/0.5 * friendPowerAtLane[lane]*DefRiskFactor/enemyPowerAtLane[lane], 1.0);
+-- 			end
+-- 		end
+-- 	end
+-- 	return defDesire;
+-- end
 
 
 -- maybe I can use farm desire to represent how
@@ -150,17 +159,20 @@ end
 -- { { string, vector }, ... } GetNeutralSpawners()
 -- Returns a table containing a list of camp-type and location pairs. 
 -- Camp types are one of "basic_N", "ancient_N", "basic_enemy_N", "ancient_enemy_N", where N counts up from 0.
-function UpdateFarmLaneDesires()
-	local friendAvgHealth = 0;
-	for N, friend in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES)) do
-		friendAvgHealth = (friendAvgHealth*(N-1) + friend:GetMaxHealth())/N;
-	end
-	friendAvgHealth = Max(friendAvgHealth, 1000);
-	-- print(friendAvgHealth,enemyPowerAtLane[LANE_TOP],enemyPowerAtLane[LANE_MID],enemyPowerAtLane[LANE_BOT])
-	return {1.0-Min(enemyPowerAtLane[LANE_TOP]/friendAvgHealth/FarmRiskFactor,1.0),
-			1.0-Min(enemyPowerAtLane[LANE_MID]/friendAvgHealth/FarmRiskFactor,1.0),
-			1.0-Min(enemyPowerAtLane[LANE_BOT]/friendAvgHealth/FarmRiskFactor,1.0)};
-end
+-- function UpdateFarmLaneDesires()
+-- 	if GetGameState() <= GAME_STATE_PRE_GAME or DotaTime() < -30 then
+-- 		return {0, 0, 0};
+-- 	end
+-- 	local friendAvgHealth = 0;
+-- 	for N, friend in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES)) do
+-- 		friendAvgHealth = (friendAvgHealth*(N-1) + friend:GetMaxHealth())/N;
+-- 	end
+-- 	friendAvgHealth = Max(friendAvgHealth, 1000);
+-- 	-- print(friendAvgHealth,enemyPowerAtLane[LANE_TOP],enemyPowerAtLane[LANE_MID],enemyPowerAtLane[LANE_BOT])
+-- 	return {1.0-Min(enemyPowerAtLane[LANE_TOP]/friendAvgHealth/FarmRiskFactor,1.0),
+-- 			1.0-Min(enemyPowerAtLane[LANE_MID]/friendAvgHealth/FarmRiskFactor,1.0),
+-- 			1.0-Min(enemyPowerAtLane[LANE_BOT]/friendAvgHealth/FarmRiskFactor,1.0)};
+-- end
 
 
 -- maybe use this to represent an easy target
