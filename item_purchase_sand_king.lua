@@ -3,18 +3,6 @@ item_purchase_generic = dofile( GetScriptDirectory().."/item_purchase_generic" )
 
 local itemGuide = {};
 
-function GetItemGuide(itemLists)
-	if itemLists == nil then return; end
-	for listName, list in pairs(itemLists) do
-		itemGuide[listName] = {};
-		local totalCost = 0;
-		for _, item in ipairs(list) do
-			totalCost = totalCost + GetItemCost(item);
-			table.insert(itemGuide[listName], {['cost']=totalCost, ['item']=item});
-		end
-	end
-end
-
 function ItemPurchaseThink()
 	local itemLists = {
 		[1] = {
@@ -24,6 +12,7 @@ function ItemPurchaseThink()
 		},
 		[2] = {
 			"item_tranquil_boots", --2 tranquil
+			"item_magic_wand",
 			"item_blink", -- 3 blink
 		},
 		[3] = {
@@ -44,7 +33,7 @@ function ItemPurchaseThink()
 	};
 	if GetGameState() < GAME_STATE_PRE_GAME then return; end
 	if #itemGuide == 0 then
-		GetItemGuide(itemLists);
+		item_purchase_generic.GetItemGuide(itemLists, itemGuide);
 	end
 	item_purchase_generic.ItemPurchaseThink();
 	local I = GetBot();
@@ -53,7 +42,7 @@ function ItemPurchaseThink()
 		return;
 	end
 	for list = 2,3 do
-		if I:GetNetWorth() < itemGuide[list][#itemGuide[list]]['cost'] then
+		if I:GetNetWorth() < itemGuide[list][#itemGuide[list]]['worth'] then
 			item_purchase_generic.PurchaseItem(I, itemGuide[list]);
 			return;
 		end

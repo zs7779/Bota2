@@ -8,7 +8,7 @@ function GetDesire()
 	   I:GetNextItemPurchaseValue() == 0 or
 	   I:DistanceFromSideShop() > 2000 or
 	   I:WasRecentlyDamagedByAnyHero(5.0) or
-	   #(I:GetNearbyHeroes(800,true,BOT_MODE_NONE)) > 0 then
+	   #(I:GetNearbyHeroes(600,true,BOT_MODE_NONE)) > 0 then
 		return 0;
 	end
 	if I:DistanceFromSideShop() == 0 then

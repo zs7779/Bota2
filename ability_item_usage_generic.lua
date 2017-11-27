@@ -605,6 +605,7 @@ end
 
 function CourierUsageThink()
 	local I = GetBot();
+	local position = I:GetPlayerPosition();
 	local courier;
 
 	-- think of buying multiple couriers if human exist. only use last one
@@ -612,50 +613,41 @@ function CourierUsageThink()
 		courier = GetCourier(0);
 	end
 	if courier == nil or
-	   not I:IsTrueHero() or I:HasModifier("modifier_arc_warden_tempest_double") then
+	   not I:IsTrueHero(true) or I:HasModifier("modifier_arc_warden_tempest_double") then
 		return;
 	end
+	if not I.wantCourier and I:GetCourierValue() >= 400 or
+	   position <= 3 and (courier:GetItem('item_tpscroll') or courier:GetItem('item_flask') or courier:GetItem('item_clarity')) or
+	   DotaTime() > 480 and I:GetCourierValue() > 0 then
+		I.wantCourier = true;
+	else
+		I.wantCourier = nil;
+	end
+
 	local state = GetCourierState(courier);
 	if state == COURIER_STATE_DEAD then return; end
-	-- deliver or goto secret shop. you always walk to sideshop
-	if state == COURIER_STATE_AT_BASE then
-		courier.mustReturn = nil;
-		if I:GetStashValue() >= 325 and courier:HaveSlot() then
-			I:ActionImmediate_Courier(courier, COURIER_ACTION_TAKE_STASH_ITEMS);
-			return;
-		end
-		if I:GetCourierValue()+I:GetStashValue() >= 325 then
-			I:ActionImmediate_Courier(courier, COURIER_ACTION_TAKE_AND_TRANSFER_ITEMS);
-			return;
-		end
-		if I.secretShopMode and I:GetActiveMode() ~= BOT_MODE_SECRET_SHOP then
-			I:ActionImmediate_Courier(courier, COURIER_ACTION_SECRET_SHOP);
-			return;
-		end
-	end
-	-- waiting at shop/evading enemy kinda state
-	if state == COURIER_STATE_IDLE then
+	if state == COURIER_STATE_IDLE or state == COURIER_STATE_AT_BASE or state == COURIER_STATE_RETURNING_TO_BASE then
 		if courier.idleTime == nil then
 			courier.idleTime = GameTime();
-		elseif GameTime() - courier.idleTime > 10 then
-			I:ActionImmediate_Courier(courier, COURIER_ACTION_RETURN);
-			courier.idleTime = nil;
-			return;
 		end
+	else
+		courier.idleTime = nil;
 	end
-	local courierBurst;
-	if IsFlyingCourier(courier) then
-		courierBurst = courier:GetAbilityByName("courier_burst");
-		if (courier:GetHealth() < courier:GetMaxHealth() or
-		   	 #(courier:GetIncomingTrackingProjectiles()) > 0) then
-			if courier:CanCast() and courierBurst:IsFullyCastable() then
-		    	I:ActionImmediate_Courier(courier, COURIER_ACTION_BURST);
-		    end
-		    if state == COURIER_STATE_IDLE then
-		    	I:ActionImmediate_Courier(courier, COURIER_ACTION_RETURN);
-		    	return;
-		    end
+
+	if courier.idleTime and GameTime() - courier.idleTime > 3 then
+		if I.secretShopMode and (I:GetActiveMode() ~= BOT_MODE_SECRET_SHOP or not I:IsAlive()) then
+			I:ActionImmediate_Courier(courier, COURIER_ACTION_SECRET_SHOP);
+		elseif I:IsAlive() and I.wantCourier and I:HaveSlot(true) then
+			for P = 1,5 do
+				if GetTeamMember(P).wantCourier and P < position then return; end
+			end
+			I:ActionImmediate_Courier(courier, COURIER_ACTION_TRANSFER_ITEMS);
+		elseif state ~= COURIER_STATE_AT_BASE and state ~= COURIER_STATE_RETURNING_TO_BASE then
+			I:ActionImmediate_Courier(courier, COURIER_ACTION_RETURN);
+		elseif state == COURIER_STATE_AT_BASE and I:IsAlive() and I:GetStashValue() > 0 and courier:HaveSlot() then
+			I:ActionImmediate_Courier(courier, COURIER_ACTION_TAKE_STASH_ITEMS);
 		end
+		return;
 	end
 end
 
@@ -753,9 +745,9 @@ end
 
 
 -- only check the ones bot dont use well
--- wand/stick/mana boot/armlet/soul ring/salve/mango
+-- wand/stick/mana boot/armlet/soul ring/salve/mango/bottle/glimmer cape
 -- maybe put manaboot and mek somewhere in assemble
-function FakeItemUsageThink() -- <- because I can't program blink
+function ItemUsageThinkTwice() -- <- because I can't program blink
 	local I = GetBot();
 	-- if not I:CanUseItem() or I:IsInvisible() then return; end
 	-- for i = 0,5 do
@@ -767,44 +759,13 @@ function FakeItemUsageThink() -- <- because I can't program blink
 end
 
 local ConsiderItem = {};
-ConsiderItem["item_courier"] = function(I, dunkey)
-	I:Action_UseAbility(dunkey);
-end
-ConsiderItem["item_flying_courier"] = function(I, flyDunkey)
-	for i = 1,#GetNumCouriers() do
-		if not IsFlyingCourier(GetCourier(i)) then
-			I:Action_UseAbility(flyDunkey);
-			return;
-		end
-	end
-end
-ConsiderItem["item_tome_of_knowledge"] = function(I, dunkey)
-	I:Action_UseAbility(dunkey);
-end
 
 ConsiderItem["item_tango"] = function(I,tango)
 	local tangoCharge = tango:GetCurrentCharges();
-
-	-- Give tango to mid, carry, offlane
-	if DotaTime() < -20 and I:GetPlayerPosition() == 5 and
-		I:DistanceFromFountain() < 300 then
-		if tangoCharge >= 8 then
-			local friend = GetTeamMember(2);
-			I:ActionQueue_UseAbilityOnEntity(tango, friend);
-			I:ActionQueue_UseAbilityOnEntity(tango, friend);
-		elseif tangoCharge >= 6 then
-			for position = 1,3,2 do
-				local friend = GetTeamMember(position);
-				I:ActionQueue_UseAbilityOnEntity(tango, friend);
-				I:ActionQueue_UseAbilityOnEntity(tango, friend);
-			end
-		end
-	end
-
-	if I:GetMaxHealth() - I:GetHealth() > 125 and I:DistanceFromFountain() > 2000 then
-		local trees = I:GetNearbyTrees(1500);
+	if I:GetMaxHealth() - I:GetHealth() > 100 and I:DistanceFromFountain() > 2000 then
+		local trees = I:GetNearbyTrees(1200);
 		if trees[1] ~= nil then
-			I:Action_UseAbilityOnTree(tango, trees[1]);
+			I:Action_UseAbilityOnTree(tango, trees[1]); -- ** also consider not run toward enemy tower or something
 		end
 	end
 end

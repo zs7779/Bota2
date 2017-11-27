@@ -331,9 +331,14 @@ function CDOTA_Bot_Script:IsImmune()
 	return self:IsMagicImmune() or self:IsInvulnerable();
 end
 
-function CDOTA_Bot_Script:IsTrueHero() -- *** if taking too much damage then is illusion
-	return self:IsAlive() and not self:IsIllusion() and self:CanBeSeen() and
+function CDOTA_Bot_Script:IsTrueHero(bCanBeDead) -- *** if taking too much damage then is illusion
+	local trueHero = self:IsHero() and not self:IsIllusion() and self:CanBeSeen() and
 	       self:GetActualIncomingDamage(100, DAMAGE_TYPE_PURE) < 200;
+	if bCanBeDead then
+		return trueHero;
+	else
+		return trueHero and self:IsAlive();
+	end
 end
 
 function CDOTA_Bot_Script:CanAct() -- or if GetCurrentActiveAbility( ) gives mana drain/sandstorm/upheaval/tornado
@@ -354,7 +359,7 @@ end
 function CDOTA_Bot_Script:PredictLocation(fTime)
 	local stability = self:GetMovementDirectionStability();
 	local location = self:GetExtrapolatedLocation(fTime);
-	if stability < 0.5 and fTime > 0.5 then
+	if stability < 0.6 and fTime > 0.5 then
 		return stability*location + (1.0-stability)*self:GetLocation(), false;
 	end
 	return location, true;
@@ -373,8 +378,10 @@ function CDOTA_Bot_Script:ClosestBuilding()
 end
 
 
-function CDOTA_Bot_Script:HaveSlot()
-	for slot = 0,5 do
+function CDOTA_Bot_Script:HaveSlot(bStash)
+	local nSlots = 5;
+	if bStash then nSlots = 8; end
+	for slot = 0,nSlots do
 		if not self:GetItemInSlot(slot) then
 			return true;
 		end

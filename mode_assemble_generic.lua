@@ -90,7 +90,7 @@ function ConsiderShrine(I, position)
 	local team = GetTeam();
 	local enemys = I:GetNearbyHeroes(1200,true,BOT_MODE_NONE);
 	if (I:IsLowHealth() or I:IsNoMana()) and position <= 3 and not I.shrine then -- I need shrine and I'm core or I'm underattack
-		local dist = I:DistanceFromFountain();
+		local dist = I:DistanceFromFountain()-3000;
 		for i = SHRINE_BASE_1, SHRINE_JUNGLE_2 do
 			local shrine = GetShrine(team, i);
 			if shrine ~= nil and GetShrineCooldown(shrine) < 10 then
@@ -178,7 +178,7 @@ function ShrineThink(I)
 			if friend ~= nil and friend:IsTrueHero() and
 			   friend.shrine == I.shrine and
 			   friend:GetActiveMode() == BOT_MODE_ASSEMBLE and
-			   GetUnitToUnitDistance(friend, I.shrine) > 300 then
+			   GetUnitToUnitDistance(friend, I.shrine) > 400 then
 				wait = wait + 1;
 			end
 		end

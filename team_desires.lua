@@ -1,96 +1,96 @@
 require(GetScriptDirectory() ..  "/utils")
 
-local friendTotalPower = 500;
-local enemyTotalPower = 500;
-local LastSeenEnemys = {};
-local enemyPowerAtLane = {500,500,500};
-local friendPowerAtLane = {500,500,500};
-function initializeLastSeen()
-	for _, id in ipairs(GetTeamPlayers(GetOpposingTeam())) do
-		LastSeenEnemys[id] = {};
-		LastSeenEnemys[id].location = Vector(0, 0);
-		LastSeenEnemys[id].time = 0;
-		LastSeenEnemys[id].power = 100;
-		LastSeenEnemys[id].speed = 300;
-	end
-end
+-- local friendTotalPower = 500;
+-- local enemyTotalPower = 500;
+-- local LastSeenEnemys = {};
+-- local enemyPowerAtLane = {500,500,500};
+-- local friendPowerAtLane = {500,500,500};
+-- function initializeLastSeen()
+-- 	for _, id in ipairs(GetTeamPlayers(GetOpposingTeam())) do
+-- 		LastSeenEnemys[id] = {};
+-- 		LastSeenEnemys[id].location = Vector(0, 0);
+-- 		LastSeenEnemys[id].time = 0;
+-- 		LastSeenEnemys[id].power = 100;
+-- 		LastSeenEnemys[id].speed = 300;
+-- 	end
+-- end
 
 
--- so this enemy power thing works
--- now you want to farm if enemy power is low
--- you want to push if enemy power is lower than your power
--- you want to def if lanefront is near your tower and enemy power is present
--- roam into push or rosh
-local FarmRiskFactor = 2.0;
-local PushRiskFactor = 1.2;
-local DefRiskFactor = 0.9;
+-- -- so this enemy power thing works
+-- -- now you want to farm if enemy power is low
+-- -- you want to push if enemy power is lower than your power
+-- -- you want to def if lanefront is near your tower and enemy power is present
+-- -- roam into push or rosh
+-- local FarmRiskFactor = 2.0;
+-- local PushRiskFactor = 1.2;
+-- local DefRiskFactor = 0.9;
 
 function TeamThink()
-	if #LastSeenEnemys == 0 then
-		initializeLastSeen();
-		return;
-	end
-	if GetGameState() <= GAME_STATE_PRE_GAME or DotaTime() < -30 then
-		return {0, 0, 0};
-	end
-	-- last seen location and power
-	for _, enemy in ipairs(GetUnitList(UNIT_LIST_ENEMY_HEROES)) do
-		if enemy:IsTrueHero() and enemy:IsAlive() then
-			LastSeenEnemys[enemy:GetPlayerID()].power = enemy:GetRawOffensivePower();
-			LastSeenEnemys[enemy:GetPlayerID()].speed = enemy:GetCurrentMovementSpeed();
-		end
-	end
-	for _, id in ipairs(GetTeamPlayers(GetOpposingTeam())) do
-		if not IsHeroAlive(id) then
-			LastSeenEnemys[id].power = 100;
-			LastSeenEnemys[id].speed = 100;
-		end
-		local lastSeen = GetHeroLastSeenInfo(id)[1];
-		if lastSeen ~= nil then
-			LastSeenEnemys[id].location = lastSeen.location;
-			LastSeenEnemys[id].time = lastSeen.time_since_seen;
-		end
-	end
+	-- if #LastSeenEnemys == 0 then
+	-- 	initializeLastSeen();
+	-- 	return;
+	-- end
+	-- if GetGameState() <= GAME_STATE_PRE_GAME or DotaTime() < -30 then
+	-- 	return {0, 0, 0};
+	-- end
+	-- -- last seen location and power
+	-- for _, enemy in ipairs(GetUnitList(UNIT_LIST_ENEMY_HEROES)) do
+	-- 	if enemy:IsTrueHero() and enemy:IsAlive() then
+	-- 		LastSeenEnemys[enemy:GetPlayerID()].power = enemy:GetRawOffensivePower();
+	-- 		LastSeenEnemys[enemy:GetPlayerID()].speed = enemy:GetCurrentMovementSpeed();
+	-- 	end
+	-- end
+	-- for _, id in ipairs(GetTeamPlayers(GetOpposingTeam())) do
+	-- 	if not IsHeroAlive(id) then
+	-- 		LastSeenEnemys[id].power = 100;
+	-- 		LastSeenEnemys[id].speed = 100;
+	-- 	end
+	-- 	local lastSeen = GetHeroLastSeenInfo(id)[1];
+	-- 	if lastSeen ~= nil then
+	-- 		LastSeenEnemys[id].location = lastSeen.location;
+	-- 		LastSeenEnemys[id].time = lastSeen.time_since_seen;
+	-- 	end
+	-- end
 
-	-- local power
-	local team = GetTeam();
-	local enemyTeam = GetOpposingTeam();
-	-- local lanePosition = {};
-	for lane = LANE_TOP, LANE_BOT do
-		local laneFront = GetLaneFrontLocation(team, lane, 0);
-		local enemyLaneFront = GetLaneFrontLocation(enemyTeam, lane, 0);
-		local enemyPower = 0;
-		for _, enemyID in ipairs(GetTeamPlayers(GetOpposingTeam())) do
-			if GetLocationToLocationDistance(enemyLaneFront,LastSeenEnemys[enemyID].location)-LastSeenEnemys[enemyID].time*LastSeenEnemys[enemyID].speed<5000 then
-		   	   enemyPower = enemyPower + LastSeenEnemys[enemyID].power;
-		   	end
-		end
-		enemyPowerAtLane[lane] = enemyPower;
+	-- -- local power
+	-- local team = GetTeam();
+	-- local enemyTeam = GetOpposingTeam();
+	-- -- local lanePosition = {};
+	-- for lane = LANE_TOP, LANE_BOT do
+	-- 	local laneFront = GetLaneFrontLocation(team, lane, 0);
+	-- 	local enemyLaneFront = GetLaneFrontLocation(enemyTeam, lane, 0);
+	-- 	local enemyPower = 0;
+	-- 	for _, enemyID in ipairs(GetTeamPlayers(GetOpposingTeam())) do
+	-- 		if GetLocationToLocationDistance(enemyLaneFront,LastSeenEnemys[enemyID].location)-LastSeenEnemys[enemyID].time*LastSeenEnemys[enemyID].speed<5000 then
+	-- 	   	   enemyPower = enemyPower + LastSeenEnemys[enemyID].power;
+	-- 	   	end
+	-- 	end
+	-- 	enemyPowerAtLane[lane] = enemyPower;
 
-		local friendPower = 0;
-		for N, friend in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES)) do
-			if friend:IsTrueHero() then
-				if GetUnitToLocationDistance(friend, laneFront) < 3000 then
-		   	   		friendPower = friendPower + friend:GetOffensivePower();
-		   	   	end
-		   	end
-		end
-		friendPowerAtLane[lane] = friendPower;
-	end
+	-- 	local friendPower = 0;
+	-- 	for N, friend in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES)) do
+	-- 		if friend:IsTrueHero() then
+	-- 			if GetUnitToLocationDistance(friend, laneFront) < 3000 then
+	-- 	   	   		friendPower = friendPower + friend:GetOffensivePower();
+	-- 	   	   	end
+	-- 	   	end
+	-- 	end
+	-- 	friendPowerAtLane[lane] = friendPower;
+	-- end
 
-	-- global power
-	friendTotalPower = 0;
-	enemyTotalPower = 0;
-	for _, enemyID in ipairs(GetTeamPlayers(GetOpposingTeam())) do
-   	   enemyTotalPower = enemyTotalPower + LastSeenEnemys[enemyID].power;
-   	end
-   	for N, friend in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES)) do
-		if friend:IsTrueHero() then
-	   	   	friendTotalPower = friendTotalPower + friend:GetOffensivePower();
-	   	end
-	end
-	if friendTotalPower <= 0 then friendTotalPower = 500; end
-	if enemyTotalPower <= 0 then enemyTotalPower = 500; end
+	-- -- global power
+	-- friendTotalPower = 0;
+	-- enemyTotalPower = 0;
+	-- for _, enemyID in ipairs(GetTeamPlayers(GetOpposingTeam())) do
+ --   	   enemyTotalPower = enemyTotalPower + LastSeenEnemys[enemyID].power;
+ --   	end
+ --   	for N, friend in ipairs(GetUnitList(UNIT_LIST_ALLIED_HEROES)) do
+	-- 	if friend:IsTrueHero() then
+	--    	   	friendTotalPower = friendTotalPower + friend:GetOffensivePower();
+	--    	end
+	-- end
+	-- if friendTotalPower <= 0 then friendTotalPower = 500; end
+	-- if enemyTotalPower <= 0 then enemyTotalPower = 500; end
 end
 
 -- friend > enemy push and def
