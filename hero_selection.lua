@@ -1,6 +1,6 @@
 function Think()
 	if GetGameState() ~= GAME_STATE_HERO_SELECTION then	return; end
-    local picks = {"npc_dota_hero_sven","npc_dota_hero_dragon_knight","npc_dota_hero_tidehunter","npc_dota_hero_sand_king","npc_dota_hero_dazzle"};
+    local picks = {"npc_dota_hero_sven","npc_dota_hero_viper","npc_dota_hero_sand_king","npc_dota_hero_lion","npc_dota_hero_lich"};
 	local friendTeam = GetTeam();
 	local IDs = GetTeamPlayers(friendTeam);
 
@@ -21,7 +21,7 @@ function UpdateLaneAssignments()
 	    [1] = LANE_BOT,
 	    [2] = LANE_MID,
 	    [3] = LANE_TOP,
-	    [4] = LANE_NONE,
+	    [4] = LANE_TOP,
 	    [5] = LANE_BOT,
 	    };
     end
@@ -30,7 +30,7 @@ function UpdateLaneAssignments()
 	    [1] = LANE_TOP,
 	    [2] = LANE_MID,
 	    [3] = LANE_BOT,
-	    [4] = LANE_NONE,
+	    [4] = LANE_BOT,
 	    [5] = LANE_TOP,
 	    };
     end
