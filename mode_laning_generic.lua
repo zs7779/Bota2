@@ -11,9 +11,10 @@ function GetDesire()
         this_bot:InitializeBot();
     end
     -- Time < 5 minutes or level < 7
-    if time < 300 or this_bot_level < 7 then
+    if time < 600 or this_bot_level < 10 then
         return mode_utils.mode_desire.laning
     end
+    -- and if laning enemy is not too strong
     return 0;	
 end
 

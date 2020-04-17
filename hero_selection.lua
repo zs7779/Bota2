@@ -1,6 +1,6 @@
 function Think()
 	if GetGameState() ~= GAME_STATE_HERO_SELECTION then	return; end
-    local picks = {"npc_dota_hero_sven","npc_dota_hero_viper","npc_dota_hero_sand_king","npc_dota_hero_lion","npc_dota_hero_lich"};
+    local picks = {"npc_dota_hero_sven","npc_dota_hero_death_prophet","npc_dota_hero_axe","npc_dota_hero_sand_king","npc_dota_hero_jakiro"};
 	local friendTeam = GetTeam();
 	local IDs = GetTeamPlayers(friendTeam);
 

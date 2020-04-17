@@ -19,4 +19,9 @@ mode_utils.mode_desire = {
     side_shop = 0,
     item = 0,
 }
+
+mode_utils.slow_factor = 0.5;
+mode_utils.passiveness_factor = 0.9;
+mode_utils.excution_factor = 1.0;
+
 return mode_utils;
