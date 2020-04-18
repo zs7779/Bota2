@@ -14,7 +14,11 @@ function GetDesire()
     end
 
     -- Standing on top of rune, pick it up, dunno if appropriate to put here
-    this_bot:PickupRune();
+    if self.rune ~= nil and GetUnitToLocationDistance(self, GetRuneSpawnLocation(self.rune)) < 300 then
+        this_bot:PickupRune();
+        return mode_utils.mode_desire.rune;
+    end
+
     local runes = {power={RUNE_POWERUP_1, RUNE_POWERUP_2},
                 bounty={RUNE_BOUNTY_1, RUNE_BOUNTY_2, RUNE_BOUNTY_3, RUNE_BOUNTY_4}};
     local next_power_rune_time = 240;
@@ -26,22 +30,21 @@ function GetDesire()
     -- end
     -- Bounty rune
     if time + 20 > next_bounty_rune_time then
-        want_rune = want_rune or this_bot:DecideRoamRune(runes.bounty, time>next_bounty_rune_time);
+        this_bot:DecideRoamRune(runes.bounty, time>next_bounty_rune_time);
     end
     -- Power rune
     if time + 20 > next_power_rune_time then
-        want_rune = want_rune or this_bot:DecideRoamRune(runes.power, time>next_power_rune_time);
+        this_bot:DecideRoamRune(runes.power, time>next_power_rune_time);
     end
     -- All runes are unavailable
-    if time - 280 > next_bounty_rune_time then
+    if time - 280 > next_bounty_rune_time and
+        this_bot:AllRunesUnavailable(runes.bounty) then
         next_bounty_rune_time = next_bounty_rune_time + 300;
     end
-    if time - 100 > next_power_rune_time then
+    if time - 100 > next_power_rune_time
+        this_bot:AllRunesUnavailable(runes.power) then
         next_power_rune_time = next_power_rune_time + 120;
     end
 
-    if want_rune then
-        return mode_utils.mode_desire.rune;
-    end
 	return 0;
 end

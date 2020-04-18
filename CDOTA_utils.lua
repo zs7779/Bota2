@@ -205,21 +205,13 @@ function CDOTA_Bot_Script:DecideRoamRune(runes, rune_spawned)
             end
         end
     end
-    if self.roam_location == nil or
-        GetUnitToLocationDistance(self, roam_location) > min_distance then
-        self.roam_location = GetRuneSpawnLocation(rune);
-        return true;
-    end
-    return false;
+    self.rune = nearest_rune;
 end
 
 function CDOTA_Bot_Script:PickUpRune()
-    for rune in RUNE_POWERUP_1, RUNE_BOUNTY_4 do
-        local rune_location = GetRuneSpawnLocation(rune);
-        local rune_distance = GetUnitToLocationDistance(self, rune_location);
-        if GetUnitToLocationDistance(self, rune_location) < 300 then
-            self:Action_PickUpRune(rune);
-        end
+    if self.rune ~= nil then
+        self:Action_PickUpRune(self.rune);
+        self.rune = nil;
     end
 end
 
