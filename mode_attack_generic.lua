@@ -16,10 +16,11 @@ function GetDesire()
     end
 
     if time > update_time then
-        print(this_bot:GetUnitName().." Power "..this_bot:EstimatePower().." Disable "..this_bot:EstimateFriendsDisableTime(0));
+        -- print(this_bot:GetUnitName().." Power "..this_bot:EstimatePower().." Disable "..this_bot:EstimateFriendsDisableTime(0));
         update_time = update_time + 30;
     end
 
+    -- 先有切后排logic
     local current_target = this_bot:GetFriendsTarget(1000);
     if current_target ~= nil and current_target:IsAlive() and current_target:CanBeSeen() then
         return mode_utils.mode_desire.attack;

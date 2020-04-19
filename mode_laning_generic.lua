@@ -18,27 +18,39 @@ function GetDesire()
     local this_bot_level = this_bot:GetLevel();
     local lane_front = GetLaneFrontLocation(this_bot:GetTeam(), this_bot:GetAssignedLane(), 0);
     local this_bot_tower = utils.GetLaneTower(this_bot:GetTeam(), this_bot:GetAssignedLane());
-    -- Time < 5 minutes or level < 7
-    -- and if laning enemy is not too strong
-    -- if lane is not too far from tower
-
+    
     if time > update_time then
         -- print(this_bot:GetUnitName().." Tower "..GetUnitToLocationDistance(this_bot_tower, lane_front));
         update_time = update_time + 30;
     end
 
-    if this_bot.position <= 3 and 
-        (this_bot.lane_is_hard or this_bot:EstimateEnimiesPower(1200) > stupidity * this_bot:GetMaxHealth()) then
-        this_bot.lane_is_hard = true;
-        return 0;
+    if time < 0 then
+        return mode_utils.mode_desire.laning;
     end
-
-    if time < 0 or time < 600 and this_bot_level <= 6 and this_bot_tower ~= nil and GetUnitToLocationDistance(this_bot_tower, lane_front) < 4000 then
-        local lane_danger = 0;
-        lane_danger = this_bot_tower:EstimateEnimiesPower(1600);
-        lane_danger = math.max(this_bot:EstimateEnimiesPower(1200), lane_danger);
-        if lane_danger < stupidity * this_bot:GetHealth() then
-            return mode_utils.mode_desire.laning;
+    if time < 600 and this_bot_level <= 6 then
+        -- Time < 5 minutes or level < 7
+        -- if lane is not too far from tower
+        -- and if laning enemy is not too strong
+        if this_bot_tower ~= nil and GetUnitToLocationDistance(this_bot_tower, lane_front) < 4000 then
+            local lane_danger = 0;
+            lane_danger = this_bot_tower:EstimateEnimiesPower(1600);
+            lane_danger = math.max(this_bot:EstimateEnimiesPower(1200), lane_danger);
+            if lane_danger < stupidity * this_bot:GetHealth() then
+                this_bot.help = false;
+                return mode_utils.mode_desire.laning;
+            elseif this_bot.position <= 3 then
+                this_bot.help = true;
+                local weakest_enemy = this_bot:FindWeakestEnemy(1200);
+                -- if lane enemy is strong but have friends/power to counterattack
+                if this_bot:EstimateFriendsPower(1200) > weakest_enemy:GetHealth() then
+                    return mode_utils.mode_desire.laning;
+                end
+            elseif this_bot.position >= 4 then
+                local friend_need_help = this_bot:FriendNeedHelpNearby(1200);
+                if friend_need_help ~= nil then
+                    return mode_utils.mode_desire.laning;
+                end
+            end
         end
     end
     -- GetAssignedLane() 

@@ -26,4 +26,19 @@ function utils.GetLaneTower(team, lane)
     return nil;
 end
 
+function utils.GetOutposts()
+    local ally_outpost, enemy_outpost = nil, nil;
+    for _, u in pairs(GetUnitList(UNIT_LIST_ALLIED_BUILDINGS)) do
+        if string.find(u:GetUnitName(), "Outpost") then
+            ally_outpost = u;
+        end
+    end
+    for _, u in pairs(GetUnitList(UNIT_LIST_ENEMY_BUILDINGS)) do
+        if string.find(u:GetUnitName(), "Outpost") then
+            enemy_outpost = u;
+        end
+    end
+    return {ally_outpost, enemy_outpost};
+end
+
 return utils;

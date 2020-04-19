@@ -68,6 +68,13 @@ function CDOTA_Bot_Script:GetComboMana()
     return mana_cost;
 end
 
+function CDOTA_Bot_Script:TimeToRegen()
+    local healthy = 0.7;
+    local healthy_hp = healthy * self:GetMaxHealth();
+    local healthy_mp = math.min(self:GetComboMana(), self:GetMaxMana());
+    return math.max((healthy_hp - self:GetHealth()) / self:GetHealthRegen(), (healthy_mp - self:GetMana()) / self:GetManaRegen());
+end
+
 function CDOTA_Bot_Script:EstimateFriendsDisableTime(distance)
     -- estimate total disable time among friends within distance, I'm guessing 0 means just myself
     local stun_factor, slow_factor = 1.0, 0.5;
@@ -124,7 +131,7 @@ function CDOTA_Bot_Script:EstimateFriendsPower(distance)
     local disable_time = self:EstimateFriendsDisableTime(distance);
     local power = 0;
     for i = 1, #nearby_friends do
-        if nearby_friends[i]:IsAlive() then
+        if nearby_friends[i]:IsAlive() and not nearby_friends[i]:IsIllusion() then
             -- power = power + nearby_friends[i]:EstimatePower(disable_time);
             power = power + nearby_friends[i]:GetOffensivePower();
         end
@@ -138,7 +145,7 @@ function CDOTA_Bot_Script:EstimateFriendsDamageToTarget(distance, target)
     local disable_time = self:EstimateFriendsDisableTime(distance);
     local damage = 0;
     for i = 1, #nearby_friends do
-        if nearby_friends[i]:IsAlive() then
+        if nearby_friends[i]:IsAlive() and not nearby_friends[i]:IsIllusion() then
             -- power = power + nearby_friends[i]:EstimatePower(disable_time);
             damage = damage + nearby_friends[i]:GetEstimatedDamageToTarget(true, target, disable_time, DAMAGE_TYPE_ALL);
         end
@@ -152,13 +159,16 @@ function CDOTA_Bot_Script:EstimateEnimiesPower(distance)
     local nearby_enemies = self:GetNearbyHeroes(distance, true, BOT_MODE_NONE);
     -- local disable_time = self:EstimateFriendsDisableTime(distance);
     local power = 0;
+    local enemy_account = {};
     if nearby_enemies == nil then
         return power;
     end
     for i = 1, #nearby_enemies do
-        if nearby_enemies[i]:IsAlive() then
+        local enemy_id = self:GetPlayerID();
+        if nearby_enemies[i]:IsAlive() and enemy_account[enemy_id] == nil then
             -- power = power + nearby_friends[i]:EstimatePower(disable_time);
             power = power + nearby_enemies[i]:GetRawOffensivePower();
+            enemy_account[enemy_id] = true;
         end
     end
     return power;
@@ -193,13 +203,13 @@ function CDOTA_Bot_Script:GetFriendsTarget(distance)
 end
 
 function CDOTA_Bot_Script:DecideRoamRune(runes, rune_spawned)
-    local min_distance = 1000000;
+    local min_distance = 3500;
     local nearest_rune = nil;
     for _, rune in pairs(runes) do
         if not rune_spawned or GetRuneStatus(rune) ~= RUNE_STATUS_MISSING then
             local rune_location = GetRuneSpawnLocation(rune);
             local rune_distance = GetUnitToLocationDistance(self, rune_location);
-            if rune_distance < min_distance and rune_distance < 3500 then
+            if rune_distance < min_distance then
                 min_distance = rune_distance;
                 nearest_rune = rune;
             end
@@ -211,18 +221,65 @@ end
 function CDOTA_Bot_Script:PickUpRune()
     if self.rune ~= nil then
         self:Action_PickUpRune(self.rune);
-        self.rune = nil;
     end
 end
 
-function CDOTA_Bot_Script.AllRunesUnavailable(runes)
+function CDOTA_Bot_Script:FriendWantRune()
+    local friends = GetUnitList(UNIT_LIST_ALLIED_HEROES);
+    for i = 1, #friends do
+        local friend = friends[i];
+        if friend ~= self and friend:IsAlive() and friend.rune == self.rune then
+            if self.rune <= RUNE_POWERUP_2 and self.position > friend.position or
+                self.rune > RUNE_POWERUP_2 and self.position < friend.position then
+                self.rune = nil;
+                self.rune_time = nil;
+                return;
+            end
+        end
+    end
+end
+
+function CDOTA_Bot_Script:AllRunesUnavailable(runes)
     for _, rune in pairs(runes) do
         if GetRuneStatus(rune) ~= RUNE_STATUS_MISSING or
             GetUnitToLocationDistance(self, GetRuneSpawnLocation(rune)) < 3500 then
-                return true;
-            end
+            return true;
+        end
     end
     return false;
 end
-function CDOTA_Bot_Script.IhaveShowed()
+
+function CDOTA_Bot_Script:NeedHelp()
+    return self:IsAlive() and self.help;
 end
+
+function CDOTA_Bot_Script:FindFriendNeedHelp()
+    local friends = GetUnitList(UNIT_LIST_ALLIED_HEROES);
+    local nearest_friend, min_distance = nil, 1000000;
+    for i = 1, #friends do
+        if friends[i] ~= self and friends[i]:NeedHelp() then
+            local distance = GetUnitToUnitDistance(self, friends[i]);
+            if distance < min_distance then
+                nearest_friend = friend;
+                min_distance = distance;
+            end
+        end
+    end
+    return nearest_friend, min_distance;
+end
+
+function CDOTA_Bot_Script:FriendNeedHelpNearby(distance)
+    local distance = distance or 1200;
+    local friend, friend_distance = self:FindFriendNeedHelp();
+    if friend_distance <= distance then
+        return friend;
+    end
+    return nil;
+end
+
+-- function CDOTA_Bot_Script:MoveToWaypoint(distance, waypoints)
+--     if distance == 0 or waypoints == nil or #waypoints == 0 then
+--         return 0;
+--     end
+--     self:Action_MoveToLocation(waypoints[1]);
+-- end

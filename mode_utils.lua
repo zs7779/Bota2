@@ -33,7 +33,7 @@ mode_utils.excution_factor = 1.0;
 mode_utils.towers = {[LANE_TOP]={TOWER_TOP_1, TOWER_TOP_2, TOWER_TOP_3},
                         [LANE_MID]={TOWER_MID_1, TOWER_MID_2, TOWER_MID_3}, 
                         [LANE_BOT]={TOWER_BOT_1, TOWER_BOT_2, TOWER_BOT_3}};
-mode_utils.runes = {[power]={RUNE_POWERUP_1, RUNE_POWERUP_2},
-                        [bounty]={RUNE_BOUNTY_1, RUNE_BOUNTY_2, RUNE_BOUNTY_3, RUNE_BOUNTY_4}};
+mode_utils.runes = {["power"]={RUNE_POWERUP_1, RUNE_POWERUP_2},
+                        ["bounty"]={RUNE_BOUNTY_1, RUNE_BOUNTY_2, RUNE_BOUNTY_3, RUNE_BOUNTY_4}};
 
 return mode_utils;

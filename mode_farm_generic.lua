@@ -16,10 +16,11 @@ function GetDesire()
     end
 
     local this_bot_level = this_bot:GetLevel();
-    -- -- Time > 10 minutes or level >= 7
-    -- -- If very close to a big item
+    -- Time > 10 minutes or level >= 7
+    -- If very close to a big item
     if time > 60 then
         return mode_utils.mode_desire.farm;
     end
+    -- { { string, vector }, ... } GetNeutralSpawners() 
     return 0;
 end
