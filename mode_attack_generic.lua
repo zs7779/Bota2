@@ -5,6 +5,11 @@ require(GetScriptDirectory().."/CDOTA_utils");
 update_time = 0;
 passiveness = 1.0;
 
+local function GarbageCleaning()
+    local this_bot = GetBot();
+    this_bot:SetTarget(nil);
+end
+
 function GetDesire()
     local this_bot = GetBot();
     local time = DotaTime();
@@ -12,6 +17,7 @@ function GetDesire()
         this_bot:InitializeBot();
     end
     if not this_bot:IsAlive() then
+        GarbageCleaning();
         return 0;
     end
 
@@ -40,6 +46,5 @@ function GetDesire()
 end
 
 function OnEnd()
-    local this_bot = GetBot();
-    this_bot:SetTarget(nil);
+    GarbageCleaning(); 
 end

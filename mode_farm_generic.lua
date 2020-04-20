@@ -11,16 +11,16 @@ function GetDesire()
     if not this_bot.is_initialized then
         this_bot:InitializeBot();
     end
-    if not this_bot:IsAlive() then
-        return 0;
-    end
+    -- if not this_bot:IsAlive() then
+    --     return 0;
+    -- end
 
-    local this_bot_level = this_bot:GetLevel();
+    -- local this_bot_level = this_bot:GetLevel();
     -- Time > 10 minutes or level >= 7
     -- If very close to a big item
-    if time > 60 then
+    -- if time > 60 then
         return mode_utils.mode_desire.farm;
-    end
+    -- end
     -- { { string, vector }, ... } GetNeutralSpawners() 
     return 0;
 end

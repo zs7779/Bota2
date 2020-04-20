@@ -202,8 +202,8 @@ function CDOTA_Bot_Script:GetFriendsTarget(distance)
     return nil;
 end
 
-function CDOTA_Bot_Script:DecideRoamRune(runes, rune_spawned)
-    local min_distance = 3500;
+function CDOTA_Bot_Script:DecideRoamRune(runes, rune_spawned, min_distance)
+    local min_distance = min_distance or 3000;
     local nearest_rune = nil;
     for _, rune in pairs(runes) do
         if not rune_spawned or GetRuneStatus(rune) ~= RUNE_STATUS_MISSING then
@@ -240,13 +240,14 @@ function CDOTA_Bot_Script:FriendWantRune()
 end
 
 function CDOTA_Bot_Script:AllRunesUnavailable(runes)
-    for _, rune in pairs(runes) do
-        if GetRuneStatus(rune) ~= RUNE_STATUS_MISSING or
-            GetUnitToLocationDistance(self, GetRuneSpawnLocation(rune)) < 3500 then
-            return true;
+    local friends = GetUnitList(UNIT_LIST_ALLIED_HEROES);
+    for i = 1, #friends do
+        local friend = friends[i];
+        if friend:IsAlive() and friend.rune ~= nil then
+            return false;
         end
     end
-    return false;
+    return true;
 end
 
 function CDOTA_Bot_Script:NeedHelp()

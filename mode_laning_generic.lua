@@ -14,6 +14,9 @@ function GetDesire()
     if not this_bot:IsAlive() then
         return 0;
     end
+    if time > 600 then
+        return 0;
+    end
 
     local this_bot_level = this_bot:GetLevel();
     local lane_front = GetLaneFrontLocation(this_bot:GetTeam(), this_bot:GetAssignedLane(), 0);

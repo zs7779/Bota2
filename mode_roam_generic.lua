@@ -3,6 +3,14 @@ mode_utils = require(GetScriptDirectory().."/mode_utils");
 require(GetScriptDirectory().."/CDOTA_utils");
 
 update_time = 0;
+next_outpost_time = 600;
+local function GarbageCleaning()
+    local this_bot = GetBot();
+    this_bot.roam = nil;
+    this_bot.outpost = nil;
+    this_bot.outpost_time = nil;
+end
+
 function GetDesire()
     local this_bot = GetBot();
     local time = DotaTime();
@@ -10,6 +18,7 @@ function GetDesire()
         this_bot:InitializeBot();
     end
     if not this_bot:IsAlive() then
+        GarbageCleaning();
         return 0;
     end
 
@@ -27,6 +36,7 @@ function GetDesire()
         for _, outpost in pairs(this_bot.outposts) do
             if outpost:GetTeam() ~= this_bot:GetTeam() and GetUnitToUnitDistance(this_bot, outpost) < 400 then -- not occupied and close by
                 this_bot.outpost = outpost;
+                this_bot.outpost_time = next_outpost_time;
             end
         end
     end
@@ -72,4 +82,8 @@ function Think()
     if roam_location ~= nil then
         GeneratePath(this_bot_location, roam_location, GetAvoidanceZones() , MoveToWaypoint);
     end
+end
+
+function OnEnd()
+    GarbageCleaning();
 end
