@@ -41,4 +41,15 @@ function utils.GetOutposts()
     return {ally_outpost, enemy_outpost};
 end
 
+function utils.GuessCreepPosition()
+    
+end
+
+function utils.GetFlag(behavior, flag)
+    if flag == 0 then
+        return 0;
+    end
+    return math.floor(behavior / flag) % 2 == 1; -- because if 0 is true
+end
+
 return utils;

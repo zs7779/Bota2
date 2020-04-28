@@ -19,8 +19,8 @@ function GetDesire()
     -- Time > 10 minutes or level >= 7
     -- If very close to a big item
     -- if time > 60 then
-        return mode_utils.mode_desire.farm;
+    return mode_utils.mode_desire.farm;
     -- end
     -- { { string, vector }, ... } GetNeutralSpawners() 
-    return 0;
+    -- return 0;
 end

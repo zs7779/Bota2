@@ -55,8 +55,8 @@ function Think()
     local this_bot = GetBot();
     local this_bot_location = this_bot:GetLocation();
     local roam_location = nil;
-    local function MoveToWaypoint(distance, table_length_I_presume, waypoints)
-        if distance ~= 0 and waypoints ~= nil and #waypoints > 0 then
+    local function MoveToWaypoint(distance, table_length_I_assume, waypoints)
+        if distance > 0 and waypoints ~= nil and #waypoints > 0 then
             this_bot:Action_MovePath(waypoints);    
         end
     end
@@ -80,7 +80,7 @@ function Think()
     --     print(this_bot.ward);
     end
     if roam_location ~= nil then
-        GeneratePath(this_bot_location, roam_location, GetAvoidanceZones() , MoveToWaypoint);
+        GeneratePath(this_bot_location, roam_location, GetAvoidanceZones(), MoveToWaypoint);
     end
 end
 

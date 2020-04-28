@@ -29,6 +29,7 @@ mode_utils.mode_desire = {
 mode_utils.slow_factor = 0.5;
 mode_utils.passiveness_factor = 0.9;
 mode_utils.excution_factor = 1.0;
+mode_utils.friend_help_factor = 1.5;
 
 mode_utils.towers = {[LANE_TOP]={TOWER_TOP_1, TOWER_TOP_2, TOWER_TOP_3},
                         [LANE_MID]={TOWER_MID_1, TOWER_MID_2, TOWER_MID_3}, 

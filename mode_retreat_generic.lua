@@ -21,7 +21,7 @@ function GetDesire()
         update_time = update_time + 30;
     end
     local health = this_bot:GetHealth();
-    if this_bot:EstimateEnimiesPower(1200) > stupidity * health then
+    if this_bot:EstimateEnimiesPower(1600) > stupidity * health then
         return mode_utils.mode_desire.retreat;
     end
     -- not enough mana to do combo

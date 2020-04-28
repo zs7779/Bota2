@@ -1,5 +1,4 @@
 -- Extend helper functions to CDOTA_Bot_Script class, which is the class of the Bot objects
-
 local debug = true;
 
 function CDOTA_Bot_Script:InitializeBot()
@@ -49,9 +48,14 @@ function CDOTA_Bot_Script:GetAbilities()
 
     if debug then
         print("Abilities")
-        for i = 1, #abilities do
+        for i = 1, #self.abilities_slots do
             local ability = self:GetAbilityInSlot(self.abilities_slots[i]);
-            print(self.abilities_slots[i], ability:GetName());
+            local ability_behavior = ability:GetBehavior();
+            print(self.abilities_slots[i], ability:GetName(),
+                "AOE "..ability:GetAOERadius(),
+                "Range "..ability:GetCastRange(),
+                "Duration "..ability:GetDuration(),
+                "Damage "..ability:GetAbilityDamage());
         end
     end
 	return self.abilities_slots;
@@ -68,10 +72,22 @@ function CDOTA_Bot_Script:GetComboMana()
     return mana_cost;
 end
 
+function CDOTA_Bot_Script:HealthyMana()
+    return math.min(self:GetComboMana(), self:GetMaxMana());
+end
+
+function CDOTA_Bot_Script:FreeMana()
+    return math.max(self:GetMana() - self:HealthyMana(), 0);
+end
+
+function CDOTA_Bot_Script:FreeAbility(ability)
+    return ability ~= nil and ability:IsFullyCastable() and ability:GetCooldown() < 20 and ability:GetManaCost() < self:FreeMana();
+end
+
 function CDOTA_Bot_Script:TimeToRegen()
     local healthy = 0.7;
     local healthy_hp = healthy * self:GetMaxHealth();
-    local healthy_mp = math.min(self:GetComboMana(), self:GetMaxMana());
+    local healthy_mp = self:HealthyMana();
     return math.max((healthy_hp - self:GetHealth()) / self:GetHealthRegen(), (healthy_mp - self:GetMana()) / self:GetManaRegen());
 end
 
@@ -164,7 +180,7 @@ function CDOTA_Bot_Script:EstimateEnimiesPower(distance)
         return power;
     end
     for i = 1, #nearby_enemies do
-        local enemy_id = self:GetPlayerID();
+        local enemy_id = nearby_enemies[i]:GetPlayerID();
         if nearby_enemies[i]:IsAlive() and enemy_account[enemy_id] == nil then
             -- power = power + nearby_friends[i]:EstimatePower(disable_time);
             power = power + nearby_enemies[i]:GetRawOffensivePower();
@@ -191,12 +207,20 @@ function CDOTA_Bot_Script:FindWeakestEnemy(distance)
     return weakest_enemy;
 end
 
+-- richest enemy
+-- strongest enemy
+-- 1. 先手到大哥可以打
+-- 2. 随便打 power之类的
+
 function CDOTA_Bot_Script:GetFriendsTarget(distance)
     local distance = distance or 0;
     local nearby_friends = self:GetNearbyHeroes(distance, false, BOT_MODE_NONE);
     for i = 1, #nearby_friends do
         if nearby_friends[i]:IsAlive() and nearby_friends[i]:GetActiveMode() == BOT_MODE_ATTACK then
-            return nearby_friends[i]:GetTarget();
+            local friend_target = nearby_friends[i]:GetTarget();
+            if friend_target ~= nil and friend_target:IsAlive() and friend_target:CanBeSeen() then
+                return friend_target;
+            end
         end
     end
     return nil;
@@ -243,7 +267,7 @@ function CDOTA_Bot_Script:AllRunesUnavailable(runes)
     local friends = GetUnitList(UNIT_LIST_ALLIED_HEROES);
     for i = 1, #friends do
         local friend = friends[i];
-        if friend:IsAlive() and friend.rune ~= nil then
+        if friend.rune ~= nil then
             return false;
         end
     end
@@ -284,3 +308,4 @@ end
 --     end
 --     self:Action_MoveToLocation(waypoints[1]);
 -- end
+

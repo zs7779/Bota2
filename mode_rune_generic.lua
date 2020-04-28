@@ -5,7 +5,7 @@ require(GetScriptDirectory().."/CDOTA_utils");
 update_time = 0;
 next_power_rune_time = 240;
 next_bounty_rune_time = 0;
-free_time = {5, 5, 10, 20, 20};
+free_time = {1, 5, 10, 15, 15};
 local function GarbageCleaning()
     local this_bot = GetBot();
     this_bot.rune = nil;
@@ -29,11 +29,11 @@ function GetDesire()
         update_time = update_time + 60;
     end
     -- Standing on top of rune, pick it up, dunno if appropriate to put here
-    if this_bot.rune ~= nil then
-        if time > this_bot.rune_time and GetRuneStatus(this_bot.rune) == RUNE_STATUS_MISSING then
+    if this_bot.rune ~= nil and (this_bot.rune_time == nil or time > this_bot.rune_time) then
+        if GetRuneStatus(this_bot.rune) == RUNE_STATUS_MISSING then
             GarbageCleaning();
             return 0;
-        elseif GetUnitToLocationDistance(this_bot, GetRuneSpawnLocation(this_bot.rune)) < 300 and time > this_bot.rune_time then
+        elseif GetUnitToLocationDistance(this_bot, GetRuneSpawnLocation(this_bot.rune)) < 300 then
             return mode_utils.mode_desire.rune;
         end
     end
@@ -47,7 +47,7 @@ function GetDesire()
     if this_bot.rune == nil then
         if time + free_time[this_bot.position] > next_bounty_rune_time then
             this_bot:DecideRoamRune(runes.bounty, time>next_bounty_rune_time, 3000);
-            if this_bot.rune then
+            if this_bot.rune ~= nil then
                 this_bot.rune_time = next_bounty_rune_time;
                 this_bot:FriendWantRune();
             end
@@ -55,7 +55,7 @@ function GetDesire()
         -- Power rune
         if time + free_time[this_bot.position] > next_power_rune_time then
             this_bot:DecideRoamRune(runes.power, time>next_power_rune_time, 3000);
-            if this_bot.rune then
+            if this_bot.rune ~= nil then
                 this_bot.rune_time = next_power_rune_time;
                 this_bot:FriendWantRune();
             end
@@ -66,10 +66,12 @@ function GetDesire()
     if time > next_bounty_rune_time and
         this_bot:AllRunesUnavailable(runes.bounty) then
         next_bounty_rune_time = next_bounty_rune_time + 300;
+        print("bounty time is now "..next_bounty_rune_time);
     end
     if time > next_power_rune_time and
         this_bot:AllRunesUnavailable(runes.power) then
         next_power_rune_time = next_power_rune_time + 120;
+        print("rune time is now "..next_power_rune_time);
     end
 
 	return 0;
