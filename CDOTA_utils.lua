@@ -52,10 +52,8 @@ function CDOTA_Bot_Script:GetAbilities()
             local ability = self:GetAbilityInSlot(self.abilities_slots[i]);
             local ability_behavior = ability:GetBehavior();
             print(self.abilities_slots[i], ability:GetName(),
-                "AOE "..ability:GetAOERadius(),
                 "Range "..ability:GetCastRange(),
-                "Duration "..ability:GetDuration(),
-                "Damage "..ability:GetAbilityDamage());
+                "Mana "..ability:GetManaCost());
         end
     end
 	return self.abilities_slots;
@@ -77,7 +75,7 @@ function CDOTA_Bot_Script:HealthyMana()
 end
 
 function CDOTA_Bot_Script:FreeMana()
-    return math.max(self:GetMana() - self:HealthyMana(), 0);
+    return math.min(math.max(self:GetMana() - self:HealthyMana(), 0), self:GetMaxMana() * 0.4);
 end
 
 function CDOTA_Bot_Script:FreeAbility(ability)
@@ -184,6 +182,7 @@ function CDOTA_Bot_Script:EstimateEnimiesPower(distance)
         if nearby_enemies[i]:IsAlive() and enemy_account[enemy_id] == nil then
             -- power = power + nearby_friends[i]:EstimatePower(disable_time);
             power = power + nearby_enemies[i]:GetRawOffensivePower();
+            -- apparently this is very wrong for some heroes: phoneix/monkeyking maybe elder titan
             enemy_account[enemy_id] = true;
         end
     end

@@ -1,5 +1,5 @@
 utils = require(GetScriptDirectory().."/utils");
-mode_utils = require(GetScriptDirectory().."/mode_utils");
+enums = require(GetScriptDirectory().."/enums");
 require(GetScriptDirectory().."/CDOTA_utils");
 
 update_time = 0;
@@ -34,7 +34,7 @@ function GetDesire()
             GarbageCleaning();
             return 0;
         elseif GetUnitToLocationDistance(this_bot, GetRuneSpawnLocation(this_bot.rune)) < 300 then
-            return mode_utils.mode_desire.rune;
+            return enums.mode_desire.rune;
         end
     end
 

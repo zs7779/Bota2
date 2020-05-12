@@ -1,5 +1,5 @@
 utils = require(GetScriptDirectory().."/utils");
-mode_utils = require(GetScriptDirectory().."/mode_utils");
+enums = require(GetScriptDirectory().."/enums");
 require(GetScriptDirectory().."/CDOTA_utils");
 
 -- I'm having a sense the original farm mode was exclusively for jungle
@@ -19,7 +19,7 @@ function GetDesire()
     -- Time > 10 minutes or level >= 7
     -- If very close to a big item
     -- if time > 60 then
-    return mode_utils.mode_desire.farm;
+    return enums.mode_desire.farm;
     -- end
     -- { { string, vector }, ... } GetNeutralSpawners() 
     -- return 0;

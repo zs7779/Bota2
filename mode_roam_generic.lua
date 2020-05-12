@@ -1,5 +1,5 @@
 utils = require(GetScriptDirectory().."/utils");
-mode_utils = require(GetScriptDirectory().."/mode_utils");
+enums = require(GetScriptDirectory().."/enums");
 require(GetScriptDirectory().."/CDOTA_utils");
 
 update_time = 0;
@@ -44,7 +44,7 @@ function GetDesire()
     -- if time > 0 then
         if not this_bot:FriendNeedHelpNearby(1600) then
             if (this_bot.rune or this_bot.roam or this_bot.outpost or this_bot.pull or this_bot.ward) then
-                return mode_utils.mode_desire.roam;
+                return enums.mode_desire.roam;
             end
         end
     -- end

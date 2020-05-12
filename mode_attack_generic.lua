@@ -1,5 +1,5 @@
 utils = require(GetScriptDirectory().."/utils");
-mode_utils = require(GetScriptDirectory().."/mode_utils");
+enums = require(GetScriptDirectory().."/enums");
 require(GetScriptDirectory().."/CDOTA_utils");
 
 update_time = 30;
@@ -23,14 +23,14 @@ function GetDesire()
 
     if time > update_time then
         -- print(this_bot:GetUnitName().." Power "..this_bot:EstimatePower().." Disable "..this_bot:EstimateFriendsDisableTime(0));
-        this_bot:GetAbilities();
+        this_bot:GetAbilities(); -- maybe good idea
         update_time = update_time + 60;
     end
 
     -- 先有切后排logic
     -- local target = this_bot:FindWeakestEnemy(1200);
     -- if current_target ~= nil and current_target:IsAlive() and current_target:CanBeSeen() then
-    --     return mode_utils.mode_desire.attack;
+    --     return enums.mode_desire.attack;
         -- GetPlayerID() 
         -- { {location, time_since_seen}, ...} GetHeroLastSeenInfo( nPlayerID ) 
         -- int GetUnitPotentialValue( hUnit, vLocation, fRadius ) 
@@ -43,12 +43,8 @@ function GetDesire()
     end
     if target ~= nil and this_bot:EstimateFriendsDamageToTarget(900, target) > passiveness * target:GetHealth() then
         this_bot:SetTarget(target);
-        mods = target:GetModifierList();
-        for i = 1,#mods do
-            print(target:GetUnitName(), i, target:GetModifierName(i), target:GetModifierRemainingDuration(i));
-        end
         -- print("Target "..target:GetUnitName().." Health "..target:GetHealth().." Power "..this_bot:EstimateFriendsPower(1200));
-        return mode_utils.mode_desire.attack;
+        return enums.mode_desire.attack;
     end
     return 0;	
 end

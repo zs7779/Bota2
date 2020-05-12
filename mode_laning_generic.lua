@@ -1,5 +1,5 @@
 utils = require(GetScriptDirectory().."/utils");
-mode_utils = require(GetScriptDirectory().."/mode_utils");
+enums = require(GetScriptDirectory().."/enums");
 require(GetScriptDirectory().."/CDOTA_utils");
 
 update_time = 15;
@@ -28,7 +28,7 @@ function GetDesire()
     end
 
     if time < 0 then
-        return mode_utils.mode_desire.laning;
+        return enums.mode_desire.laning;
     end
     if time < 600 and this_bot_level <= 6 then
         -- Time < 5 minutes or level < 7
@@ -40,18 +40,18 @@ function GetDesire()
             lane_danger = math.max(this_bot:EstimateEnimiesPower(1200), lane_danger);
             if lane_danger < stupidity * this_bot:GetHealth() then
                 this_bot.help = false;
-                return mode_utils.mode_desire.laning;
+                return enums.mode_desire.laning;
             elseif this_bot.position <= 3 then
                 this_bot.help = true;
                 local weakest_enemy = this_bot:FindWeakestEnemy(1200);
                 -- if lane enemy is strong but have friends/power to counterattack
                 if this_bot:EstimateFriendsPower(1200) > weakest_enemy:GetHealth() then
-                    return mode_utils.mode_desire.laning;
+                    return enums.mode_desire.laning;
                 end
             elseif this_bot.position >= 4 then
                 local friend_need_help = this_bot:FriendNeedHelpNearby(1200);
                 if friend_need_help ~= nil then
-                    return mode_utils.mode_desire.laning;
+                    return enums.mode_desire.laning;
                 end
             end
         end

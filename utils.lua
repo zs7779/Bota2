@@ -52,4 +52,8 @@ function utils.GetFlag(behavior, flag)
     return math.floor(behavior / flag) % 2 == 1; -- because if 0 is true
 end
 
+function utils.GetDistance(a, b) -- maybe its easier to just worke with squared distance all the time..
+	return math.sqrt((a[1] - b[1]) * (a[1] - b[1]) + (a[2] - b[2]) * (a[2] - b[2]));
+end
+
 return utils;
