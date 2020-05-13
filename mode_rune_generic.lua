@@ -5,7 +5,7 @@ require(GetScriptDirectory().."/CDOTA_utils");
 update_time = 0;
 next_power_rune_time = 240;
 next_bounty_rune_time = 0;
-free_time = {1, 5, 10, 15, 15};
+
 local function GarbageCleaning()
     local this_bot = GetBot();
     this_bot.rune = nil;
@@ -45,7 +45,7 @@ function GetDesire()
     this_bot:DecideRoamRune(runes.all, true, 600);
     -- Bounty rune
     if this_bot.rune == nil then
-        if time + free_time[this_bot.position] > next_bounty_rune_time then
+        if time + enums.free_time[this_bot.position] > next_bounty_rune_time then
             this_bot:DecideRoamRune(runes.bounty, time>next_bounty_rune_time, 3000);
             if this_bot.rune ~= nil then
                 this_bot.rune_time = next_bounty_rune_time;
@@ -53,7 +53,7 @@ function GetDesire()
             end
         end
         -- Power rune
-        if time + free_time[this_bot.position] > next_power_rune_time then
+        if time + enums.free_time[this_bot.position] > next_power_rune_time then
             this_bot:DecideRoamRune(runes.power, time>next_power_rune_time, 3000);
             if this_bot.rune ~= nil then
                 this_bot.rune_time = next_power_rune_time;
@@ -66,12 +66,12 @@ function GetDesire()
     if time > next_bounty_rune_time and
         this_bot:AllRunesUnavailable(runes.bounty) then
         next_bounty_rune_time = next_bounty_rune_time + 300;
-        print("bounty time is now "..next_bounty_rune_time);
+        -- print("bounty time is now "..next_bounty_rune_time);
     end
     if time > next_power_rune_time and
         this_bot:AllRunesUnavailable(runes.power) then
         next_power_rune_time = next_power_rune_time + 120;
-        print("rune time is now "..next_power_rune_time);
+        -- print("rune time is now "..next_power_rune_time);
     end
 
 	return 0;

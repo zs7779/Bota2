@@ -3,7 +3,6 @@ enums = require(GetScriptDirectory().."/enums");
 require(GetScriptDirectory().."/CDOTA_utils");
 
 update_time = 30;
-passiveness = 0.6;
 
 local function GarbageCleaning()
     local this_bot = GetBot();
@@ -37,13 +36,14 @@ function GetDesire()
     -- end
     -- Assault
     -- Kill
-    local target = this_bot:GetFriendsTarget(900);
+    local target = this_bot:FindWeakestEnemy(this_bot.ability_range);
     if target == nil then
-        target = this_bot:FindWeakestEnemy(1200);
+        target = this_bot:GetFriendsTarget(900);
     end
-    if target ~= nil and this_bot:EstimateFriendsDamageToTarget(900, target) > passiveness * target:GetHealth() then
+
+    if target ~= nil and this_bot:EstimateFriendsDamageToTarget(900, target) > enums.passiveness * target:GetHealth() then
         this_bot:SetTarget(target);
-        -- print("Target "..target:GetUnitName().." Health "..target:GetHealth().." Power "..this_bot:EstimateFriendsPower(1200));
+        -- print("Target "..target:GetUnitName().." Damage "..this_bot:EstimateFriendsDamageToTarget(900, target).." Disable "..target:GetRemainingDisableTime());
         return enums.mode_desire.attack;
     end
     return 0;	

@@ -3,11 +3,11 @@ enums = require(GetScriptDirectory().."/enums");
 require(GetScriptDirectory().."/CDOTA_utils");
 
 update_time = 0;
-stupidity = 1.0;
-healthy = 0.6;
 timeout = 90;
+
+local this_bot = GetBot();
+
 function GetDesire()
-    local this_bot = GetBot();
     local time = DotaTime();
     if not this_bot.is_initialized then
         this_bot:InitializeBot();
@@ -21,7 +21,7 @@ function GetDesire()
         update_time = update_time + 30;
     end
     local health = this_bot:GetHealth();
-    if this_bot:EstimateEnimiesPower(1600) > stupidity * health then
+    if this_bot:EstimateEnimiesPower(1600) > enums.stupidity * health then
         return enums.mode_desire.retreat;
     end
     -- not enough mana to do combo

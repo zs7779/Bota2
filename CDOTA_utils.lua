@@ -1,5 +1,8 @@
 -- Extend helper functions to CDOTA_Bot_Script class, which is the class of the Bot objects
-local debug = true;
+local debug = false;
+
+local stun_factor, slow_factor = 1.0, 0.5;
+local physical_factor, magic_factor, free_attacks = 0.65, 0.75, 3;
 
 function CDOTA_Bot_Script:InitializeBot()
     if debug then
@@ -45,17 +48,16 @@ function CDOTA_Bot_Script:GetAbilities()
         end
         self.abilities_slots = abilities;
     end
-
-    if debug then
-        print("Abilities")
-        for i = 1, #self.abilities_slots do
-            local ability = self:GetAbilityInSlot(self.abilities_slots[i]);
-            local ability_behavior = ability:GetBehavior();
-            print(self.abilities_slots[i], ability:GetName(),
-                "Range "..ability:GetCastRange(),
-                "Mana "..ability:GetManaCost());
-        end
+    if self.ability_range == nil then
+        self.ability_range = 0;
     end
+    for i = 1, #self.abilities_slots do
+        local ability = self:GetAbilityInSlot(self.abilities_slots[i]);
+        -- local ability_behavior = ability:GetBehavior();
+        self.ability_range = math.max(self.ability_range, ability:GetCastRange());
+    end
+    self.ability_range = math.min(self.ability_range, 1600);
+
 	return self.abilities_slots;
 end
 
@@ -91,7 +93,6 @@ end
 
 function CDOTA_Bot_Script:EstimateFriendsDisableTime(distance)
     -- estimate total disable time among friends within distance, I'm guessing 0 means just myself
-    local stun_factor, slow_factor = 1.0, 0.5;
     local distance = distance or 0;
     local nearby_friends = self:GetNearbyHeroes(distance, false, BOT_MODE_NONE);
     local stun_time, slow_time = 0, 0;
@@ -108,7 +109,6 @@ function CDOTA_Bot_Script:EstimatePower(disable_time)
     -- mean to be a rough estimate, better than GetOffensivePower, probably worse than GetEstimatedDamageToTarget
     -- still considering if the factors should be args. it would complicate the
     -- power immediately drops after cast stun, problem!
-    local physical_factor, magic_factor, free_attacks = 0.65, 0.75, 3;
     local physical_damage = 0;
     local magic_damage = 0;
     local pure_damage = 0;
@@ -153,10 +153,30 @@ function CDOTA_Bot_Script:EstimateFriendsPower(distance)
     return power;
 end
 
+function CDOTA_Bot_Script:GetStunTime()
+    if self.stun_timer == nil or self.stun_timer < DotaTime() or not self:IsStunned() and not self:IsRooted() and not self:IsHexed() then
+        self.stun_timer = nil;
+        return 0;
+    end
+    return math.max(self.stun_timer - DotaTime(), 0);
+end
+
+function CDOTA_Bot_Script:GetSlowTime()
+    if self.slow_timer == nil or self.slow_timer < DotaTime() then
+        self.slow_timer = nil;
+        return 0;
+    end
+    return math.max(self.slow_timer - DotaTime(), 0);
+end
+
+function CDOTA_Bot_Script:GetRemainingDisableTime()
+    return self:GetStunTime() + self:GetSlowTime() * slow_factor;
+end
+
 function CDOTA_Bot_Script:EstimateFriendsDamageToTarget(distance, target)
     local distance = distance or 0;
     local nearby_friends = self:GetNearbyHeroes(distance, false, BOT_MODE_NONE);
-    local disable_time = self:EstimateFriendsDisableTime(distance);
+    local disable_time = self:EstimateFriendsDisableTime(distance) + target:GetRemainingDisableTime() + 2;
     local damage = 0;
     for i = 1, #nearby_friends do
         if nearby_friends[i]:IsAlive() and not nearby_friends[i]:IsIllusion() then
@@ -171,10 +191,12 @@ function CDOTA_Bot_Script:EstimateEnimiesPower(distance)
     -- Need to add something so it doesnt count illusion twice
     local distance = distance or 0;
     local nearby_enemies = self:GetNearbyHeroes(distance, true, BOT_MODE_NONE);
+    local nearby_creeps = self:GetNearbyLaneCreeps(300, true);
+    local nearby_towers = self:GetNearbyTowers(700, true);
     -- local disable_time = self:EstimateFriendsDisableTime(distance);
     local power = 0;
     local enemy_account = {};
-    if nearby_enemies == nil then
+    if nearby_enemies == nil and nearby_creeps == nil and nearby_towers == nil then
         return power;
     end
     for i = 1, #nearby_enemies do
@@ -182,10 +204,21 @@ function CDOTA_Bot_Script:EstimateEnimiesPower(distance)
         if nearby_enemies[i]:IsAlive() and enemy_account[enemy_id] == nil then
             -- power = power + nearby_friends[i]:EstimatePower(disable_time);
             power = power + nearby_enemies[i]:GetRawOffensivePower();
+            -- power = power + nearby_enemies[i]:GetEstimatedDamageToTarget(true, self, duration???);
             -- apparently this is very wrong for some heroes: phoneix/monkeyking maybe elder titan
             enemy_account[enemy_id] = true;
         end
     end
+    for i = 1, #nearby_creeps do
+       if nearby_creeps[i]:IsAlive() then
+            power = power + nearby_creeps[i]:GetRawOffensivePower();
+        end
+    end
+    for i = 1, #nearby_towers do
+        if nearby_towers[i]:IsAlive() then
+             power = power + nearby_towers[i]:GetRawOffensivePower();
+         end
+     end
     return power;
 end
 

@@ -1,5 +1,15 @@
 local enums = {};
 
+enums.atentnion = 0.5;
+enums.passiveness = 1.0;
+enums.stupidity = 1.5;
+enums.healthy = 0.6;
+
+enums.slow_factor = 0.5;
+enums.passiveness_factor = 0.9;
+enums.excution_factor = 1.0;
+enums.friend_help_factor = 1.5;
+
 enums.mode_desire = {
     -- super duper emergency
     evasive_maneuvers = 1.0,
@@ -25,11 +35,7 @@ enums.mode_desire = {
     side_shop = 0,
     item = 0,
 }
-
-enums.slow_factor = 0.5;
-enums.passiveness_factor = 0.9;
-enums.excution_factor = 1.0;
-enums.friend_help_factor = 1.5;
+enums.free_time = {1, 5, 10, 15, 15};
 
 enums.towers = {[LANE_TOP]={TOWER_TOP_1, TOWER_TOP_2, TOWER_TOP_3},
                 [LANE_MID]={TOWER_MID_1, TOWER_MID_2, TOWER_MID_3}, 
@@ -38,4 +44,7 @@ enums.runes = {["power"]={RUNE_POWERUP_1, RUNE_POWERUP_2},
                ["bounty"]={RUNE_BOUNTY_1, RUNE_BOUNTY_2, RUNE_BOUNTY_3, RUNE_BOUNTY_4}};
 
 enums.unit_list = {[true]=UNIT_LIST_ENEMY_HEROES, [false]=UNIT_LIST_ALLIED_HEROES};
+
+enums.STUN = "stun_timer";
+enums.SLOW = "slow_timer";
 return enums;

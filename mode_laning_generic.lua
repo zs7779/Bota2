@@ -3,7 +3,6 @@ enums = require(GetScriptDirectory().."/enums");
 require(GetScriptDirectory().."/CDOTA_utils");
 
 update_time = 15;
-stupidity = 1.0;
 -- Called every ~300ms, and needs to return a floating-point value between 0 and 1 that indicates how much this mode wants to be the active mode.
 function GetDesire()
     local this_bot = GetBot();
@@ -34,11 +33,11 @@ function GetDesire()
         -- Time < 5 minutes or level < 7
         -- if lane is not too far from tower
         -- and if laning enemy is not too strong
-        if this_bot_tower ~= nil and GetUnitToLocationDistance(this_bot_tower, lane_front) < 4000 then
+        if this_bot_tower ~= nil and GetUnitToLocationDistance(this_bot_tower, lane_front) < 5000 then
             local lane_danger = 0;
             lane_danger = this_bot_tower:EstimateEnimiesPower(1600);
             lane_danger = math.max(this_bot:EstimateEnimiesPower(1200), lane_danger);
-            if lane_danger < stupidity * this_bot:GetHealth() then
+            if lane_danger < enums.stupidity * this_bot:GetHealth() then
                 this_bot.help = false;
                 return enums.mode_desire.laning;
             elseif this_bot.position <= 3 then

@@ -1,6 +1,6 @@
 function Think()
 	if GetGameState() ~= GAME_STATE_HERO_SELECTION then	return; end
-    local picks = {"npc_dota_hero_phantom_assassin","npc_dota_hero_sniper","npc_dota_hero_necrolyte","npc_dota_hero_sand_king","npc_dota_hero_jakiro"};
+    local picks = {"npc_dota_hero_sven","npc_dota_hero_sniper","npc_dota_hero_necrolyte","npc_dota_hero_sand_king","npc_dota_hero_jakiro"};
 	local friendTeam = GetTeam();
 	local IDs = GetTeamPlayers(friendTeam);
 	-- GetTeamPlayers() returns only human players in bot mode, but works fine in lobby
