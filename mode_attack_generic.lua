@@ -23,7 +23,7 @@ function GetDesire()
     if time > update_time then
         -- print(this_bot:GetUnitName().." Power "..this_bot:EstimatePower().." Disable "..this_bot:EstimateFriendsDisableTime(0));
         this_bot:GetAbilities(); -- maybe good idea
-        update_time = update_time + 60;
+        update_time = update_time + 20;
     end
 
     -- 先有切后排logic
@@ -36,12 +36,12 @@ function GetDesire()
     -- end
     -- Assault
     -- Kill
-    local target = this_bot:FindWeakestEnemy(this_bot.ability_range);
+    local target = this_bot:GetFriendsTarget(600);
     if target == nil then
-        target = this_bot:GetFriendsTarget(900);
+        target = this_bot:FindWeakestEnemy(this_bot:GetKillRange());
     end
 
-    if target ~= nil and this_bot:EstimateFriendsDamageToTarget(900, target) > enums.passiveness * target:GetHealth() then
+    if target ~= nil and this_bot:EstimateFriendsDamageToTarget(600, target) > enums.passiveness * target:GetHealth() then
         this_bot:SetTarget(target);
         -- print("Target "..target:GetUnitName().." Damage "..this_bot:EstimateFriendsDamageToTarget(900, target).." Disable "..target:GetRemainingDisableTime());
         return enums.mode_desire.attack;

@@ -1,3 +1,4 @@
+abilities_dictionary = require(GetScriptDirectory().."/abilities_dictionary");
 -- Extend helper functions to CDOTA_Bot_Script class, which is the class of the Bot objects
 local debug = false;
 
@@ -39,45 +40,48 @@ end
 function CDOTA_Bot_Script:GetAbilities()
     -- save a list of abilities to self
     local abilities = {};
-    if self.abilities_slots == nil then
-        for i = 0, 23 do
-            local ability = self:GetAbilityInSlot(i);
-            if ability ~= nil and not ability:IsTalent() and not ability:IsItem() and not ability:IsHidden() and not ability:IsPassive() then
-                abilities[#abilities+1] = i;
-            end
+    for i = 0, 23 do
+        local ability = self:GetAbilityInSlot(i);
+        if ability ~= nil and not ability:IsTalent() and not ability:IsItem() and not ability:IsHidden() and not ability:IsPassive() then
+            abilities[#abilities+1] = abilities_dictionary[ability:GetName()](ability);
         end
-        self.abilities_slots = abilities;
     end
-    if self.ability_range == nil then
-        self.ability_range = 0;
-    end
-    for i = 1, #self.abilities_slots do
-        local ability = self:GetAbilityInSlot(self.abilities_slots[i]);
-        -- local ability_behavior = ability:GetBehavior();
-        self.ability_range = math.max(self.ability_range, ability:GetCastRange());
-    end
-    self.ability_range = math.min(self.ability_range, 1600);
+    self.abilities = abilities;
+    -- for _, ab in pairs(self.abilities) do
+    --     print(self:GetUnitName(), ab.handle:GetName());
+    -- end
+	return self.abilities;
+end
 
-	return self.abilities_slots;
+function CDOTA_Bot_Script:GetKillRange()
+    if self.abilities == nil then
+        return 0;
+    end
+    local ability_range = 0;
+    for _, ability in pairs(self.abilities) do
+        if ability.handle:IsTrained() then
+            ability_range = math.max(ability_range, ability.handle:GetCastRange());
+        end
+    end
+    return math.min(ability_range, 1600);
 end
 
 function CDOTA_Bot_Script:GetComboMana()
     local mana_cost = 0;
-    if self.abilities_slots ~= nil then
-        for i = 1, #self.abilities_slots do
-            local ability = self:GetAbilityInSlot(self.abilities_slots[i]);
-            mana_cost = mana_cost + ability:GetManaCost();
+    if self.abilities ~= nil then
+        for _, ability in pairs(self.abilities) do
+            mana_cost = mana_cost + ability.handle:GetManaCost();
         end
     end
     return mana_cost;
 end
 
 function CDOTA_Bot_Script:HealthyMana()
-    return math.min(self:GetComboMana(), self:GetMaxMana());
+    return math.max(math.min(self:GetComboMana(), self:GetMaxMana()), self:GetMaxMana() * 0.5);
 end
 
 function CDOTA_Bot_Script:FreeMana()
-    return math.min(math.max(self:GetMana() - self:HealthyMana(), 0), self:GetMaxMana() * 0.4);
+    return math.max(self:GetMana() - self:HealthyMana(), 0);
 end
 
 function CDOTA_Bot_Script:FreeAbility(ability)
@@ -89,6 +93,17 @@ function CDOTA_Bot_Script:TimeToRegen()
     local healthy_hp = healthy * self:GetMaxHealth();
     local healthy_mp = self:HealthyMana();
     return math.max((healthy_hp - self:GetHealth()) / self:GetHealthRegen(), (healthy_mp - self:GetMana()) / self:GetManaRegen());
+end
+
+function CDOTA_Bot_Script:MoveOppositeStep(location)
+    local self_location = self:GetLocation();
+    local vector = {self_location[1] - location[1], self_location[2], location[2]};
+    local vector_len = math.sqrt(vector[1] * vector[2]);
+    vector[1] = vector[1] / vector_len * 300;
+    vector[2] = vector[2] / vector_len * 300;
+    self_location[1] = self_location[1] + vector[1];
+    self_location[2] = self_location[2] + vector[2];
+    self:ActionQueue_MoveToLocation(self_location);
 end
 
 function CDOTA_Bot_Script:EstimateFriendsDisableTime(distance)
@@ -113,14 +128,13 @@ function CDOTA_Bot_Script:EstimatePower(disable_time)
     local magic_damage = 0;
     local pure_damage = 0;
     local mana_cost = 1;
-    if self.abilities_slots ~= nil then
-        for i = 1, #self.abilities_slots do
-            local ability = self:GetAbilityInSlot(self.abilities_slots[i]);
-            if ability:IsFullyCastable() then
-                mana_cost = mana_cost + ability:GetManaCost();
+    if self.abilities ~= nil then
+        for _, ability in pairs(self.abilities) do
+            if ability.handle:IsFullyCastable() then
+                mana_cost = mana_cost + ability.handle:GetManaCost();
 
-                local ability_damage_type = ability:GetDamageType();
-                local ability_damage = ability:GetAbilityDamage();
+                local ability_damage_type = ability.handle:GetDamageType();
+                local ability_damage = ability.damage;
                 
                 if ability_damage_type == DAMAGE_TYPE_PHYSICAL then
                     physical_damage = physical_damage + ability_damage;
@@ -176,12 +190,19 @@ end
 function CDOTA_Bot_Script:EstimateFriendsDamageToTarget(distance, target)
     local distance = distance or 0;
     local nearby_friends = self:GetNearbyHeroes(distance, false, BOT_MODE_NONE);
-    local disable_time = self:EstimateFriendsDisableTime(distance) + target:GetRemainingDisableTime() + 2;
+    local disable_time = self:EstimateFriendsDisableTime(distance) + target:GetRemainingDisableTime();
+    local attack_range = self:GetAttackRange();
+    local target_distance = GetUnitToUnitDistance(self, target);
+    
     local damage = 0;
     for i = 1, #nearby_friends do
         if nearby_friends[i]:IsAlive() and not nearby_friends[i]:IsIllusion() then
             -- power = power + nearby_friends[i]:EstimatePower(disable_time);
-            damage = damage + nearby_friends[i]:GetEstimatedDamageToTarget(true, target, disable_time, DAMAGE_TYPE_ALL);
+            if nearby_friends[i]:GetAttackRange() > GetUnitToUnitDistance(nearby_friends[i], target) then
+                damage = damage + nearby_friends[i]:GetEstimatedDamageToTarget(true, target, disable_time+1, DAMAGE_TYPE_ALL);
+            else
+                damage = damage + nearby_friends[i]:GetEstimatedDamageToTarget(true, target, disable_time, DAMAGE_TYPE_ALL);
+            end
         end
     end
     return damage;

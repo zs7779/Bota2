@@ -1,8 +1,8 @@
 local enums = {};
 
 enums.atentnion = 0.5;
-enums.passiveness = 1.0;
-enums.stupidity = 1.5;
+enums.passiveness = 0.6;
+enums.stupidity = 1.2;
 enums.healthy = 0.6;
 
 enums.slow_factor = 0.5;
@@ -45,6 +45,13 @@ enums.runes = {["power"]={RUNE_POWERUP_1, RUNE_POWERUP_2},
 
 enums.unit_list = {[true]=UNIT_LIST_ENEMY_HEROES, [false]=UNIT_LIST_ALLIED_HEROES};
 
-enums.STUN = "stun_timer";
-enums.SLOW = "slow_timer";
+enums.modes = {BOT_MODE_LANING, BOT_MODE_ATTACK, BOT_MODE_ROAM, BOT_MODE_RETREAT, BOT_MODE_SECRET_SHOP, BOT_MODE_SIDE_SHOP,
+BOT_MODE_PUSH_TOWER_TOP, BOT_MODE_PUSH_TOWER_MID, BOT_MODE_PUSH_TOWER_BOT, BOT_MODE_DEFEND_TOWER_TOP, BOT_MODE_DEFEND_TOWER_MID, BOT_MODE_DEFEND_TOWER_BOT,
+BOT_MODE_ASSEMBLE, BOT_MODE_TEAM_ROAM, BOT_MODE_FARM, BOT_MODE_DEFEND_ALLY, BOT_MODE_EVASIVE_MANEUVERS, BOT_MODE_ROSHAN, BOT_MODE_ITEM, BOT_MODE_WARD};
+
+enums.timer = {
+    STUN = "stun_timer",
+    SLOW = "slow_timer",
+    NONE = nil,
+};
 return enums;
