@@ -1,3 +1,4 @@
+enums = require(GetScriptDirectory().."/enums");
 abilities_dictionary = require(GetScriptDirectory().."/abilities_dictionary");
 -- Extend helper functions to CDOTA_Bot_Script class, which is the class of the Bot objects
 local debug = false;
@@ -59,11 +60,21 @@ function CDOTA_Bot_Script:GetKillRange()
     end
     local ability_range = 0;
     for _, ability in pairs(self.abilities) do
-        if ability.handle:IsTrained() then
-            ability_range = math.max(ability_range, ability.handle:GetCastRange());
+        if ability.handle:IsTrained() and (ability.timer == enums.timer.SLOW or ability.timer == enums.timer.STUN) then
+            ability_range = math.max(ability_range, ability.cast_range);
         end
     end
     return math.min(ability_range, 1600);
+end
+
+function CDOTA_Bot_Script:TradeIsWorth(target)
+    for _, friend in pairs(self:GetNearbyHeroes(enums.experience_range, false, BOT_MODE_NONE)) do
+        -- todo: may be consider friend position >= self position
+        if target:GetNetWorth() > friend:GetNetWorth() or target:GetLevel() > friend:GetLevel() then
+            return true;
+        end
+    end
+    return false;
 end
 
 function CDOTA_Bot_Script:GetComboMana()
@@ -108,11 +119,13 @@ end
 
 function CDOTA_Bot_Script:EstimateFriendsDisableTime(distance)
     -- estimate total disable time among friends within distance, I'm guessing 0 means just myself
+    -- works on both teammate and enemy nice
     local distance = distance or 0;
     local nearby_friends = self:GetNearbyHeroes(distance, false, BOT_MODE_NONE);
     local stun_time, slow_time = 0, 0;
     for i = 1, #nearby_friends do
         if nearby_friends[i]:IsAlive() then
+            -- print(self:GetUnitName(), nearby_friends[i]:GetUnitName())
             stun_time = stun_time + nearby_friends[i]:GetStunDuration(true);
             slow_time = slow_time + nearby_friends[i]:GetSlowDuration(true);
         end
@@ -151,20 +164,6 @@ function CDOTA_Bot_Script:EstimatePower(disable_time)
     local num_attacks = math.max((disable_time + free_attacks) / (self:GetSecondsPerAttack()+0.01), free_attacks);
     total_power = total_power + self:GetAttackDamage() * num_attacks;
     return total_power;    
-end
-
-function CDOTA_Bot_Script:EstimateFriendsPower(distance)
-    local distance = distance or 0;
-    local nearby_friends = self:GetNearbyHeroes(distance, false, BOT_MODE_NONE);
-    local disable_time = self:EstimateFriendsDisableTime(distance);
-    local power = 0;
-    for i = 1, #nearby_friends do
-        if nearby_friends[i]:IsAlive() and not nearby_friends[i]:IsIllusion() then
-            -- power = power + nearby_friends[i]:EstimatePower(disable_time);
-            power = power + nearby_friends[i]:GetOffensivePower();
-        end
-    end
-    return power;
 end
 
 function CDOTA_Bot_Script:GetStunTime()
@@ -208,6 +207,32 @@ function CDOTA_Bot_Script:EstimateFriendsDamageToTarget(distance, target)
     return damage;
 end
 
+function CDOTA_Bot_Script:EstimateEnemiesDisableTime(distance)
+    local distance = distance or 1600;
+    local stun_time, slow_time = 0, 0;
+    for _, enemy in pairs(self:GetNearbyHeroes(distance, true, BOT_MODE_NONE)) do
+        if enemy:IsAlive() then
+            stun_time = stun_time + enemy:GetStunDuration(true);
+            slow_time = slow_time + enemy:GetSlowDuration(true);
+        end
+    end
+    return stun_factor * (stun_time + slow_factor * slow_time);
+end
+
+function CDOTA_Bot_Script:EstimateEnemiesDamageToTarget(distance, target)
+    local distance = distance or 1600;
+    local disable_time = target:EstimateEnemiesDisableTime(distance) + target:GetRemainingDisableTime() + 1;
+    
+    local damage = 0;
+    for _, attacker in pairs(target:GetNearbyHeroes(distance, true, BOT_MODE_NONE)) do
+        if attacker:IsAlive() and not attacker:IsIllusion() then
+            -- power = power + nearby_friends[i]:EstimatePower(disable_time);
+            damage = damage + attacker:GetEstimatedDamageToTarget(true, target, disable_time, DAMAGE_TYPE_ALL);
+        end
+    end
+    return damage;
+end
+
 function CDOTA_Bot_Script:EstimateEnimiesPower(distance)
     -- Need to add something so it doesnt count illusion twice
     local distance = distance or 0;
@@ -243,21 +268,30 @@ function CDOTA_Bot_Script:EstimateEnimiesPower(distance)
     return power;
 end
 
-function CDOTA_Bot_Script:FindWeakestEnemy(distance)
-    local distance = distance or 150;
-    local nearby_enemies = self:GetNearbyHeroes(distance, true, BOT_MODE_NONE);
+function CDOTA_Bot_Script:FindWeakestEnemy(range)
+    local range = range or 150;
     local smallest_health = 1000000;
     local weakest_enemy = nil;
-    for i = 1, #nearby_enemies do
-        if nearby_enemies[i]:IsAlive() and nearby_enemies[i]:CanBeSeen() then
-            local enemy_health = nearby_enemies[i]:GetHealth();
+    for _, enemy in pairs(self:GetNearbyHeroes(math.min(range, 1600), true, BOT_MODE_NONE)) do
+        if enemy:IsAlive() and enemy:CanBeSeen() then
+            local enemy_health = enemy:GetHealth();
             if enemy_health < smallest_health then
                 smallest_health = enemy_health;
-                weakest_enemy = nearby_enemies[i];
+                weakest_enemy = enemy;
             end
         end
     end
     return weakest_enemy;
+end
+
+function CDOTA_Bot_Script:FindClosestEnemy(range)
+    local range = range or 1600;
+    for _, enemy in pairs(self:GetNearbyHeroes(math.min(range, 1600), true, BOT_MODE_NONE)) do
+        if enemy:IsAlive() and enemy:CanBeSeen() then
+            return enemy;
+        end
+    end
+    return nil;
 end
 
 -- richest enemy
@@ -267,10 +301,9 @@ end
 
 function CDOTA_Bot_Script:GetFriendsTarget(distance)
     local distance = distance or 0;
-    local nearby_friends = self:GetNearbyHeroes(distance, false, BOT_MODE_NONE);
-    for i = 1, #nearby_friends do
-        if nearby_friends[i]:IsAlive() and nearby_friends[i]:GetActiveMode() == BOT_MODE_ATTACK then
-            local friend_target = nearby_friends[i]:GetTarget();
+    for _, friend in pairs(self:GetNearbyHeroes(distance, false, BOT_MODE_NONE)) do
+        if friend:IsAlive() and friend:GetActiveMode() == BOT_MODE_ATTACK then
+            local friend_target = friend:GetTarget();
             if friend_target ~= nil and friend_target:IsAlive() and friend_target:CanBeSeen() then
                 return friend_target;
             end

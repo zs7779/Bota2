@@ -44,7 +44,7 @@ function GetDesire()
                 this_bot.help = true;
                 local weakest_enemy = this_bot:FindWeakestEnemy(1200);
                 -- if lane enemy is strong but have friends/power to counterattack
-                if this_bot:EstimateFriendsPower(1200) > weakest_enemy:GetHealth() then
+                if this_bot:EstimateFriendsDamageToTarget(1200, weakest_enemy) > weakest_enemy:GetHealth() then
                     return enums.mode_desire.laning;
                 end
             elseif this_bot.position >= 4 then

@@ -28,13 +28,13 @@ function GetTargetsInRange(range, enemy, creep, base_location, time_in_future, d
     local this_bot = GetBot();
     local targets = {};
     if creep then
-        targets = this_bot:GetNearbyCreeps(range, enemy);
+        targets = this_bot:GetNearbyCreeps(math.min(range, 1600), enemy);
         return targets;
     end
     if range <= 1600 then
         targets = this_bot:GetNearbyHeroes(range, enemy, BOT_MODE_NONE);
     else
-        units = GetUnitList(enums.unit_list[enemy]);
+        units = GetUnitList(enums.hero_list[enemy]);
         for _, unit in pairs(units) do
             if unit:GetMovementDirectionStability() >= time_in_future and
                utils.GetDistance(base_location, unit:GetExtrapolatedLocation(time_in_future)) <= range and
@@ -46,10 +46,10 @@ function GetTargetsInRange(range, enemy, creep, base_location, time_in_future, d
     return targets;
 end
 
-function CheckTargetsStillAtLocation(aoe_num_units, aoe_location, enemy, base_location, cast_range, aoe_radius, target_flags, modifier_func)
+function CheckTargetsStillAtLocation(aoe_num_units, aoe_location, enemy, creep, base_location, cast_range, aoe_radius, target_flags, modifier_func)
     local unit_count = 0;
     if aoe_location ~= nil then
-        local targets = GetTargetsInRange(cast_range, enemy, false, base_location, 0, 0);
+        local targets = GetTargetsInRange(cast_range, enemy, creep, base_location, 0, 0);
         for _, target in pairs(targets) do
             -- find number of heroes being hit (considering magic immunity)
             if CanCastOnTarget(target, target_flags, modifier_func) and GetUnitToLocationDistance(target, aoe_location) <= aoe_radius then
@@ -99,13 +99,13 @@ function ThinkCircleAbilityOnTarget(base_location, cast_range, aoe_radius, time_
 end
 
 function UseCircleAbility(ability, enemy, creep, cast_range, aoe_radius, time_in_future, damage, target_flags, modifier_func, use_in_modes, free_ability, min_units)
-    local this_bot = GetBot();
-    -- print(this_bot:GetUnitName(), ability:GetName())
-    use_in_modes = use_in_modes or enums.modes;
-    min_units = min_units or 1;
     if ability == nil or not ability:IsFullyCastable() then
         return;
     end
+    use_in_modes = use_in_modes or enums.modes;
+    min_units = min_units or 1;
+    local this_bot = GetBot();
+    -- print(this_bot:GetUnitName(), ability:GetName())
     local aoe_num_units, aoe_location = 0, nil;
     local bot_location = this_bot:GetLocation();
     local active_mode = this_bot:GetActiveMode();
@@ -122,8 +122,8 @@ function UseCircleAbility(ability, enemy, creep, cast_range, aoe_radius, time_in
         DebugDrawCircle(aoe_location, aoe_radius, 0, 0, 100);
         if ability:IsInAbilityPhase() and enemy then
             -- doesnt seem to work, probably need to test with toggle like Leshrac
-            if not CheckTargetsStillAtLocation(aoe_num_units, aoe_location, enemy, bot_location, cast_range, aoe_radius, target_flags, modifier_func) then
-                this_bot:Action_ClearActions(true);
+            if not CheckTargetsStillAtLocation(aoe_num_units, aoe_location, enemy, creep, bot_location, cast_range, aoe_radius, target_flags, modifier_func) then
+                this_bot:Action_ClearActions(false);
                 this_bot:MoveOppositeStep(aoe_location);
                 this_bot:ActionQueue_Delay(0.5);
             end
@@ -154,12 +154,12 @@ function ThinkUnitAbility(enemy, creep, cast_range, aoe_radius, damage, target_f
 end
 
 function UseUnitAbility(ability, enemy, creep, cast_range, aoe_radius, damage, target_flags, modifier_func, use_in_modes, free_ability)
-    local this_bot = GetBot();
-    -- print(this_bot:GetUnitName(), ability:GetName())
-    use_in_modes = use_in_modes or enums.modes;
     if ability == nil or not ability:IsFullyCastable() then
         return;
     end
+    use_in_modes = use_in_modes or enums.modes;
+    local this_bot = GetBot();
+    -- print(this_bot:GetUnitName(), ability:GetName())
     local active_mode = this_bot:GetActiveMode();
     local target = nil;
     for _, mode in pairs(use_in_modes) do
@@ -187,14 +187,14 @@ function ThinkBuffCircleAbilityTarget(creep, base_location, cast_range, aoe_radi
 end
 
 function UseCircleBuffAbility(ability, creep, cast_range, aoe_radius, time_in_future, target_flags, modifier_func, use_in_modes, free_ability, min_units)
-    local this_bot = GetBot();
-    -- print(ability:GetName(), NoModifier("modifier_sniper_take_aim")(this_bot), this_bot:GetUnitName(), this_bot:HasModifier("modifier_sniper_take_aim"))
-    -- print(this_bot:GetUnitName(), ability:GetName())
-    use_in_modes = use_in_modes or enums.modes;
-    min_units = min_units or 1;
     if ability == nil or not ability:IsFullyCastable() then
         return;
     end
+    use_in_modes = use_in_modes or enums.modes;
+    min_units = min_units or 1;
+    local this_bot = GetBot();
+    -- print(ability:GetName(), NoModifier("modifier_sniper_take_aim")(this_bot), this_bot:GetUnitName(), this_bot:HasModifier("modifier_sniper_take_aim"))
+    -- print(this_bot:GetUnitName(), ability:GetName())
     local aoe_num_units, aoe_location = 0, nil;
     local active_mode = this_bot:GetActiveMode();
     for _, mode in pairs(use_in_modes) do
@@ -217,7 +217,7 @@ function NoStunTime(target)
         -- print(target:GetUnitName(),"Not stunned");
         return true;
     end
-    print(target:GetUnitName(),"Stunned");
+    print(target:GetUnitName().." Stunned "..target:GetStunTime());
     return false;
 end
 
