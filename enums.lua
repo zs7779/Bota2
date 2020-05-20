@@ -22,8 +22,8 @@ enums.mode_desire = {
     -- team activity
     push = 0.6, -- [push_tower_top push_tower_mid push_tower_bot]
     defend = 0.55, -- [defend_tower_top defend_tower_mid defend_tower_bottom]
-    team_roam = 0.5,
-    roshan = 0.45,
+    roshan = 0.5,
+    team_roam = 0.45,
     assemble = 0.4,
     roam = 0.35,
     -- special time
@@ -37,6 +37,7 @@ enums.mode_desire = {
 }
 enums.free_time = {1, 5, 10, 15, 15};
 
+enums.lanes = {LANE_TOP, LANE_MID, LANE_BOT};
 enums.towers = {[LANE_TOP]={TOWER_TOP_1, TOWER_TOP_2, TOWER_TOP_3},
                 [LANE_MID]={TOWER_MID_1, TOWER_MID_2, TOWER_MID_3}, 
                 [LANE_BOT]={TOWER_BOT_1, TOWER_BOT_2, TOWER_BOT_3}};
@@ -56,6 +57,7 @@ enums.timer = {
     STUN = "stun_timer",
     SLOW = "slow_timer",
     BUFF = "buff_timer",
+    SAVE = "save_timer",
     NONE = nil,
 };
 return enums;

@@ -23,11 +23,11 @@ function GetDesire()
     if time > update_time then
         -- print(this_bot:GetUnitName().." Power "..this_bot:EstimatePower().." Disable "..this_bot:EstimateFriendsDisableTime(0));
         this_bot:GetAbilities(); -- maybe good idea
-        if this_bot:GetPlayerPosition() == 5 then
-            for _, enemy in pairs(GetUnitList(UNIT_LIST_ENEMY_HEROES)) do
-                print(enemy:GetUnitName(), enemy:EstimatePower(), enemy:EstimateFriendsDisableTime(1200))
-            end
-        end
+        -- if this_bot:GetPlayerPosition() == 5 then
+        --     for _, enemy in pairs(GetUnitList(UNIT_LIST_ENEMY_HEROES)) do
+        --         print(enemy:GetUnitName(), enemy:EstimatePower(), enemy:EstimateFriendsDisableTime(1200))
+        --     end
+        -- end
         update_time = update_time + 20;
     end
 
@@ -48,7 +48,7 @@ function GetDesire()
         -- target = this_bot:FindWeakestEnemy(this_bot:GetKillRange());
     end
 
-    if target ~= nil and target:EstimateEnemiesDamageToTarget(600, target) > enums.passiveness * target:GetHealth() then
+    if target ~= nil and target:EstimateEnemiesDamageToSelf(600) > enums.passiveness * target:GetHealth() then
         this_bot:SetTarget(target);
         -- print("Target "..target:GetUnitName().." Damage "..this_bot:EstimateFriendsDamageToTarget(900, target).." Disable "..target:GetRemainingDisableTime());
         return enums.mode_desire.attack;

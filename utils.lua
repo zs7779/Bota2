@@ -17,9 +17,12 @@ function utils.GetLaneTower(team, lane)
     local towers = {[LANE_TOP]={TOWER_TOP_1, TOWER_TOP_2, TOWER_TOP_3},
                     [LANE_MID]={TOWER_MID_1, TOWER_MID_2, TOWER_MID_3}, 
                     [LANE_BOT]={TOWER_BOT_1, TOWER_BOT_2, TOWER_BOT_3}};
-    for _, i in pairs(towers[lane]) do
-        local tower = GetTower(team, i);
+    for i, t in pairs(towers[lane]) do
+        local tower = GetTower(team, t);
         if tower ~= nil and tower:IsAlive() then
+            return tower;
+        end
+        if i == 3 then -- dead or alive or nil, get tower 3
             return tower;
         end
     end

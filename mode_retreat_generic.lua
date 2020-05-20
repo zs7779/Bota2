@@ -21,13 +21,18 @@ function GetDesire()
         update_time = update_time + 30;
     end
     local health = this_bot:GetHealth();
-    if this_bot:EstimateEnimiesPower(1600) > enums.stupidity * health then
+    -- enemy can kill me and no friend has stun or save
+    if this_bot:EstimateEnemiesDamageToSelf(1600) > enums.stupidity * health and this_bot:EnemyCanInitiateOnSelf(1600) and not this_bot:FriendCanSaveMe(600) then
         return enums.mode_desire.retreat;
     end
-    -- not enough mana to do combo
-    -- want some number that is consistent, say we want to regen from 0 to 90 in 30 seconds, then 45 to 90 should be 15 seconds
-    if this_bot:GetActiveMode() ~= BOT_MODE_ATTACK and this_bot:TimeToRegen() > timeout then
+    -- no friend can take lane
+    if this_bot:GetActiveMode() == BOT_MODE_LANING and #(this_bot:GetNearbyHeroes(range, false, BOT_MODE_NONE)) == 0 then
+        return 0;
+    end
+    -- no mana or health to do anything
+    if this_bot:TimeToRegen(0.4) > timeout then
         return enums.mode_desire.retreat;
     end
+    
 	return 0;
 end

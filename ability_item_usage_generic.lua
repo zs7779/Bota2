@@ -102,8 +102,8 @@ function UseCircleAbility(ability, enemy, creep, cast_range, aoe_radius, time_in
     if ability == nil or not ability:IsFullyCastable() then
         return;
     end
-    use_in_modes = use_in_modes or enums.modes;
-    min_units = min_units or 1;
+    local use_in_modes = use_in_modes or enums.modes;
+    local min_units = min_units or 1;
     local this_bot = GetBot();
     -- print(this_bot:GetUnitName(), ability:GetName())
     local aoe_num_units, aoe_location = 0, nil;
@@ -157,7 +157,7 @@ function UseUnitAbility(ability, enemy, creep, cast_range, aoe_radius, damage, t
     if ability == nil or not ability:IsFullyCastable() then
         return;
     end
-    use_in_modes = use_in_modes or enums.modes;
+    local use_in_modes = use_in_modes or enums.modes;
     local this_bot = GetBot();
     -- print(this_bot:GetUnitName(), ability:GetName())
     local active_mode = this_bot:GetActiveMode();
@@ -190,8 +190,8 @@ function UseCircleBuffAbility(ability, creep, cast_range, aoe_radius, time_in_fu
     if ability == nil or not ability:IsFullyCastable() then
         return;
     end
-    use_in_modes = use_in_modes or enums.modes;
-    min_units = min_units or 1;
+    local use_in_modes = use_in_modes or enums.modes;
+    local min_units = min_units or 1;
     local this_bot = GetBot();
     -- print(ability:GetName(), NoModifier("modifier_sniper_take_aim")(this_bot), this_bot:GetUnitName(), this_bot:HasModifier("modifier_sniper_take_aim"))
     -- print(this_bot:GetUnitName(), ability:GetName())

@@ -67,11 +67,35 @@ function CDOTA_Bot_Script:GetKillRange()
     return math.min(ability_range, 1600);
 end
 
+function CDOTA_Bot_Script:EnemyCanInitiateOnSelf(distance)
+    local distance = distance or 0;
+    for _, enemy in pairs(self:GetNearbyHeroes(math.min(distance, 1600), true, BOT_MODE_NONE)) do
+        if enemy:GetKillRange() >= GetUnitToUnitDistance(self, enemy) then
+            return true;
+        end
+    end
+    return false;
+end
+
 function CDOTA_Bot_Script:TradeIsWorth(target)
     for _, friend in pairs(self:GetNearbyHeroes(enums.experience_range, false, BOT_MODE_NONE)) do
         -- todo: may be consider friend position >= self position
         if target:GetNetWorth() > friend:GetNetWorth() or target:GetLevel() > friend:GetLevel() then
             return true;
+        end
+    end
+    return false;
+end
+
+function CDOTA_Bot_Script:FriendCanSaveMe(range)
+    local range = range or 600;
+    for _, friend in pairs(self:GetNearbyHeroes(range, false, BOT_MODE_NONE)) do
+        if friend.abilities ~= nil then
+            for _, ability in pairs(friend.abilities) do
+                if (ability.timer == enums.timer.STUN or ability.timer == enums.timer.SAVE) and ability.handle:IsFullyCastable() then
+                    return true;
+                end
+            end
         end
     end
     return false;
@@ -99,11 +123,21 @@ function CDOTA_Bot_Script:FreeAbility(ability)
     return ability ~= nil and ability:IsFullyCastable() and ability:GetCooldown() < 20 and ability:GetManaCost() < self:FreeMana();
 end
 
-function CDOTA_Bot_Script:TimeToRegen()
-    local healthy = 0.7;
-    local healthy_hp = healthy * self:GetMaxHealth();
+function CDOTA_Bot_Script:TimeToRegenMana(healthy)
+    local healthy = healthy or 0.7;
     local healthy_mp = self:HealthyMana();
-    return math.max((healthy_hp - self:GetHealth()) / self:GetHealthRegen(), (healthy_mp - self:GetMana()) / self:GetManaRegen());
+    return (healthy_mp - self:GetMana()) / self:GetManaRegen();
+end
+
+function CDOTA_Bot_Script:TimeToRegenHealth(healthy)
+    local healthy = healthy or 0.7;
+    local healthy_hp = healthy * self:GetMaxHealth();
+    return (healthy_hp - self:GetHealth()) / self:GetHealthRegen();
+end
+
+function CDOTA_Bot_Script:TimeToRegen(healthy)
+    local healthy = healthy or 0.7;
+    return math.max(self:TimeToRegenHealth(healthy), self:TimeToRegenMana(healthy));
 end
 
 function CDOTA_Bot_Script:MoveOppositeStep(location)
@@ -231,6 +265,10 @@ function CDOTA_Bot_Script:EstimateEnemiesDamageToTarget(distance, target)
         end
     end
     return damage;
+end
+
+function CDOTA_Bot_Script:EstimateEnemiesDamageToSelf(distance)
+    return self:EstimateEnemiesDamageToTarget(distance);
 end
 
 function CDOTA_Bot_Script:EstimateEnimiesPower(distance)
@@ -394,4 +432,35 @@ end
 --     end
 --     self:Action_MoveToLocation(waypoints[1]);
 -- end
+
+
+-- todo: a thing to recognize illusion from damage?
+-- damage amplifier?
+-- TimeSinceDamagedByHero how does it work on illusions?
+
+function CDOTA_Bot_Script:FindFarm()
+    local lanes = {"top", "mid", "bot"};
+    local lane_front_locations = {GetLaneFrontLocation(enemy_team, LANE_TOP, 0), GetLaneFrontLocation(enemy_team, LANE_MID, 0), GetLaneFrontLocation(enemy_team, LANE_BOT, 0)};
+    local neutral_camps = GetNeutralSpawners();
+    local min_distance = 1000000;
+    local my_lane = nil;
+    for lane = 1, 3 do
+        if GetFarmLaneDesire(enums.lanes[lane]) >= safety[position] then
+            local lane_distance = GetUnitToLocationDistance(this_bot, lane_front_locations[lane]);
+            if lane_distance < min_distance then
+                min_distance = lane_distance;
+                my_lane = lane;
+            end
+        end
+    end
+    for _, friend in pairs(GetUnitList(UNIT_LIST_ALLIED_HEROES)) do
+        if friend.is_initialized and friend.farm ~= nil and friend.farm == my_lane and friend.position > self.position then
+            my_lane = nil;
+        end
+    end
+    self.farm = my_lane;
+end
+
+function CDOTA_Bot_Script:LastHit()
+end
 
