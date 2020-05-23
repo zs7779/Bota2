@@ -14,6 +14,7 @@ function CDOTA_Bot_Script:InitializeBot()
     self.is_initialized = false;
     self:GetPlayerPosition();
     self:GetAbilities();
+    self:GetNeutralCamp();
     self.is_initialized = true;
 
     if debug then
@@ -264,11 +265,23 @@ function CDOTA_Bot_Script:EstimateEnemiesDamageToTarget(distance, target)
             damage = damage + attacker:GetEstimatedDamageToTarget(true, target, disable_time, DAMAGE_TYPE_ALL);
         end
     end
+    for _, attacker in pairs(target:GetNearbyCreeps(300, true)) do
+        if attacker:IsAlive() and not attacker:IsIllusion() then
+            -- power = power + nearby_friends[i]:EstimatePower(disable_time);
+            damage = damage + attacker:GetEstimatedDamageToTarget(true, target, disable_time, DAMAGE_TYPE_ALL);
+        end
+    end
+    for _, attacker in pairs(target:GetNearbyTowers(700, true)) do
+        if attacker:IsAlive() and not attacker:IsIllusion() then
+            -- power = power + nearby_friends[i]:EstimatePower(disable_time);
+            damage = damage + attacker:GetEstimatedDamageToTarget(true, target, disable_time, DAMAGE_TYPE_ALL);
+        end
+    end
     return damage;
 end
 
 function CDOTA_Bot_Script:EstimateEnemiesDamageToSelf(distance)
-    return self:EstimateEnemiesDamageToTarget(distance);
+    return self:EstimateEnemiesDamageToTarget(distance, self);
 end
 
 function CDOTA_Bot_Script:EstimateEnimiesPower(distance)
@@ -439,28 +452,151 @@ end
 -- TimeSinceDamagedByHero how does it work on illusions?
 
 function CDOTA_Bot_Script:FindFarm()
-    local lanes = {"top", "mid", "bot"};
-    local lane_front_locations = {GetLaneFrontLocation(enemy_team, LANE_TOP, 0), GetLaneFrontLocation(enemy_team, LANE_MID, 0), GetLaneFrontLocation(enemy_team, LANE_BOT, 0)};
+    local enemy_team = GetOpposingTeam();
     local neutral_camps = GetNeutralSpawners();
     local min_distance = 1000000;
     local my_lane = nil;
     for lane = 1, 3 do
-        if GetFarmLaneDesire(enums.lanes[lane]) >= safety[position] then
-            local lane_distance = GetUnitToLocationDistance(this_bot, lane_front_locations[lane]);
+        local lane_front_location = GetLaneFrontLocation(enemy_team, enums.lanes[lane], 0);
+        if GetFarmLaneDesire(enums.lanes[lane]) >= enums.safety[self.position] then
+            local lane_distance = GetUnitToLocationDistance(this_bot, lane_front_location);
             if lane_distance < min_distance then
                 min_distance = lane_distance;
                 my_lane = lane;
             end
         end
-    end
-    for _, friend in pairs(GetUnitList(UNIT_LIST_ALLIED_HEROES)) do
-        if friend.is_initialized and friend.farm ~= nil and friend.farm == my_lane and friend.position > self.position then
-            my_lane = nil;
+        for _, friend in pairs(GetUnitList(UNIT_LIST_ALLIED_HEROES)) do
+            -- print(self:GetUnitName(), friend:GetUnitName(), GetUnitToLocationDistance(friend, lane_front_location), GetUnitToLocationDistance(self, lane_front_location))
+            if friend ~= self and friend.is_initialized and friend.position < self.position and 
+               (friend.farm_lane ~= nil and friend.farm_lane == my_lane or GetUnitToLocationDistance(friend, lane_front_location) < GetUnitToLocationDistance(self, lane_front_location)) then
+                my_lane = nil;
+            end
         end
     end
-    self.farm = my_lane;
+    self.farm_lane = enums.lanes[lane];
+    -- { { string, vector }, ... } GetNeutralSpawners() 
 end
 
-function CDOTA_Bot_Script:LastHit()
+function CDOTA_Bot_Script:GetNeutralCamp()
+    local ns = GetNeutralSpawners()
+    if self.neutral_camps == nil then
+        self.neutral_camps = {};
+    end
+    for k, v in pairs(ns) do
+        -- print(k, v.team, v.location)
+        self.neutral_camps[k] = v;
+        self.neutral_camps[k].dead = true;
+        self.neutral_camps[k].refresh_time = 60;
+        self.neutral_camps[k].blocked = false;
+    end
 end
 
+function CDOTA_Bot_Script:RefreshNeutralCamp()
+    if self.neutral_camps ~= nil then
+        local friends = GetUnitList(UNIT_LIST_ALLIED_HEROES);
+        if self.pull_camp ~= nil and DotaTime() % 30 - 6 > enums.pull_time[self.pull_camp.team][self.pull_camp.type] then
+            print("pull fail",DotaTime() % 30 - 6, enums.pull_time[self.pull_camp.team][self.pull_camp.type]);
+            self.pull_camp = nil;
+        end
+        for k, neutral in pairs(self.neutral_camps) do
+            if IsLocationVisible(neutral.location) and GetUnitToLocationDistance(self, neutral.location) < 100 then
+                local creeps = self:GetNearbyNeutralCreeps(1000);
+                if creeps ~= nil and #creeps == 0 then
+                    for _, friend in pairs(friends) do
+                        if friend.neutral_camps ~= nil then
+                            friend.neutral_camps[k].dead = true;
+                        end
+                    end
+                    if self.pull_camp == neutral then
+                        print("all dead")
+                        self.pull_camp = nil;
+                    end
+                end
+            end
+            if DotaTime() > neutral.refresh_time then
+                self.neutral_camps[k].refresh_time = neutral.refresh_time + 60;
+                self.neutral_camps[k].dead = false;
+            end
+        end
+    end
+end
+
+function CDOTA_Bot_Script:TimeToReachLocation(location)
+    -- print(GetUnitToLocationDistance(self, location), location)
+    return GetUnitToLocationDistance(self, location) / self:GetCurrentMovementSpeed() * 1.2; -- because path doesnt work!!!!!!!!!!!!!!!!
+end
+
+function CDOTA_Bot_Script:IsAtLocation(location, range)
+    return GetUnitToLocationDistance(self, location) <= range;
+end
+
+function CDOTA_Bot_Script:FindNeutralCamp(pull)
+    if self.neutral_camps == nil then
+        return nil;
+    end
+    local team = GetTeam();
+    local enemy_team = GetOpposingTeam();
+    local min_distance = 1000000;
+    local my_neutral = nil;
+
+    for k, neutral in pairs(self.neutral_camps) do
+        if not neutral.dead and not neutral.blocked then
+            if not pull then
+                local distance = GetUnitToLocationDistance(self, neutral.location);
+                if distance < min_distance then
+                    min_distance = distance;
+                    my_neutral = neutral;
+                end
+            else
+                if k == enums.pull_camps[team].small then
+                    local time_to_reach = self:TimeToReachLocation(neutral.location);
+                    local time_to_pull = (DotaTime() + time_to_reach) % 30;
+                    -- print(time_to_reach, time_to_pull)
+                    if time_to_reach < 20 and time_to_pull < enums.pull_time[team].small and time_to_pull > enums.pull_time[team].small - 10 then
+                        return neutral;
+                    end
+                -- elseif k == enums.pull_camps[team].large then
+                --     local time_to_reach = self:TimeToReachLocation(neutral.location);
+                --     local time_to_pull = (DotaTime() + time_to_reach) % 30;
+                --     if time_to_reach < 30 and time_to_pull < enums.pull_time[team].large and time_to_pull > enums.pull_time[team].large - 10 then
+                --         return neutral;
+                --     end
+                end
+            end
+        end
+    end
+    return my_neutral;
+end
+
+function CDOTA_Bot_Script:LastHit(creeps, damage)
+    if creeps ~= nil then
+        for _, creep in pairs(creeps) do
+            if creep:IsAlive() and creep:CanBeSeen() and creep:GetHealth() < damage then
+                self:Action_ClearActions(false);
+                self:Action_AttackUnit(creep, false);
+                return;
+            end
+        end
+    end
+end
+
+function CDOTA_Bot_Script:HitCreeps(creeps)
+    if creeps ~= nil then
+        for _, creep in pairs(creeps) do
+            if creep:CanBeSeen() and creep:IsAlive() then
+                self:Action_AttackUnit(creep, false);
+                return;
+            end
+        end
+    end
+end
+
+function CDOTA_Bot_Script:MoveToLocationOnPath(location)
+    -- todo: this is apparently bad because every function call creates the local function again, but dunno what else to do
+    local function MoveToWaypoint(distance, table_length_I_assume, waypoints)
+        if distance > 0 and waypoints ~= nil and #waypoints > 0 then
+            self:Action_MovePath(waypoints);
+        end
+    end
+    GeneratePath(self:GetLocation(), location, GetAvoidanceZones(), MoveToWaypoint);
+end

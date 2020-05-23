@@ -30,12 +30,23 @@ enums.mode_desire = {
     secret_shop = 0.3,
     laning = 0.25,
     -- default
+    -- todo: lane and farm probably same level? each active under condition? you choose to lane if want to shut down enemy laner
     farm = 0.2,
     -- deprecated
     side_shop = 0,
     item = 0,
 }
 enums.free_time = {1, 5, 10, 15, 15};
+enums.safety = {0.8, 0.8, 0.6, 0.4, 0.4};
+enums.push_modes = {BOT_MODE_PUSH_TOWER_TOP, BOT_MODE_PUSH_TOWER_MID, BOT_MODE_PUSH_TOWER_BOT};
+enums.siege_creep_name = {[TEAM_RADIANT] = "npc_dota_goodguys_siege", [TEAM_DIRE] = "npc_dota_badguys_siege"};
+enums.tower_importance = {[TEAM_RADIANT] = {0.8, 1.0, 0.6}, [TEAM_DIRE] = {0.6, 1.0, 0.8}};
+enums.farm_safty = {[TEAM_RADIANT] = {1.0, 0.6, 0.8}, [TEAM_DIRE] = {0.8, 0.6, 1.0}};
+enums.pull_camps = {[TEAM_RADIANT] = {small = 2, large = 3}, [TEAM_DIRE] = {small = 12, large = 13}};
+enums.pull_time = {[TEAM_RADIANT] = {small = 16, large = 23}, [TEAM_DIRE] = {small = 16, large = 20}};
+enums.pull_vector = {[TEAM_RADIANT] = {small = Vector(300, -1500, 0), large = Vector(1500, -300, 0)},
+                     [TEAM_DIRE] = {small = Vector(-300, 1500, 0), large = Vector(-1500, 0, 0)}};
+enums.pull_lane_front = {small = 0.55, big = 0.65, enemy = 0.65};
 
 enums.lanes = {LANE_TOP, LANE_MID, LANE_BOT};
 enums.towers = {[LANE_TOP]={TOWER_TOP_1, TOWER_TOP_2, TOWER_TOP_3},

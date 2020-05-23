@@ -29,12 +29,16 @@ function GetDesire()
         update_time = update_time + 60;
     end
     -- Standing on top of rune, pick it up, dunno if appropriate to put here
-    if this_bot.rune ~= nil and (this_bot.rune_time == nil or time > this_bot.rune_time) then
-        if GetRuneStatus(this_bot.rune) == RUNE_STATUS_MISSING then
-            GarbageCleaning();
-            return 0;
-        elseif GetUnitToLocationDistance(this_bot, GetRuneSpawnLocation(this_bot.rune)) < 300 then
+    if this_bot.rune ~= nil then
+        if GetRuneStatus(this_bot.rune) == RUNE_STATUS_AVAILABLE and GetUnitToLocationDistance(this_bot, GetRuneSpawnLocation(this_bot.rune)) < 300 then
             return enums.mode_desire.rune;
+        elseif (this_bot.rune_time == nil or time > this_bot.rune_time) then
+            if GetRuneStatus(this_bot.rune) == RUNE_STATUS_MISSING then
+                GarbageCleaning();
+                return 0;
+            elseif GetUnitToLocationDistance(this_bot, GetRuneSpawnLocation(this_bot.rune)) < 300 then
+                return enums.mode_desire.rune;
+            end
         end
     end
 

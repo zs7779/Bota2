@@ -4,7 +4,7 @@ require(GetScriptDirectory().."/CDOTA_utils");
 
 update_time = 30;
 
-local function GarbageCleaning()
+function GarbageCleaning()
     local this_bot = GetBot();
     this_bot:SetTarget(nil);
 end
@@ -23,7 +23,7 @@ function GetDesire()
     if time > update_time then
         -- print(this_bot:GetUnitName().." Power "..this_bot:EstimatePower().." Disable "..this_bot:EstimateFriendsDisableTime(0));
         this_bot:GetAbilities(); -- maybe good idea
-        -- if this_bot:GetPlayerPosition() == 5 then
+        -- if this_bot.position == 5 then
         --     for _, enemy in pairs(GetUnitList(UNIT_LIST_ENEMY_HEROES)) do
         --         print(enemy:GetUnitName(), enemy:EstimatePower(), enemy:EstimateFriendsDisableTime(1200))
         --     end

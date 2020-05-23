@@ -13,6 +13,12 @@ function utils.IsNight()
     return time_of_day < 0.25 or time_of_day > 0.75;
 end
 
+function utils.VectorAdd(v1, v2)
+    v1[1] = v1[1] + v2[1];
+    v1[2] = v1[2] + v2[2];
+    return v1;
+end
+
 function utils.GetLaneTower(team, lane)
     local towers = {[LANE_TOP]={TOWER_TOP_1, TOWER_TOP_2, TOWER_TOP_3},
                     [LANE_MID]={TOWER_MID_1, TOWER_MID_2, TOWER_MID_3}, 

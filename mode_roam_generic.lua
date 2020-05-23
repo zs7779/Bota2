@@ -4,15 +4,16 @@ require(GetScriptDirectory().."/CDOTA_utils");
 
 update_time = 0;
 next_outpost_time = 600;
-local function GarbageCleaning()
+function GarbageCleaning()
     local this_bot = GetBot();
     this_bot.roam = nil;
     this_bot.outpost = nil;
     this_bot.outpost_time = nil;
 end
 
+local this_bot = GetBot();
+
 function GetDesire()
-    local this_bot = GetBot();
     local time = DotaTime();
     if not this_bot.is_initialized then
         this_bot:InitializeBot();
@@ -51,16 +52,15 @@ function GetDesire()
 	return 0;
 end
 
+-- function MoveToWaypoint(distance, table_length_I_assume, waypoints)
+--     if distance > 0 and waypoints ~= nil and #waypoints > 0 then
+--         this_bot:Action_MovePath(waypoints);    
+--     end
+-- end
+
 function Think()
-    local this_bot = GetBot();
     local this_bot_location = this_bot:GetLocation();
     local roam_location = nil;
-    local function MoveToWaypoint(distance, table_length_I_assume, waypoints)
-        if distance > 0 and waypoints ~= nil and #waypoints > 0 then
-            this_bot:Action_MovePath(waypoints);    
-        end
-    end
-
 
     -- the get desires should determine if the runes or wards or rotates are no longer valid
     -- determined by mode rune
@@ -73,14 +73,18 @@ function Think()
     -- elseif this_bot.outpost then
     --     print(this_bot.outpost:GetUnitName());
     -- -- determined by lane
-    -- elseif this_bot.pull then
-    --     print(this_bot.pull[1]);
+    elseif this_bot.pull then
+        roam_location = this_bot.pull;
+        if GetUnitToLocationDistance(this_bot, roam_location) < 200 then
+            this_bot.pull = nil;
+        end
     -- -- determined by ward
     -- elseif this_bot.ward then
     --     print(this_bot.ward);
     end
     if roam_location ~= nil then
-        GeneratePath(this_bot_location, roam_location, GetAvoidanceZones(), MoveToWaypoint);
+        this_bot:MoveToLocationOnPath(roam_location);
+        -- GeneratePath(this_bot_location, roam_location, GetAvoidanceZones(), MoveToWaypoint);
     end
 end
 

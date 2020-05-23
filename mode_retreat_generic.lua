@@ -26,11 +26,11 @@ function GetDesire()
         return enums.mode_desire.retreat;
     end
     -- no friend can take lane
-    if this_bot:GetActiveMode() == BOT_MODE_LANING and #(this_bot:GetNearbyHeroes(range, false, BOT_MODE_NONE)) == 0 then
+    if this_bot:GetActiveMode() == BOT_MODE_LANING and #(this_bot:GetNearbyHeroes(1600, false, BOT_MODE_NONE)) == 0 then
         return 0;
     end
     -- no mana or health to do anything
-    if this_bot:TimeToRegen(0.4) > timeout then
+    if this_bot:TimeToRegen(0.6) > timeout then
         return enums.mode_desire.retreat;
     end
     
