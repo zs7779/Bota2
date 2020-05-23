@@ -7,6 +7,7 @@ next_outpost_time = 600;
 function GarbageCleaning()
     local this_bot = GetBot();
     this_bot.roam = nil;
+    this_bot.pull = nil;
     this_bot.outpost = nil;
     this_bot.outpost_time = nil;
 end
@@ -41,7 +42,17 @@ function GetDesire()
             end
         end
     end
-
+    if this_bot.position == 5 and time < 600 and not this_bot:WasRecentlyDamagedByAnyHero(1) then
+        if this_bot.pull_camp == nil then
+            this_bot.pull = nil;
+            local pull_camp = this_bot:FindNeutralCamp(true);
+            if pull_camp ~= nil then
+                this_bot.pull_camp = pull_camp;
+                this_bot.pull = pull_camp.location;
+                this_bot.pull_state = "pull";
+            end
+        end
+    end
     -- if time > 0 then
         if not this_bot:FriendNeedHelpNearby(1600) then
             if (this_bot.rune or this_bot.roam or this_bot.outpost or this_bot.pull or this_bot.ward) then
@@ -59,6 +70,7 @@ end
 -- end
 
 function Think()
+    local time = DotaTime();
     local this_bot_location = this_bot:GetLocation();
     local roam_location = nil;
 
@@ -74,8 +86,15 @@ function Think()
     --     print(this_bot.outpost:GetUnitName());
     -- -- determined by lane
     elseif this_bot.pull then
-        roam_location = this_bot.pull;
-        if GetUnitToLocationDistance(this_bot, roam_location) < 200 then
+        if this_bot.pull_state == "pull" then
+            if GetUnitToLocationDistance(this_bot, this_bot.pull) > 350 then
+                print("pulling")
+                roam_location = this_bot.pull;
+            else
+                this_bot:Action_ClearActions(true);
+            end
+        end
+        if this_bot.pull_state == "success" then
             this_bot.pull = nil;
         end
     -- -- determined by ward
@@ -85,6 +104,33 @@ function Think()
     if roam_location ~= nil then
         this_bot:MoveToLocationOnPath(roam_location);
         -- GeneratePath(this_bot_location, roam_location, GetAvoidanceZones(), MoveToWaypoint);
+    end
+    if this_bot.pull_camp ~= nil and this_bot.pull_state ~= "success" then       
+        local neutrals = this_bot:GetNearbyNeutralCreeps(900);
+        local pull_time = enums.pull_time[this_bot.pull_camp.team][this_bot.pull_camp.type];
+        if neutrals ~= nil then
+            for _, neutral in pairs(neutrals) do
+                if neutral:IsAlive() and neutral:CanBeSeen() then
+                    if neutral:WasRecentlyDamagedByCreep(2) then
+                        this_bot.pull_state = "success";
+                        print("pull good")
+                        break;
+                    elseif this_bot.pull_state ~= "aggro" and this_bot:IsAtLocation(this_bot.pull_camp.location, 1800) and
+                        (neutral:WasRecentlyDamagedByHero(this_bot, 5) or this_bot:WasRecentlyDamagedByCreep(5)) then
+                        print("aggro good")
+                        this_bot.pull_state = "aggro";
+                    end
+                end
+            end
+        end
+        if this_bot.pull_state == "aggro" and time % 30 >= pull_time - 1 and time % 30 <= pull_time + 1 then
+            this_bot:Action_MoveToLocation(this_bot.pull_camp.location + enums.pull_vector[this_bot.pull_camp.team][this_bot.pull_camp.type]);
+            print("pull to lane")
+        elseif this_bot:IsAtLocation(this_bot.pull_camp.location, 600) and #neutrals > 0 and
+                time % 30 >= pull_time - 1 and time % 30 <= pull_time + 1 then
+            print("attack pull")
+            this_bot:Action_AttackUnit(neutrals[1], true);
+        end
     end
 end
 

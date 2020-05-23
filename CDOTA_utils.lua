@@ -494,12 +494,14 @@ end
 function CDOTA_Bot_Script:RefreshNeutralCamp()
     if self.neutral_camps ~= nil then
         local friends = GetUnitList(UNIT_LIST_ALLIED_HEROES);
-        if self.pull_camp ~= nil and DotaTime() % 30 - 6 > enums.pull_time[self.pull_camp.team][self.pull_camp.type] then
-            print("pull fail",DotaTime() % 30 - 6, enums.pull_time[self.pull_camp.team][self.pull_camp.type]);
+        if self.pull_camp ~= nil and self.pull_state ~= "success" and DotaTime() % 30 > enums.pull_time[self.pull_camp.team][self.pull_camp.type] + 6 then
+            print("pull fail",utils.SecondsToClock(DotaTime()), enums.pull_time[self.pull_camp.team][self.pull_camp.type]);
             self.pull_camp = nil;
+            self.pull = nil;
+            self.pull_state = nil;
         end
         for k, neutral in pairs(self.neutral_camps) do
-            if IsLocationVisible(neutral.location) and GetUnitToLocationDistance(self, neutral.location) < 100 then
+            if IsLocationVisible(neutral.location) and GetUnitToLocationDistance(self, neutral.location) < 450 then
                 local creeps = self:GetNearbyNeutralCreeps(1000);
                 if creeps ~= nil and #creeps == 0 then
                     for _, friend in pairs(friends) do
@@ -510,6 +512,8 @@ function CDOTA_Bot_Script:RefreshNeutralCamp()
                     if self.pull_camp == neutral then
                         print("all dead")
                         self.pull_camp = nil;
+                        self.pull = nil;
+                        self.pull_state = nil;
                     end
                 end
             end
@@ -552,7 +556,7 @@ function CDOTA_Bot_Script:FindNeutralCamp(pull)
                     local time_to_reach = self:TimeToReachLocation(neutral.location);
                     local time_to_pull = (DotaTime() + time_to_reach) % 30;
                     -- print(time_to_reach, time_to_pull)
-                    if time_to_reach < 20 and time_to_pull < enums.pull_time[team].small and time_to_pull > enums.pull_time[team].small - 10 then
+                    if time_to_reach < 15 and time_to_pull < enums.pull_time[team].small and time_to_pull > enums.pull_time[team].small - 15 then
                         return neutral;
                     end
                 -- elseif k == enums.pull_camps[team].large then
@@ -572,7 +576,7 @@ function CDOTA_Bot_Script:LastHit(creeps, damage)
     if creeps ~= nil then
         for _, creep in pairs(creeps) do
             if creep:IsAlive() and creep:CanBeSeen() and creep:GetHealth() < damage then
-                self:Action_ClearActions(false);
+                -- self:Action_ClearActions(false);
                 self:Action_AttackUnit(creep, false);
                 return;
             end
@@ -580,14 +584,16 @@ function CDOTA_Bot_Script:LastHit(creeps, damage)
     end
 end
 
-function CDOTA_Bot_Script:HitCreeps(creeps)
-    if creeps ~= nil then
+function CDOTA_Bot_Script:FarmCreeps(creeps, damage)
+    if creeps ~= nil and #creeps > 0 then
         for _, creep in pairs(creeps) do
-            if creep:CanBeSeen() and creep:IsAlive() then
+            if creep:IsAlive() and creep:CanBeSeen() and creep:GetHealth() < damage then
+                -- self:Action_ClearActions(false);
                 self:Action_AttackUnit(creep, false);
                 return;
             end
         end
+        self:Action_AttackMove(creeps[1]:GetLocation());
     end
 end
 

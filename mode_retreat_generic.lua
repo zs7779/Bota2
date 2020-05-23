@@ -30,7 +30,8 @@ function GetDesire()
         return 0;
     end
     -- no mana or health to do anything
-    if this_bot:TimeToRegen(0.6) > timeout then
+    if this_bot:TimeToRegenHealth(0.6) > timeout or this_bot:TimeToRegenMana(0.4) > timeout or
+       this_bot:GetHealth() / this_bot:GetMaxHealth() < 0.2 or this_bot:GetMana() / this_bot:GetMaxMana() < 0.1 then
         return enums.mode_desire.retreat;
     end
     
