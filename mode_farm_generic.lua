@@ -63,10 +63,11 @@ function Think()
             this_bot:MoveToLocationOnPath(lane_front_location);
         end
     else
+        local neutral_camp;
         if this_bot.pull ~= nil and this_bot.pull_state == "success" then
             neutral_camp = this_bot.pull;
         end
-        local neutral_camp = this_bot:FindNeutralCamp(false);
+        neutral_camp = this_bot:FindNeutralCamp(false);
         if neutral_camp ~= nil then
             if this_bot:IsAtLocation(neutral_camp.location, attack_range) and IsLocationVisible(neutral_camp.location) then
                 local neutrals = this_bot:GetNearbyCreeps(attack_range, true);

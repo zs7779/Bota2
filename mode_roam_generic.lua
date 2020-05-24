@@ -8,6 +8,7 @@ function GarbageCleaning()
     local this_bot = GetBot();
     this_bot.roam = nil;
     this_bot.pull = nil;
+    this_bot.pull_state = nil;
     this_bot.outpost = nil;
     this_bot.outpost_time = nil;
 end
@@ -42,13 +43,16 @@ function GetDesire()
             end
         end
     end
-    if this_bot.position == 5 and time < 600 and not this_bot:WasRecentlyDamagedByAnyHero(2) and not this_bot:WasRecentlyDamagedByCreep(2) then
-        if this_bot.pull == nil then
+    if this_bot.position == 5 and time < 600 then
+        if not this_bot:WasRecentlyDamagedByAnyHero(2) and not this_bot:WasRecentlyDamagedByCreep(2) and this_bot.pull == nil and this_bot.pull_state == nil then
             local pull_camp = this_bot:FindNeutralCamp(true);
             if pull_camp ~= nil then
                 this_bot.pull = pull_camp;
                 this_bot.pull_state = "pull";
             end
+        else
+            this_bot.pull = nil;
+            this_bot.pull_state = nil;
         end
     end
     -- if time > 0 then
@@ -86,42 +90,41 @@ function Think()
     elseif this_bot.pull then
         if this_bot.pull_state == "success" then
             this_bot.pull = nil;
+            return;
         else
             local pull_time = enums.pull_time[this_bot.pull.team][this_bot.pull.type];
             local neutrals = this_bot:GetNearbyNeutralCreeps(1600);
             local friend_creeps = this_bot:GetNearbyLaneCreeps(900, false);
-            if neutrals ~= nil then
-                for _, neutral in pairs(neutrals) do
-                    if neutral:IsAlive() and neutral:CanBeSeen() then
-                        local projectiles = neutral:GetIncomingTrackingProjectiles();
-                        for _, p in pairs(projectiles) do
-                            if p.playerid == -1 then
-                                this_bot.pull_state = "success";
-                                print("pull good")
-                                break;
-                            end
-                            if this_bot.pull_state == "pull" and p.caster == this_bot then
-                                print("aggro good")
-                                this_bot.pull_state = "aggro";
-                                break;
-                            end
+            if #neutrals > 0 then
+                local neutral = neutrals[1];
+                if neutral:IsAlive() and neutral:CanBeSeen() then
+                    local projectiles = neutral:GetIncomingTrackingProjectiles();
+                    for _, p in pairs(projectiles) do
+                        if p.playerid == -1 then
+                            this_bot.pull_state = "success";
+                            print("pull good")
+                            return;
                         end
-                        if this_bot.pull_state ~= "success" then
-                            for _, c in pairs(friend_creeps) do
-                                if GetUnitToUnitDistance(c, neutral) < 500 then
-                                    this_bot.pull_state = "success";
-                                    print("pull good")
-                                    break;
-                                end
-                            end
-                        elseif this_bot.pull_state == "pull" and this_bot:IsAtLocation(this_bot.pull.location, 1800) then
-                            if this_bot:WasRecentlyDamagedByCreep(5) then
-                                print("aggro good")
-                                this_bot.pull_state = "aggro";
-                            end
+                        if this_bot.pull_state == "pull" and p.caster == this_bot then
+                            print("aggro good")
+                            this_bot.pull_state = "aggro";
+                        end
+                    end
+                    for _, c in pairs(friend_creeps) do
+                        if GetUnitToUnitDistance(c, neutral) < 500 then
+                            this_bot.pull_state = "success";
+                            print("pull good")
+                            return;
+                        end
+                    end
+                    if this_bot.pull_state == "pull" and this_bot:IsAtLocation(this_bot.pull.location, 1800) then
+                        if this_bot:WasRecentlyDamagedByCreep(5) then -- todo: may add projectile playerid == -1
+                            print("aggro good")
+                            this_bot.pull_state = "aggro";
                         end
                     end
                 end
+            
             end
 
             if this_bot.pull_state == "pull" then
@@ -135,11 +138,9 @@ function Think()
                     print("wait pull time")
                     this_bot:Action_ClearActions(true);
                 end
-            elseif this_bot.pull_state == "aggro" and time % 30 >= pull_time - 1 and time % 30 <= pull_time + 1 then
+            elseif this_bot.pull_state == "aggro" and time % 30 >= pull_time - 1 and time % 30 <= pull_time + 4 then
                 this_bot:Action_MoveToLocation(this_bot.pull.location + enums.pull_vector[this_bot.pull.team][this_bot.pull.type]);
                 print("pull to lane")
-            else
-                print("else", this_bot.pull_state)
             end
         end
     -- -- determined by ward

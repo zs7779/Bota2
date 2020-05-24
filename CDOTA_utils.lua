@@ -511,10 +511,10 @@ function CDOTA_Bot_Script:RefreshNeutralCamp()
                         end
                     end
                     if self.pull == neutral then
-                        print("all dead")
                         self.pull = nil;
                         self.pull_state = nil;
                     end
+                    print("all dead")
                 end
             end
             if DotaTime() > neutral.refresh_time then
