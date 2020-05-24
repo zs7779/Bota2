@@ -79,6 +79,8 @@ function CDOTA_Bot_Script:EnemyCanInitiateOnSelf(distance)
 end
 
 function CDOTA_Bot_Script:TradeIsWorth(target)
+    -- GetBountyXP
+    -- GetBountyGoldMax
     for _, friend in pairs(self:GetNearbyHeroes(enums.experience_range, false, BOT_MODE_NONE)) do
         -- todo: may be consider friend position >= self position
         if target:GetNetWorth() > friend:GetNetWorth() or target:GetLevel() > friend:GetLevel() then
@@ -494,9 +496,8 @@ end
 function CDOTA_Bot_Script:RefreshNeutralCamp()
     if self.neutral_camps ~= nil then
         local friends = GetUnitList(UNIT_LIST_ALLIED_HEROES);
-        if self.pull_camp ~= nil and self.pull_state ~= "success" and DotaTime() % 30 > enums.pull_time[self.pull_camp.team][self.pull_camp.type] + 6 then
-            print("pull fail",utils.SecondsToClock(DotaTime()), enums.pull_time[self.pull_camp.team][self.pull_camp.type]);
-            self.pull_camp = nil;
+        if self.pull ~= nil and self.pull_state ~= "success" and DotaTime() % 30 > enums.pull_time[self.pull.team][self.pull.type] + 8 then
+            print("pull fail",utils.SecondsToClock(DotaTime()), self.pull_state, enums.pull_time[self.pull.team][self.pull.type]);
             self.pull = nil;
             self.pull_state = nil;
         end
@@ -509,9 +510,8 @@ function CDOTA_Bot_Script:RefreshNeutralCamp()
                             friend.neutral_camps[k].dead = true;
                         end
                     end
-                    if self.pull_camp == neutral then
+                    if self.pull == neutral then
                         print("all dead")
-                        self.pull_camp = nil;
                         self.pull = nil;
                         self.pull_state = nil;
                     end
@@ -557,6 +557,7 @@ function CDOTA_Bot_Script:FindNeutralCamp(pull)
                     local time_to_pull = (DotaTime() + time_to_reach) % 30;
                     -- print(time_to_reach, time_to_pull)
                     if time_to_reach < 15 and time_to_pull < enums.pull_time[team].small and time_to_pull > enums.pull_time[team].small - 15 then
+                        print("time to reach", time_to_reach, "arrive at", time_to_pull)
                         return neutral;
                     end
                 -- elseif k == enums.pull_camps[team].large then

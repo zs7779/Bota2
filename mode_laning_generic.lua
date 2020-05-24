@@ -38,13 +38,18 @@ function GetDesire()
             lane_danger = this_bot_tower:EstimateEnemiesDamageToTarget(1600, this_bot);
             if lane_danger < enums.stupidity * this_bot:GetHealth() then
                 this_bot.help = false;
-                return enums.mode_desire.laning;
+                if this_bot.pull_state == "success" then
+                    return 0;
+                else
+                    return enums.mode_desire.laning;
+                end
             elseif this_bot.position <= 3 then
                 this_bot.help = true;
                 return enums.mode_desire.laning;
             elseif this_bot.position >= 4 then
                 local friend_need_help = this_bot:FriendNeedHelpNearby(1200);
                 if friend_need_help ~= nil then
+                    print(friend_need_help:GetUnitName().." need help")
                     return enums.mode_desire.laning;
                 end
             end

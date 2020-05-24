@@ -63,8 +63,8 @@ function Think()
             this_bot:MoveToLocationOnPath(lane_front_location);
         end
     else
-        if pull_camp ~= nil then
-            neutral_camp = pull_camp;
+        if this_bot.pull ~= nil and this_bot.pull_state == "success" then
+            neutral_camp = this_bot.pull;
         end
         local neutral_camp = this_bot:FindNeutralCamp(false);
         if neutral_camp ~= nil then
