@@ -514,7 +514,7 @@ function CDOTA_Bot_Script:RefreshNeutralCamp()
                         self.pull = nil;
                         self.pull_state = nil;
                     end
-                    print("all dead")
+                    -- print("all dead")
                 end
             end
             if DotaTime() > neutral.refresh_time then
@@ -557,7 +557,7 @@ function CDOTA_Bot_Script:FindNeutralCamp(pull)
                     local time_to_pull = (DotaTime() + time_to_reach) % 30;
                     -- print(time_to_reach, time_to_pull)
                     if time_to_reach < 15 and time_to_pull > enums.pull_time[team].small - 5 and time_to_pull < enums.pull_time[team].small then
-                        print("time to reach", time_to_reach, "arrive at", time_to_pull)
+                        -- print("time to reach", time_to_reach, "arrive at", time_to_pull)
                         return neutral;
                     end
                 -- elseif k == enums.pull_camps[team].large then

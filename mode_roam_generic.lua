@@ -103,24 +103,24 @@ function Think()
                     for _, p in pairs(projectiles) do
                         if p.playerid == -1 then
                             this_bot.pull_state = {["state"] = "success", ["time"] = time + 15};
-                            print("pull good")
+                            -- print("pull good")
                             return;
                         end
                         if this_bot.pull_state.state == "pull" and p.caster == this_bot then
-                            print("aggro good")
+                            -- print("aggro good")
                             this_bot.pull_state = {["state"] = "aggro", ["time"] = time + 10};
                         end
                     end
                     for _, c in pairs(friend_creeps) do
                         if GetUnitToUnitDistance(c, neutral) < 500 then
                             this_bot.pull_state = {["state"] = "success", ["time"] = time + 15};
-                            print("pull good")
+                            -- print("pull good")
                             return;
                         end
                     end
                     if this_bot.pull_state.state == "pull" and this_bot:IsAtLocation(this_bot.pull.location, 1800) then
                         if this_bot:WasRecentlyDamagedByCreep(5) then -- todo: may add projectile playerid == -1
-                            print("aggro good")
+                            -- print("aggro good")
                             this_bot.pull_state = {["state"] = "aggro", ["time"] = time + 10};
                         end
                     end
@@ -133,15 +133,15 @@ function Think()
                     roam_location = this_bot.pull.location;
                 elseif this_bot:IsAtLocation(this_bot.pull.location, 600) and #neutrals > 0 and
                        time % 30 >= pull_time - 1 and time % 30 <= pull_time + 1 then
-                    print("attack pull")
+                    -- print("attack pull")
                     this_bot:Action_AttackUnit(neutrals[1], true);
                 else
-                    print("wait pull time")
+                    -- print("wait pull time")
                     this_bot:Action_ClearActions(true);
                 end
             elseif this_bot.pull_state.state == "aggro" and time % 30 >= pull_time - 1 and time % 30 <= pull_time + 4 then
                 this_bot:Action_MoveToLocation(this_bot.pull.location + enums.pull_vector[this_bot.pull.team][this_bot.pull.type]);
-                print("pull to lane")
+                -- print("pull to lane")
             end
         end
     -- -- determined by ward
