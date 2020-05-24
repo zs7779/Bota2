@@ -495,9 +495,9 @@ end
 
 function CDOTA_Bot_Script:RefreshNeutralCamp()
     if self.neutral_camps ~= nil then
+        local time = DotaTime();
         local friends = GetUnitList(UNIT_LIST_ALLIED_HEROES);
-        if self.pull ~= nil and self.pull_state ~= "success" and DotaTime() % 30 > enums.pull_time[self.pull.team][self.pull.type] + 8 then
-            print("pull fail",utils.SecondsToClock(DotaTime()), self.pull_state, enums.pull_time[self.pull.team][self.pull.type]);
+        if self.pull_state ~= nil and self.pull_state.time < time then
             self.pull = nil;
             self.pull_state = nil;
         end
@@ -556,7 +556,7 @@ function CDOTA_Bot_Script:FindNeutralCamp(pull)
                     local time_to_reach = self:TimeToReachLocation(neutral.location);
                     local time_to_pull = (DotaTime() + time_to_reach) % 30;
                     -- print(time_to_reach, time_to_pull)
-                    if time_to_reach < 15 and time_to_pull < enums.pull_time[team].small and time_to_pull > enums.pull_time[team].small - 15 then
+                    if time_to_reach < 15 and time_to_pull > enums.pull_time[team].small - 5 and time_to_pull < enums.pull_time[team].small then
                         print("time to reach", time_to_reach, "arrive at", time_to_pull)
                         return neutral;
                     end

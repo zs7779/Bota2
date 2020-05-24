@@ -38,7 +38,7 @@ function GetDesire()
             lane_danger = this_bot_tower:EstimateEnemiesDamageToTarget(1600, this_bot);
             if lane_danger < enums.stupidity * this_bot:GetHealth() then
                 this_bot.help = false;
-                if this_bot.pull_state == "success" then
+                if this_bot.pull_state then
                     return 0;
                 else
                     return enums.mode_desire.laning;

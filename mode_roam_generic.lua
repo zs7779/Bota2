@@ -8,7 +8,6 @@ function GarbageCleaning()
     local this_bot = GetBot();
     this_bot.roam = nil;
     this_bot.pull = nil;
-    this_bot.pull_state = nil;
     this_bot.outpost = nil;
     this_bot.outpost_time = nil;
 end
@@ -44,15 +43,17 @@ function GetDesire()
         end
     end
     if this_bot.position == 5 and time < 600 then
-        if not this_bot:WasRecentlyDamagedByAnyHero(2) and not this_bot:WasRecentlyDamagedByCreep(2) and this_bot.pull == nil and this_bot.pull_state == nil then
-            local pull_camp = this_bot:FindNeutralCamp(true);
-            if pull_camp ~= nil then
-                this_bot.pull = pull_camp;
-                this_bot.pull_state = "pull";
+        if this_bot.pull == nil and this_bot.pull_state == nil then
+            if not this_bot:WasRecentlyDamagedByAnyHero(1) and not this_bot:WasRecentlyDamagedByCreep(2) then
+                local pull_camp = this_bot:FindNeutralCamp(true);
+                if pull_camp ~= nil then
+                    this_bot.pull = pull_camp;
+                    this_bot.pull_state = {["state"] = "pull", ["time"] = time + 15};
+                end
+            else
+                this_bot.pull = nil;
+                this_bot.pull_state = nil;
             end
-        else
-            this_bot.pull = nil;
-            this_bot.pull_state = nil;
         end
     end
     -- if time > 0 then
@@ -88,7 +89,7 @@ function Think()
     --     print(this_bot.outpost:GetUnitName());
     -- -- determined by lane
     elseif this_bot.pull then
-        if this_bot.pull_state == "success" then
+        if this_bot.pull_state.state == "success" then
             this_bot.pull = nil;
             return;
         else
@@ -101,33 +102,33 @@ function Think()
                     local projectiles = neutral:GetIncomingTrackingProjectiles();
                     for _, p in pairs(projectiles) do
                         if p.playerid == -1 then
-                            this_bot.pull_state = "success";
+                            this_bot.pull_state = {["state"] = "success", ["time"] = time + 15};
                             print("pull good")
                             return;
                         end
-                        if this_bot.pull_state == "pull" and p.caster == this_bot then
+                        if this_bot.pull_state.state == "pull" and p.caster == this_bot then
                             print("aggro good")
-                            this_bot.pull_state = "aggro";
+                            this_bot.pull_state = {["state"] = "aggro", ["time"] = time + 10};
                         end
                     end
                     for _, c in pairs(friend_creeps) do
                         if GetUnitToUnitDistance(c, neutral) < 500 then
-                            this_bot.pull_state = "success";
+                            this_bot.pull_state = {["state"] = "success", ["time"] = time + 15};
                             print("pull good")
                             return;
                         end
                     end
-                    if this_bot.pull_state == "pull" and this_bot:IsAtLocation(this_bot.pull.location, 1800) then
+                    if this_bot.pull_state.state == "pull" and this_bot:IsAtLocation(this_bot.pull.location, 1800) then
                         if this_bot:WasRecentlyDamagedByCreep(5) then -- todo: may add projectile playerid == -1
                             print("aggro good")
-                            this_bot.pull_state = "aggro";
+                            this_bot.pull_state = {["state"] = "aggro", ["time"] = time + 10};
                         end
                     end
                 end
             
             end
 
-            if this_bot.pull_state == "pull" then
+            if this_bot.pull_state.state == "pull" then
                 if GetUnitToLocationDistance(this_bot, this_bot.pull.location) > 350 then
                     roam_location = this_bot.pull.location;
                 elseif this_bot:IsAtLocation(this_bot.pull.location, 600) and #neutrals > 0 and
@@ -138,7 +139,7 @@ function Think()
                     print("wait pull time")
                     this_bot:Action_ClearActions(true);
                 end
-            elseif this_bot.pull_state == "aggro" and time % 30 >= pull_time - 1 and time % 30 <= pull_time + 4 then
+            elseif this_bot.pull_state.state == "aggro" and time % 30 >= pull_time - 1 and time % 30 <= pull_time + 4 then
                 this_bot:Action_MoveToLocation(this_bot.pull.location + enums.pull_vector[this_bot.pull.team][this_bot.pull.type]);
                 print("pull to lane")
             end
