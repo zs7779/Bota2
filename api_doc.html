@@ -1,0 +1,2436 @@
+<h2 id="overview">Overview</h2>
+<p>Bot scripting in Dota is done via lua scripting. This is done at the server level, so there's no need to do things like examine screen pixels or simulate mouse clicks; instead scripts can query the game state and issue orders directly to units. Scripts have full access to all the entity locations, cooldowns, mana values, etc that a player on that team would expect to. The API is restricted such that scripts can't cheat -- units in FoW can't be queried, commands can't be issued to units the script doesn't control, etc.</p>
+<p>Bots are organized into three levels of evaluation and decisionmaking:</p>
+<h4 id="team_level">Team Level</h4>
+<p>This is code that determines how much the overall team wants to push each lane, defend each lane, farm each lane, or kill Roshan. These desires exist independent of the state of any of the bots. They are not authoritative; that is, they do not dictate any actions taken by any of the bots. They are instead just desires that the bots can use for decisionmaking.</p>
+<h4 id="mode_level">Mode Level</h4>
+<p>Modes are the high-level desires that individual bots are constantly evaluating, with the highest-scoring mode being their currently active mode. Examples of modes are laning, trying to kill a unit, farming, retreating, and pushing a tower.</p>
+<h4 id="action_level">Action Level</h4>
+<p>Actions are the individual things that bots are actively doing on a moment-to-moment basis. These loosely correspond to mouse clicks or button presses -- things like moving to a location, or attacking a unit, or using an ability, or purchasing an item.</p>
+<p>The overall flow is that the team level is providing top-level guidance on the current strategy of the team. Each bot is then evaluating their desire score for each of its modes, which are taking into account both the team-level desires as well as bot-level desires. The highest scoring mode becomes the active mode, which is solely responsible for issuing actions for the bot to perform.</p>
+<h2 id="directory_structure">Directory Structure</h2>
+<p>All in-development bot scripts live in the game/dota/scripts/vscripts/bots directory within your Dota 2 install. When you upload your bot script to the workshop, it will upload the contents of this directory. Downloaded scripts live in their own location within your Steam install.</p>
+<p>The bot scripting API is structured such that there are multiple elements that can be independently implemented by bot scripts. What logic is overriden is determined by which functions you implement and the files in which they are implemented.</p>
+<p>Each of the following scripting elements has its own script scope.</p>
+<h4 id="complete_takeover">Complete takeover</h4>
+<p>If you'd like to completely take over control of a hero, you can implement a Think() function in a file called bot_generic.lua, which is called every frame in lieu of the normal bot thinking code. This will completely take over all bots -- no team-level or mode-level thinking will happen. You will be responsible for issuing all action-level commands to all bots. If you'd like to just take over a specific hero's bot, for example Lina, you can implement a Think() function in a file called bot_lina.lua.</p>
+<p>Bots that have been completely taken over still respect the difficulty modifiers (see Appendix B), and still calculate their estimated damage.</p>
+<h4 id="mode_override">Mode Override</h4>
+<p>If you'd like to work within the existing mode architecture but override the logic for mode desire and behavior, for example the Laning mode, you can implement the following functions in a mode_laning_generic.lua file:</p>
+<ul>
+<li>GetDesire() - Called every ~300ms, and needs to return a floating-point value between 0 and 1 that indicates how much this mode wants to be the active mode.</li>
+<li>OnStart() - Called when a mode takes control as the active mode.</li>
+<li>OnEnd() - Called when a mode relinquishes control to another active mode.</li>
+<li>Think() - Called every frame while this is the active mode. Responsible for issuing actions for the bot to take.</li>
+</ul>
+<p>You can additionally just override the mode logic for a specific hero, such as Lina, with a mode_laning_lina.lua file. Please see Appendix A for implementation details if you'd like to chain calls from a hero-specific mode override back to a generic mode override.</p>
+<p>The list of valid bot modes to override are:</p>
+<ul>
+<li>laning</li>
+<li>attack</li>
+<li>roam</li>
+<li>retreat</li>
+<li>secret_shop</li>
+<li>side_shop</li>
+<li>rune</li>
+<li>push_tower_top</li>
+<li>push_tower_mid</li>
+<li>push_tower_bot</li>
+<li>defend_tower_top</li>
+<li>defend_tower_mid</li>
+<li>defend_tower_bottom</li>
+<li>assemble</li>
+<li>team_roam</li>
+<li>farm</li>
+<li>defend_ally</li>
+<li>evasive_maneuvers</li>
+<li>roshan</li>
+<li>item</li>
+<li>ward</li>
+</ul>
+<h4 id="ability_and_item_usage">Ability and Item usage</h4>
+<p>If you'd like to just override decisionmaking around ability and item usage, you can implement the following functions in an ability_item_usage_generic.lua file:</p>
+<ul>
+<li>ItemUsageThink() - Called every frame. Responsible for issuing item usage actions.</li>
+<li>AbilityUsageThink() - Called every frame. Responsible for issuing ability usage actions.</li>
+<li>CourierUsageThink() - Called every frame. Responsible for issuing commands to the courier.</li>
+<li>BuybackUsageThink() - Called every frame. Responsible for issuing a command to buyback.</li>
+<li>AbilityLevelUpThink() - Called every frame. Responsible for managing ability leveling.</li>
+</ul>
+<p>If any of these functions are not implemented, it will fall back to the default C++ implementation.</p>
+<p>You can additionally just override the ability/item usage logic for a single hero, such as Lina, with an ability_item_usage_lina.lua file. Please see Appendix A for implementation details if you'd like to chain calls from a hero-specific item/ability implementation back to a generic item/ability implementation.</p>
+<h4 id="minion_control">Minion Control</h4>
+<p>If you would like to override minions, which are illusions, summoned units, dominated units, etc. Basically anything that's under control of your hero. But not couriers. Then you can override the think function inside your hero file.</p>
+<ul>
+<li>MinionThink( hMinionUnit )</li>
+</ul>
+<p>This function will be called once per frame for every minion under control by a bot. For example, if you implemented it in bot_beastmaster.lua, it would constantly get called both for your boar and hawk while they're summoned and alive. The handle to the bear/hawk unit is passed in as hMinionUnit. Action commands that are usable on your hero are usable on the passed-in hMinionUnit.</p>
+<h4 id="item_purchasing">Item Purchasing</h4>
+<p>If you'd like to just override decisionmaking around item purchasing, you can implement the following function in an item_purchase_generic.lua file:</p>
+<ul>
+<li>ItemPurchaseThink() - Called every frame. Responsible for purchasing items.</li>
+</ul>
+<p>You can additionally just override the item purchasing logic for a single hero, such as Lina, with an item_purchase_lina.lua file.</p>
+<h4 id="team_level_desires">Team Level Desires</h4>
+<p>If you'd like to supply team-level desires, you can implement the following functions in a team_desires.lua file:</p>
+<ul>
+<li>TeamThink() - Called every frame. Provides a single think call for your entire team.</li>
+<li>UpdatePushLaneDesires() - Called every frame. Returns floating point values between 0 and 1 that represent the desires for pushing the top, middle, and bottom lanes, respectively.</li>
+<li>UpdateDefendLaneDesires() - Called every frame. Returns floating point values between 0 and 1 that represent the desires for defending the top, middle, and bottom lanes, respectively.</li>
+<li>UpdateFarmLaneDesires() - Called every frame. Returns floating point values between 0 and 1 that represent the desires for farming the top, middle, and bottom lanes, respectively.</li>
+<li>UpdateRoamDesire() - Called every frame. Returns a floating point value between 0 and 1 and a unit handle that represents the desire for someone to roam and gank a specified target.</li>
+<li>UpdateRoshanDesire() - Called every frame. Returns a floating point value between 0 and 1 that represents the desire for the team to kill Roshan.</li>
+</ul>
+<p>If any of these functions are not implemented, it will fall back to the default C++ implementation.</p>
+<h4 id="hero_selection">Hero Selection</h4>
+<p>If you'd like to handle hero picking and lane assignment, you can implement the following functions in a hero_selection.lua file:</p>
+<ul>
+<li>Think() - Called every frame. Responsible for selecting heroes for bots.</li>
+<li>UpdateLaneAssignments() - Called every frame prior to the game starting. Returns ten PlayerID-Lane pairs.</li>
+<li>GetBotNames() - Called once, returns a table of player names.</li>
+</ul>
+<h2 id="uploading_scripts_to_the_workshop">Uploading scripts to the Workshop</h2>
+<p>Scripts can be uploaded to the workshop using the Workshop Tools DLC. You will need to make sure that this option is selected in the DLC section of Dota 2 in Steam.</p>
+<p>Once installed, when launching Dota 2 you will see a "Launch Dota 2 - Tools" option. This will launch the workshop tools, which now has a section for uploading your bot scripts. This will upload the entire contents of your scripts/bots directory, under a specific name and description. The description can be updated, but the title cannot! Once uploaded, your scripts will show up to all Dota 2 users in the dialog that appears when they select Browse On Workshop when selecting bots in a private lobby. They will be able to upvote and subscribe to your bot scripting, and select it for their games.</p>
+<h2 id="api_reference">API Reference</h2>
+<p>There are few useful files located in the game\dota\scripts\npc folder inside your Dota 2 install directory:</p>
+<ul>
+<li>npc_abilities.txt - all the abilities in the game, and their parameters</li>
+<li>npc_heroes.txt - all the heroes in the game</li>
+<li>npc_units.txt - all the non-hero units in the game</li>
+</ul>
+<p><br />
+Note: In the following documentation, <em>hUnit</em> indicates a handle to a unit, and <em>hAbility</em> indicates a handle to an ability. <em>hItem</em> is used interchangably with <em>hAbility</em> -- under the hood abilities and items are largely the same.</p>
+<p><br />
+==== <u>GLOBAL FUNCTIONS</u> ====<br />
+<em>hUnit</em> <strong>GetBot</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a handle to the bot on which the script is currently being run (if applicable).</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetTeam</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the team for which the script is currently being run. If it's being run on a bot, returns the team of that bot.</small>
+</dd>
+</dl>
+<p><em>{int, ...}</em> <strong>GetTeamPlayers</strong>( <em><a href="#Teams" title="wikilink">nTeam</a></em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a table of the Player IDs on the specified team</small>
+<dd><small>Note: incosistency for bots when game is created in lobby vs from start bot match</small>
+</dd>
+</dl>
+<p><em>hUnit</em> <strong>GetTeamMember</strong>( <em>nPlayerNumberOnTeam</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a handle to the Nth player on the team.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsTeamPlayer</strong>( <em>nPlayerID</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the player is on Radiant or Dire</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsPlayerBot</strong>( <em>nPlayerID</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the specified playerID is a bot.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetTeamForPlayer</strong>( <em>nPlayerID</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the team for the specified playerID</small>
+</dd>
+</dl>
+<p><em>{ hUnit, ... }</em> <strong>GetUnitList</strong>( <em><a href="#Unit_Types" title="wikilink">nUnitType</a></em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a list of units matching the specified unit type. <em>Please keep in mind performance considerations when using GetUnitList(). The function itself is reasonably fast because it will build the lists on-demand and no more than once per frame, but the lists can be long and performing logic on all units (or even all creeps) can easily get pretty slow.</em></small>
+</dd>
+</dl>
+<p><em>float</em> <strong>DotaTime</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the game time. Matches game clock. Pauses with game pause.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GameTime</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the time since the hero picking phase started. Pauses with game pause.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>RealTime</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the real-world time since the app has started. Does not pause with game pause.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetUnitToUnitDistance</strong>( <em>hUnit1</em>, <em>hUnit2</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the distance between two units.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetUnitToUnitDistanceSqr</strong>( <em>hUnit1</em>, <em>hUnit2</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the squared distance between two units.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetUnitToLocationDistance</strong>( <em>hUnit</em>, <em>vLocation</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the distance between a unit and a location.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetUnitToLocationDistanceSqr</strong>( <em>hUnit</em>, <em>vLocation</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the squared distance between a unit and a location.</small>
+</dd>
+</dl>
+<p><em>{ distance, closest_point, within }</em> <strong>PointToLineDistance</strong>( <em>vStart</em>, <em>vEnd</em>, <em>vPoint</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a table containing the distance to the line segment, the closest point on the line segment, and whether the point is "within" the line segment (that is, the closest point is not one of the endpoints).</small>
+</dd>
+</dl>
+<p><em>{ float, float, float, float }</em> <strong>GetWorldBounds</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a table containing the min X, min Y, max X, and max Y bounds of the world.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsLocationPassable</strong>( <em>vLocation</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the specified location is passable.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsRadiusVisible</strong>( <em>vLocation</em>, <em>fRadius</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether a circle of the specified radius at the specified location is visible.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsLocationVisible</strong>( <em>vLocation</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the specified location is visible.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetHeightLevel</strong>( <em>vLocation</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the height value (1 through 5) of the specified location.</small>
+</dd>
+</dl>
+<p><em>{ { string, vector }, ... }</em> <strong>GetNeutralSpawners</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a table containing a list of camp-type and location pairs. Camp types are one of "basic_N", "ancient_N", "basic_enemy_N", "ancient_enemy_N", where N counts up from 0.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetItemCost</strong>( <em>sItemName</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the cost of the specified item.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsItemPurchasedFromSecretShop</strong>( <em>sItemName</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns if the specified item is purchased from the secret shops.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsItemPurchasedFromSideShop</strong>( <em>sItemName</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns if the specified item can be purchased from the side shops.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetItemStockCount</strong>( <em>sItemName</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the current stock count of the specified item.</small>
+</dd>
+</dl>
+<p><em>{ { hItem, hOwner, nPlayer, vLocation }, ...}</em> <strong>GetDroppedItemList</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a table of tables that list the item, owner, and location of items that have been dropped on the ground.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetPushLaneDesire</strong>( <em><a href="#Lanes" title="wikilink">nLane</a></em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the team's current desire to push the specified lane.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetDefendLaneDesire</strong>( <em><a href="#Lanes" title="wikilink">nLane</a></em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the team's current desire to defend the specified lane.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetFarmLaneDesire</strong>( <em><a href="#Lanes" title="wikilink">nLane</a></em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the team's current desire to farm the specified lane.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetRoamDesire</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the team's current desire to roam to a target.</small>
+</dd>
+</dl>
+<p><em>hUnit</em> <strong>GetRoamTarget</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the team's current roam target.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetRoshanDesire</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the team's current desire to kill Roshan.</small>
+</dd>
+</dl>
+<p><em><a href="#Game_States" title="wikilink">int</a></em> <strong>GetGameState</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the current game state.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetGameStateTimeRemaining</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns how much time is remaining in the current game state, if applicable.</small>
+</dd>
+</dl>
+<p><em><a href="#Game_Modes" title="wikilink">int</a></em> <strong>GetGameMode</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the current game mode.</small>
+</dd>
+</dl>
+<p><em><a href="#Hero_Pick_States" title="wikilink">int</a></em> <strong>GetHeroPickState</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the current hero pick state.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsPlayerInHeroSelectionControl</strong>( <em>nPlayerID</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the specified player is in selection control when picking a hero.</small>
+</dd>
+</dl>
+<p><strong>SelectHero</strong>( <em>nPlayerID</em>, <em>sHeroName</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Selects a hero for the specified player.</small>
+</dd>
+</dl>
+<p><em>string</em> <strong>GetSelectedHeroName</strong>( <em>nPlayerID</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the name of the hero the specified player has selected.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsInCMBanPhase</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether we're in a Captains Mode ban phase.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsInCMPickPhase</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether we're in a Captains Mode pick phase.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetCMPhaseTimeRemaining</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the time remaining in the current Captains Mode phase.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetCMCaptain</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the Player ID of the Captains Mode Captain.</small>
+</dd>
+</dl>
+<p><strong>SetCMCaptain</strong>( <em>nPlayerID</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the Captains Mode Captain to the specified Player ID.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsCMBannedHero</strong>( <em>sHeroName</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the specified hero has been banned in a Captains Mode game.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsCMPickedHero</strong>( <em><a href="#Teams" title="wikilink">nTeam</a></em>, <em>sHeroName</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the specified hero has been picked in a Captains Mode game.</small>
+</dd>
+</dl>
+<p><strong>CMBanHero</strong>( <em>sHeroName</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Bans the specified hero in a Captains Mode game.</small>
+</dd>
+</dl>
+<p><strong>CMPickHero</strong>( <em>sHeroName</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Picks the specified hero in a Captains Mode game.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>RandomInt</strong>( <em>nMin</em>, <em>nMax</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a random integer between nMin and nMax, inclusive.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>RandomFloat</strong>( <em>fMin</em>, <em>fMax</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a random float between nMin and nMax, inclusive.</small>
+</dd>
+</dl>
+<p><em>vector</em> <strong>RandomVector</strong>( <em>fLength</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a vector of fLength pointing in a random direction in the X/Y axis.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>RollPercentage</strong>( <em>nChance</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Rolls a numbmer from 1 to 100 and returns whether it is less than or equal to the specified number.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>Min</strong>( <em>fOption1</em>, <em>fOption2</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the smaller of fOption1 and fOption2.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>Max</strong>( <em>fOption1</em>, <em>fOption2</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the larger of fOption1 and fOption2.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>Clamp</strong>( <em>fValue</em>, <em>fMin</em>, <em>fMax</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns fValue clamped within the bounds of fMin and fMax.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>RemapVal</strong>( <em>fValue</em>, <em>fFromMin</em>, <em>fFromMax</em>, <em>fToMin</em>, <em>fToMax</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns fValue linearly remapped onto fFrom to fTo.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>RemapValClamped</strong>( <em>fValue</em>, <em>fFromMin</em>, <em>fFromMax</em>, <em>fToMin</em>, <em>fToMax</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns fValue linearly remapped onto fFrom to fTo, while also clamping within their bounds.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetUnitPotentialValue</strong>( <em>hUnit</em>, <em>vLocation</em>, <em>fRadius</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the 0-255 potential location value of a hero at the specified location and radius.</small>
+<dd><small>Note: Unsure how is this suppose to work, unit you can't see cannot be queried. Potential on saved unit handle always return 0 </small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsCourierAvailable</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns if the courier is available to use.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetNumCouriers</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the number of team couriers</small>
+</dd>
+</dl>
+<p><em>hCourier</em> <strong>GetCourier</strong>( <em>nCourier</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a handle to the specified courier (zero based index)</small>
+</dd>
+</dl>
+<p><em><a href="#Courier_Actions_and_States" title="wikilink">int</a></em> <strong>GetCourierState</strong>( <em>hCourier</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the current state of the specified courier.</small>
+</dd>
+</dl>
+<p><em>vector</em> <strong>GetTreeLocation</strong>( <em>nTree</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the specified tree location.</small>
+</dd>
+</dl>
+<p><em>vector</em> <strong>GetRuneSpawnLocation</strong>( <em><a href="#Rune_Locations" title="wikilink">nRuneLoc</a></em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the location of the specified rune spawner.</small>
+</dd>
+</dl>
+<p><em>vector</em> <strong>GetShopLocation</strong>( <em><a href="#Teams" title="wikilink">nTeam</a></em>, <em>nShop</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the location of the specified shop.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetTimeOfDay</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the time of day -- 0.0 is midnight, 0.5 is noon.</small>
+</dd>
+</dl>
+<p><em>hUnit</em> <strong>GetTower</strong>( <em><a href="#Teams" title="wikilink">nTeam</a></em>, <em><a href="#Towers" title="wikilink">nTower</a></em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the specified tower.</small>
+</dd>
+</dl>
+<p><em>hUnit</em> <strong>GetBarracks</strong>( <em><a href="#Teams" title="wikilink">nTeam</a></em>, <em><a href="#Barracks" title="wikilink">nBarracks</a></em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the specified barracks.</small>
+</dd>
+</dl>
+<p><em>hUnit</em> <strong>GetShrine</strong>( <em><a href="#Teams" title="wikilink">nTeam</a></em>, <em><a href="#Shrines" title="wikilink">nShrine</a></em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the specified shrine.</small>
+</dd>
+</dl>
+<p><em>hUnit</em> <strong>GetAncient</strong>( <em><a href="#Teams" title="wikilink">nTeam</a></em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the specified ancient.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetGlyphCooldown</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Get the current Glyph cooldown in seconds. Will return 0 if it is off cooldown.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetRoshanKillTime</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Get the last time that Roshan was killed.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetLaneFrontAmount</strong>( <em><a href="#Teams" title="wikilink">nTeam</a></em>, <em><a href="#Lanes" title="wikilink">nLane</a></em>, <em>bIgnoreTowers</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Return the lane front amount (0.0 - 1.0) of the specified team's creeps along the specified lane. Optionally can ignore towers.</small>
+</dd>
+</dl>
+<p><em>vector</em> <strong>GetLaneFrontLocation</strong>( <em><a href="#Teams" title="wikilink">nTeam</a></em>, <em><a href="#Lanes" title="wikilink">nLane</a></em>, <em>fDeltaFromFront</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the location of the lane front for the specified team and lane. Always ignores towers. Has a third parameter for a distance delta from the front.</small>
+</dd>
+</dl>
+<p><em>vector</em> <strong>GetLocationAlongLane</strong>( <em><a href="#Lanes" title="wikilink">nLane</a></em>, <em>fAmount</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the location the specified amount (0.0 - 1.0) along the specified lane.</small>
+</dd>
+</dl>
+<p><em>{ amount, distance }</em> <strong>GetAmountAlongLane</strong>( <em><a href="#Lanes" title="wikilink">nLane</a></em>, <em>vLocation</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the amount (0.0 - 1.0) along a lane, and distance from the lane of the specified location.</small>
+</dd>
+</dl>
+<p><em><a href="#Teams" title="wikilink">int</a></em> <strong>GetOpposingTeam</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the opposing Team ID.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsHeroAlive</strong>( <em>nPlayerID</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the specified PlayerID's hero is alive.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetHeroLevel</strong>( <em>nPlayerID</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the specified PlayerID's hero's level.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetHeroKills</strong>( <em>nPlayerID</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the specified PlayerID's hero's kill count.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetHeroDeaths</strong>( <em>nPlayerID</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the specified PlayerID's hero's death count.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetHeroAssists</strong>( <em>nPlayerID</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the specified PlayerID's hero's assists count.</small>
+</dd>
+</dl>
+<p><em>{ {location, time_since_seen}, ...}</em> <strong>GetHeroLastSeenInfo</strong>( <em>nPlayerID</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a table containing a list of locations and time_since_seen members, each representing the last seen location of a hero that player controls.</small>
+</dd>
+</dl>
+<p><em>{ {location, caster, player, ability, velocity, radius, handle }, ... }</em> <strong>GetLinearProjectiles</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a table containing info about all visible linear projectiles.</small>
+</dd>
+</dl>
+<p><em>{ location, caster, player, ability, velocity, radius }</em> <strong>GetLinearProjectileByHandle</strong>( <em>nProjectileHandle</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a table containing info about the specified linear projectile.</small>
+</dd>
+</dl>
+<p><em>{ {location, ability, caster, radius }, ... }</em> <strong>GetAvoidanceZones</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a table containing info about all visible avoidance zones.</small>
+</dd>
+</dl>
+<p><em><a href="#Rune_Types" title="wikilink">int</a></em> <strong>GetRuneType</strong>( <em><a href="#Rune_Locations" title="wikilink">nRuneLoc</a></em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the rune type of the rune at the specified location, if known.</small>
+</dd>
+</dl>
+<p><em><a href="#Rune_Status" title="wikilink">int</a></em> <strong>GetRuneStatus</strong>( <em><a href="#Rune_Locations" title="wikilink">nRuneLoc</a></em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the status of the rune at the specified location.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetRuneTimeSinceSeen</strong>( <em><a href="#Rune_Locations" title="wikilink">nRuneLoc</a></em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns how long it's been since we've seen the rune at the specified location.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetShrineCooldown</strong>( <em>hShrine</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the current cooldown of the specified Shrine.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsShrineHealing</strong>( <em>hShrine</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the specified shrine is currently healing.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>AddAvoidanceZone</strong>( <em>vLocationAndRadius</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Adds an avoidance zone for use with GeneratePath(). Takes a Vector with x and y as a 2D location, and z as as radius. Returns a handle to the avoidance zone.</small>
+</dd>
+</dl>
+<p><strong>RemoveAvoidanceZone</strong>( <em>hAvoidanceZone</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Removes the specified avoidance zone.</small>
+</dd>
+</dl>
+<p><strong>GeneratePath( <em>vStart</em>, <em>vEnd</em>, <em>tAvoidanceZones</em>, <em>funcCompletion</em> )</strong></p>
+<dl>
+<dt></dt>
+<dd><small>Pathfinds from vStar to vEnd, avoiding all the specified avoidance zones and the ones specified with AddAvoidanceZone. Will call funcCompletion when done, which is a function that has two parameters: a distance of the path, and a table that contains all the waypoints of the path. If the pathfind fails, it will call that function with a distance of 0 and an empty waypoint table.</small>
+<dd><small>Note: seems funcCompletion has changed to take 3 parameters: total_distance, num_of_way_points, way_points_table. Also it seems funcCompletion cannot change any variable in outter scope</small>
+</dd>
+</dl>
+<p><strong>DebugDrawLine</strong>( <em>vStart</em>, <em>vEnd</em>, <em>nRed</em>, <em>nGreen</em>, <em>nBlue</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Draws a line from vStar to vEnd in the specified color for one frame.</small>
+</dd>
+</dl>
+<p><strong>DebugDrawCircle</strong>( <em>vCenter</em>, <em>fRadius</em>, <em>nRed</em>, <em>nGreen</em>, <em>nBlue</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Draws a circle at vCenter with radius fRadius in the specified color for one frame.</small>
+</dd>
+</dl>
+<p><strong>DebugDrawText</strong>( <em>fScreenX</em>, <em>fScreenY</em>, <em>sText</em>, <em>nRed</em>, <em>nGreen</em>, <em>nBlue</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Draws the specified text at fScreenX, fScreenY on the screen in the specified color for one frame.</small>
+</dd>
+</dl>
+<p><strong>InstallCastCallback</strong>( int, handle ) : void</p>
+    <dd><small>Install a callback for whenever the specified player’s units cast an ability or use an item.</small></dd>
+<p><strong>InstallChatCallback</strong>( handle ) : void</p>
+    <dd><small>Install a callback for whenever a player chats.</small></dd>
+<p><strong>InstallCourierDeathCallback</strong>( handle ) : void</p>
+    <dd><small>Install a callback for whenever a courier is killed.</small></dd>
+<p><strong>InstallDamageCallback</strong>( int, handle ) : void</p>
+    <dd><small>Install a callback for whenever the specified player’s units take damage.</small></dd>
+<p><strong>InstallRoshanDeathCallback</strong>( handle ) : void</p>
+    <dd><small>Install a callback for whenever Roshan is killed.</small></dd>
+
+<p><br />
+</p>
+<h4 id="unit_scoped_functions"><u>UNIT SCOPED FUNCTIONS</u></h4>
+<p><br />
+<strong>Action_ClearActions</strong>( <em>bStop</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Clear action queue and return to idle and optionally stop in place with bStop true</small>
+</dd>
+</dl>
+<p><strong>Action_MoveToLocation</strong>( <em>vLocation</em> )<br />
+<strong>ActionPush_MoveToLocation</strong>( <em>vLocation</em> )<br />
+<strong>ActionQueue_MoveToLocation</strong>( <em>vLocation</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Command a bot to move to the specified location, this is not a precision move</small>
+</dd>
+</dl>
+<p><strong>Action_MoveDirectly</strong>( <em>vLocation</em> )<br />
+<strong>ActionPush_MoveDirectly</strong>( <em>vLocation</em> )<br />
+<strong>ActionQueue_MoveDirectly</strong>( <em>vLocation</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Command a bot to move to the specified location, bypassing the bot pathfinder. Identical to a user's right-click.</small>
+</dd>
+</dl>
+<p><strong>Action_MovePath</strong>( <em>tWaypoints</em> )<br />
+<strong>ActionPush_MovePath</strong>( <em>tWaypoints</em> )<br />
+<strong>ActionQueue_MovePath</strong>( <em>tWaypoints</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Command a bot to move along the specified path.</small>
+</dd>
+</dl>
+<p><strong>Action_MoveToUnit</strong>( <em>hUnit</em> )<br />
+<strong>ActionPush_MoveToUnit</strong>( <em>hUnit</em> )<br />
+<strong>ActionQueue_MoveToUnit</strong>( <em>hUnit</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Command a bot to move to the specified unit, this will continue to follow the unit</small>
+</dd>
+</dl>
+<p><strong>Action_AttackUnit</strong>( <em>hUnit, bOnce</em> )<br />
+<strong>ActionPush_AttackUnit</strong>( <em>hUnit, bOnce</em> )<br />
+<strong>ActionQueue_AttackUnit</strong>( <em>hUnit, bOnce</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Tell a unit to attack a unit with an option bool to stop after one attack if true</small>
+</dd>
+</dl>
+<p><strong>Action_AttackMove</strong>( <em>vLocation</em> )<br />
+<strong>ActionPush_AttackMove</strong>( <em>vLocation</em> )<br />
+<strong>ActionQueue_AttackMove</strong>( <em>vLocation</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Tell a unit to attack-move a location.</small>
+</dd>
+</dl>
+<p><strong>Action_UseAbility</strong>( <em>hAbility</em> )<br />
+<strong>ActionPush_UseAbility</strong>( <em>hAbility</em> )<br />
+<strong>ActionQueue_UseAbility</strong>( <em>hAbility</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Command a bot to use a non-targeted ability or item</small>
+</dd>
+</dl>
+<p><strong>Action_UseAbilityOnEntity</strong>( <em>hAbility</em>, <em>hTarget</em> )<br />
+<strong>ActionPush_UseAbilityOnEntity</strong>( <em>hAbility</em>, <em>hTarget</em> )<br />
+<strong>ActionQueue_UseAbilityOnEntity</strong>( <em>hAbility</em>, <em>hTarget</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Command a bot to use a unit targeted ability or item on the specified target unit</small>
+</dd>
+</dl>
+<p><strong>Action_UseAbilityOnLocation</strong>( <em>hAbility</em>, <em>vLocation</em> )<br />
+<strong>ActionPush_UseAbilityOnLocation</strong>( <em>hAbility</em>, <em>vLocation</em> )<br />
+<strong>ActionQueue_UseAbilityOnLocation</strong>( <em>hAbility</em>, <em>vLocation</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Command a bot to use a ground targeted ability or item on the specified location</small>
+</dd>
+</dl>
+<p><strong>Action_UseAbilityOnTree</strong>( <em>hAbility</em>, <em>iTree</em> )<br />
+<strong>ActionPush_UseAbilityOnTree</strong>( <em>hAbility</em>, <em>iTree</em> )<br />
+<strong>ActionQueue_UseAbilityOnTree</strong>( <em>hAbility</em>, <em>iTree</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Command a bot to use a tree targeted ability or item on the specified tree</small>
+</dd>
+</dl>
+<p><strong>Action_PickUpRune</strong>( <em><a href="#Rune_Locations" title="wikilink">nRune</a></em> )<br />
+<strong>ActionPush_PickUpRune</strong>( <em><a href="#Rune_Locations" title="wikilink">nRune</a></em> )<br />
+<strong>ActionQueue_PickUpRune</strong>( <em><a href="#Rune_Locations" title="wikilink">nRune</a></em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Command a hero to pick up the rune at the specified rune location.</small>
+</dd>
+</dl>
+<p><strong>Action_PickUpItem</strong>( <em>hItem</em> )<br />
+<strong>ActionPush_PickUpItem</strong>( <em>hItem</em> )<br />
+<strong>ActionQueue_PickUpItem</strong>( <em>hItem</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Command a bot to pick up the specified item</small>
+</dd>
+</dl>
+<p><strong>Action_DropItem</strong>( <em>hItem, vLocation</em> )<br />
+<strong>ActionPush_DropItem</strong>( <em>hItem, vLocation</em> )<br />
+<strong>ActionQueue_DropItem</strong>( <em>hItem, vLocation</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Command a bot to drop the specified item and the provided location</small>
+</dd>
+</dl>
+<p><strong>Action_UseShrine</strong>( <em>hShrine</em> )<br />
+<strong>ActionPush_UseShrine</strong>( <em>hShrine</em> )<br />
+<strong>ActionQueue_UseShrine</strong>( <em>hShrine</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Command a bot to use the specified shrine</small>
+</dd>
+</dl>
+<p><strong>Action_Delay</strong>( <em>fDelay</em> )<br />
+<strong>ActionPush_Delay</strong>( <em>fDelay</em> )<br />
+<strong>ActionQueue_Delay</strong>( <em>fDelay</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Command a bot to delay for the specified amount of time.</small>
+</dd>
+</dl>
+<p><em><a href="#Item_Purchase_Results" title="wikilink">int</a></em> '''ActionImmediate_PurchaseItem '''( <em>sItemName</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Command a bot to purchase the specified item. Item names can be found <a href="https://developer.valvesoftware.com/wiki/Dota_2_Workshop_Tools/Scripting/Built-In_Item_Names">here</a>.</small>
+</dd>
+</dl>
+<p><strong>ActionImmediate_SellItem</strong>( <em>hItem</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Command a bot to sell the specified item</small>
+</dd>
+</dl>
+<p><strong>ActionImmediate_DisassembleItem</strong>( <em>hItem</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Command a bot to disassemble the specified item</small>
+</dd>
+</dl>
+<p><strong>ActionImmediate_SetItemCombineLock</strong>( <em>hItem</em>, <em>bLocked</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Command a bot to lock or unlock combining of the specified item</small>
+</dd>
+</dl>
+<p><strong>ActionImmediate_SwapItems</strong>( <em>index1</em>, <em>index2</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Command a bot to swap the items in index1 and index2 in their inventory. Indices are zero based with 0-5 corresponding to inventory, 6-8 are backpack and 9-15 are stash</small>
+</dd>
+</dl>
+<p><strong>ActionImmediate_Courier</strong>( <em>hCourier</em>, <em><a href="#Courier_Actions_and_States" title="wikilink">nAction</a></em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Command the courier specified by hCourier to perform one of the courier Actions.</small>
+</dd>
+</dl>
+<p><strong>ActionImmediate_Buyback</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Tell a hero to buy back from death.</small>
+</dd>
+</dl>
+<p><strong>ActionImmediate_Glyph</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Tell a hero to use Glyph.</small>
+</dd>
+</dl>
+<p>'''ActionImmediate_LevelAbility '''( <em>sAbilityName</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Command a bot to level an ability or a talent. Ability and talent names can be found <a href="https://developer.valvesoftware.com/wiki/Dota_2_Workshop_Tools/Scripting/Built-In_Ability_Names">here</a></small>
+</dd>
+</dl>
+<p><strong>ActionImmediate_Chat</strong>( <em>sMessage, bAllChat</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Have a bot say something in team chat, bAllChat true to say to all chat instead</small>
+</dd>
+</dl>
+<p><strong>ActionImmediate_Ping</strong>( <em>fXCoord, fYCoord, bNormalPing</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Command a bot to ping the specified coordinates with bNormalPing setting the ping type</small>
+</dd>
+</dl>
+<p><em><a href="#Action_Types" title="wikilink">int</a></em> '''GetCurrentActionType '''()</p>
+<dl>
+<dt></dt>
+<dd><small>Get the type of the currently active Action.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>NumQueuedActions</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Get number of actions in the action queue.</small>
+</dd>
+</dl>
+<p><em><a href="#Action_Types" title="wikilink">int</a></em> <strong>GetQueuedActionType</strong>( <em>nAction</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Get the type of the specified queued action.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsBot</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is a bot (otherwise they are a human).</small>
+</dd>
+</dl>
+<p><em><a href="#Difficulties" title="wikilink">int</a></em> <strong>GetDifficulty</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the difficulty level of this bot.</small>
+</dd>
+</dl>
+<p><em>string</em> <strong>GetUnitName</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the name of the unit. Note that this is the under-the-hood name, not the normal (localized) name that you'd see for the unit.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetPlayerID</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the Player ID of the unit, used in functions that refer to a player rather than a specific unit.</small>
+</dd>
+</dl>
+<p><em><a href="#Teams" title="wikilink">int</a></em> <strong>GetTeam</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets team to which this unit belongs.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsHero</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is a hero.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsIllusion</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is an illusion. Always returns false on enemies.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsCreep</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is a creep.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsAncientCreep</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is an ancient creep.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsBuilding</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is a building. This includes towers, barracks, filler buildings, and the ancient.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsTower</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is a tower.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsFort</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is the ancient.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>CanBeSeen</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Check if a unit can currently be seen by your team. </small>
+</dd>
+</dl>
+<p><em><a href="#Bot_Modes" title="wikilink">int</a></em> <strong>GetActiveMode</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Get the bots currently active mode. This may not track modes in complete takeover bots.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetActiveModeDesire</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the desire of the currently active mode.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetHealth</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the health of the unit.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetMaxHealth</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the maximum health of the specified unit.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetHealthRegen</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the current health regen per second of the unit.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetMana</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the current mana of the unit.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetMaxMana</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the maximum mana of the unit.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetManaRegen</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the current mana regen of the unit.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetBaseMovementSpeed</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the base movement speed of the unit.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetCurrentMovementSpeed</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the current movement speed (base + modifiers) of the unit.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsAlive</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns true if the unit is alive.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetRespawnTime</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the number of seconds remaining for the unit to respawn. Returns -1.0 for non-heroes.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>HasBuyback</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns true if the unit has buyback available. Will return false for enemies or non-heroes.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetBuybackCost</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the current gold cost of buyback. Will return -1 for enemies or non-heroes.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetBuybackCooldown</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the current cooldown for buyback. Will return -1.0 for enemies or non-heroes.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetRemainingLifespan</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the remaining lifespan in seconds of units with limited lifespans.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetBaseDamage</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the average base damage of the unit.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetBaseDamageVariance</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the +/- variance in the base damage of the unit.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetAttackDamage</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns actual attack damage (with bonuses) of the unit.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetAttackRange</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the range at which the unit can attack another unit.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetAttackSpeed</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the attack speed value of the unit.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetSecondsPerAttack</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the number of seconds per attack (including backswing) of the unit.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetAttackPoint</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the point in the animation where a unit will execute the attack.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetLastAttackTime</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the time that the unit last executed an attack.</small>
+</dd>
+</dl>
+<p><em>hUnit</em> <strong>GetAttackTarget</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a the attack target of the unit.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetAcquisitionRange</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the range at which this unit will attack a target.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetAttackProjectileSpeed</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the speed of the unit's attack projectile.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetActualIncomingDamage</strong>( <em>nDamage, <a href="#Damage_Types" title="wikilink">nDamageType</a></em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the incoming damage value after reductions depending on damage type.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetAttackCombatProficiency</strong>( <em>hTarget</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the damage multiplier when attacking the specified target.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetDefendCombatProficiency</strong>( <em>hAttacker</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the damage multiplier when being attacked by the specified attacker.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetSpellAmp</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the spell amplification debuff percentage of this unit.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetArmor</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the armor of this unit.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetMagicResist</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the magic resist value of this unit.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetEvasion</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the evasion percentage of this unit.</small>
+</dd>
+</dl>
+<p><em><a href="#Attribute_Types" title="wikilink">int</a></em> <strong>GetPrimaryAttribute</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the primary stat of this unit.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetAttributeValue</strong>( <em><a href="#Attribute_Types" title="wikilink">nAttrib</a></em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the value of the specified stat. Returns -1 for non-heroes.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetBountyXP</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the XP bounty value for killing this unit.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetBountyGoldMin</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the minimum gold bounty value for killing this unit.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetBountyGoldMax</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the maximum gold bounty value for killing this unit.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetXPNeededToLevel</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the amount of XP needed for this unit to gain a level. Returns -1 for non-heroes.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetAbilityPoints</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Get the number of ability points available to this bot.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetLevel</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the level of this unit.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetGold</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the current gold amount for this unit.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetNetWorth</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the current total net worth for this unit.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetStashValue</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the current value of all items in this unit's stash.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetCourierValue</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the current value of all items on couriers that this unit owns.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetLastHits</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the current last hit count for this unit.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetDenies</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the current deny count for this unit.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetBoundingRadius</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the bounding radius of this unit. Used for attack ranges and collision.</small>
+</dd>
+</dl>
+<p><em>vector</em> <strong>GetLocation</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the location of this unit.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetFacing</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the facing of this unit on a 360 degree rotation. (0 - 359). Facing East is 0, North is 90, West is 180, South is 270.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsFacingLocation</strong>( <em>vLocation</em>, <em>nDegrees</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns if the unit is facing the specified location, within an nDegrees cone.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetGroundHeight</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets ground height of the location of this unit. Note: This call can be very expensive! Use sparingly.</small>
+</dd>
+</dl>
+<p><em>vector</em> <strong>GetVelocity</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the unit's current velocity.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetDayTimeVisionRange</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the unit's vision range during the day.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetNightTimeVisionRange</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the unit's vision range during the night.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetCurrentVisionRange</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the unit's current vision range.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetHealthRegenPerStr</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the health regen per second per point in strength.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetManaRegenPerInt</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the mana regen per second per point in intellect.</small>
+</dd>
+</dl>
+<p><em><a href="#Animation_Activities" title="wikilink">int</a></em> <strong>GetAnimActivity</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the current animation activity the unit is playing.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetAnimCycle</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the amount through the current animation (0.0 - 1.0)</small>
+</dd>
+</dl>
+<p><em>hAbility</em> <strong>GetAbilityByName</strong>( <em>sAbilityName</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Gets a handle to the named ability. Ability names can be found in <a href="https://developer.valvesoftware.com/wiki/Dota_2_Workshop_Tools/Scripting/Built-In_Ability_Names">here</a></small>
+</dd>
+</dl>
+<p><em>hAbility</em> <strong>GetAbilityInSlot</strong>( <em>nAbilitySlot</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Gets a handle to ability in the specified slot. Slots range from 0 to 23.</small>
+</dd>
+</dl>
+<p><em>hItem</em> <strong>GetItemInSlot</strong>( <em>nIventorySlot</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Gets a handle to item in the specified inventory slot. Slots range from 0 to 16.</small>
+</dd>
+</dl>
+<p><em><a href="#Inventory_slots" title="wikilink">int</a></em> <strong>FindItemSlot</strong>( <em>sItemName</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the inventory slot the named item is in. Item names can be found <a href="https://developer.valvesoftware.com/wiki/Dota_2_Workshop_Tools/Scripting/Built-In_Item_Names">here</a>.</small>
+</dd>
+</dl>
+<p><em><a href="#Item_slot_types" title="wikilink">int</a></em> GetItemSlotType( <em>nIventorySlot</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the type of the specified inventory slot.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsChanneling</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is currently channeling an ability or item.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsUsingAbility</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit's active ability is a UseAbility action. Note that this will be true while a is currently using an ability or item.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsCastingAbility</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is actively casting an ability or item. Does not include movement or backswing.</small>
+</dd>
+</dl>
+<p><em>hAbility</em> <strong>GetCurrentActiveAbility</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets a handle to ability that's currently being used.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsAttackImmune</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is immune to attacks.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsBlind</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is blind and will miss all of its attacks.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsBlockDisabled</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is disabled from blocking attacks.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsDisarmed</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is disarmed and unable to attack.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsDominated</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit has been dominated.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsEvadeDisabled</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is unable to evade attacks.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsHexed</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is hexed into an adorable animal.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsInvisible</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit has an invisibility effect. Note that this does NOT guarantee invisibility to the other team -- if they have detection, they can see you even if IsInvisible() returns true.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsInvulnerable</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is invulnerable to damage.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsMagicImmune</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is magic immune.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsMuted</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is item muted.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsNightmared</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is having bad dreams.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsRooted</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is rooted in place.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsSilenced</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is silenced and unable to use abilities.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsSpeciallyDeniable</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is deniable by allies due to a debuff.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsStunned</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit is stunned.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>IsUnableToMiss</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit will not miss due to evasion or attacking uphill.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>HasScepter</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit has ultimate scepter upgrades.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>WasRecentlyDamagedByAnyHero</strong>( <em>fInterval</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit has been damaged by a hero in the specified interval.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>TimeSinceDamagedByAnyHero</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the amount of time passed the unit has been damaged by a hero.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>WasRecentlyDamagedByHero</strong>( <em>hUnit</em>, <em>fInterval</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit has been damaged by the specified hero in the specified interval.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>TimeSinceDamagedByHero</strong>( <em>hUnit</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the amount of time passed the unit has been damaged by the specified hero.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>WasRecentlyDamagedByPlayer</strong>( <em>nPlayerID</em>, <em>fInterval</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit has been damaged by the specified player in the specified interval.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>TimeSinceDamagedByPlayer</strong>( <em>nPlayerID</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the amount of time passed the unit has been damaged by the specified hero.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>WasRecentlyDamagedByCreep</strong>( <em>fInterval</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit has been damaged by a creep in the specified interval.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>TimeSinceDamagedByCreep</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the amount of time passed the unit has been damaged by a creep.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>WasRecentlyDamagedByTower</strong>( <em>fInterval</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit has been damaged by a tower in the specified interval.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>TimeSinceDamagedByTower</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the amount of time passed the unit has been damaged by a tower.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>DistanceFromFountain</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the unit’s straight-line distance from the team’s fountain (0 is in the fountain).</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>DistanceFromSecretShop</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the unit’s straight-line distance from the closest secret shop (0 is in a secret shop).</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>DistanceFromSideShop</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the unit’s straight-line distance from the closest side shop (0 is in a side shop).</small>
+</dd>
+</dl>
+<p><strong>SetTarget</strong>( <em>hUnit</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Sets the target to be a specific unit. Doesn't actually execute anything, just potentially useful for communicating a target between modes/items.</small>
+</dd>
+</dl>
+<p><em>hUnit</em> <strong>GetTarget</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the target that's been set for a unit.</small>
+</dd>
+</dl>
+<p><strong>SetNextItemPurchaseValue</strong>( <em>nGold</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Sets the value of the next item to purchase. Doesn't actually execute anything, just potentially useful for communicating a purchase target for modes like Farm.</small>
+</dd>
+</dl>
+<p>int <strong>GetNextItemPurchaseValue</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the purchase value that's been set.</small>
+</dd>
+</dl>
+<p><em><a href="#Lanes" title="wikilink">int</a></em> <strong>GetAssignedLane</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the assigned lane of this unit.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetOffensivePower</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets an estimate of the current offensive power of a unit. Derived from the average amount of damage it can do to all enemy heroes.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetRawOffensivePower</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Gets an estimate of the current offensive power of a unit. Derived from the average amount of damage it can do to all enemy heroes, ignoring cooldown and mana status.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetEstimatedDamageToTarget</strong>( <em>bCurrentlyAvailable</em>, <em>hTarget</em>, <em>fDuration</em>, <em><a href="#Damage_Types" title="wikilink">nDamageTypes</a></em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Gets an estimate of the amount of damage that this unit can do to the specified unit. If bCurrentlyAvailable is true, it takes into account mana and cooldown status.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetStunDuration</strong>( <em>bCurrentlyAvailable</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Gets an estimate of the duration of a stun that a unit can cast. If bCurrentlyAvailable is true, it takes into account mana and cooldown status.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetSlowDuration</strong>( <em>bCurrentlyAvailable</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Gets an estimate of the duration of a slow that a unit can cast. If bCurrentlyAvailable is true, it takes into account mana and cooldown status.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>HasBlink</strong>( <em>bCurrentlyAvailable</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit has a blink available to them.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>HasMinistunOnAttack</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit has a ministun when they attack.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>HasSilence</strong>( <em>bCurrentlyAvailable</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit has a silence available to them.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>HasInvisibility</strong>( <em>bCurrentlyAvailable</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit has an invisibility-causing item or ability available to them.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>UsingItemBreaksInvisibility</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether using an item would break the unit's invisibility.</small>
+</dd>
+</dl>
+<p><em>{ hUnit, ... }</em> <strong>GetNearbyHeroes</strong>( <em>nRadius</em>, <em>bEnemies</em>, <em><a href="#Bot_Modes" title="wikilink">nMode</a></em>)</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a table of heroes, sorted closest-to-furthest, that are in the specified mode. If nMode is BOT_MODE_NONE, searches for all heroes. If bEnemies is true, nMode must be BOT_MODE_NONE. nRadius must be less than 1600.</small>
+</dd>
+</dl>
+<p><em>{ hUnit, ... }</em> <strong>GetNearbyCreeps</strong>( <em>nRadius</em>, <em>bEnemies</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a table of creeps, sorted closest-to-furthest. nRadius must be less than 1600.</small>
+</dd>
+</dl>
+<p><em>{ hUnit, ... }</em> <strong>GetNearbyLaneCreeps</strong>( <em>nRadius</em>, <em>bEnemies</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a table of lane creeps, sorted closest-to-furthest. nRadius must be less than 1600.</small>
+</dd>
+</dl>
+<p><em>{ hUnit, ... }</em> <strong>GetNearbyNeutralCreeps</strong>( <em>nRadius</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a table of neutral creeps, sorted closest-to-furthest. nRadius must be less than 1600.</small>
+</dd>
+</dl>
+<p><em>{ hUnit, ... }</em> <strong>GetNearbyTowers</strong>( <em>nRadius</em>, <em>bEnemies</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a table of towers, sorted closest-to-furthest. nRadius must be less than 1600.</small>
+</dd>
+</dl>
+<p><em>{ hUnit, ... }</em> <strong>GetNearbyBarracks</strong>( <em>nRadius</em>, <em>bEnemies</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a table of barracks, sorted closest-to-furthest. nRadius must be less than 1600.</small>
+</dd>
+</dl>
+<p><em>{ hUnit, ... }</em> <strong>GetNearbyShrines</strong>( <em>nRadius</em>, <em>bEnemies</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a table of shrines, sorted closest-to-furthest. nRadius must be less than 1600.</small>
+</dd>
+</dl>
+<p><em>{ int, ... }</em> '''GetNearbyTrees '''( <em>nRadius</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a table of Tree IDs, sorted closest-to-furthest. nRadius must be less than 1600.</small>
+</dd>
+</dl>
+<p><em>{ int count, vector targetloc }</em> <strong>FindAoELocation</strong>( ''bEnemies, bHeroes, vBaseLocation, nMaxDistanceFromBase, nRadius, fTimeInFuture, nMaxHealth)</p>
+<dl>
+<dt></dt>
+<dd><small>Gets the optimal location for AoE to hit the maximum number of units described by the parameters. Returns a table containing the values <em>targetloc</em> that is a vector for the center of the AoE and <em>count</em> that will be equal to the number of units within the AoE that mach the description.</small>
+</dd>
+</dl>
+<p><em>vector</em> <strong>GetExtrapolatedLocation</strong>( <em>fTime</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the extrapolated location of the unit fTime seconds into the future, based on its current movement.</small>
+</dd>
+</dl>
+<p><em>float</em> <strong>GetMovementDirectionStability</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns how stable the direction of the unit's movement is -- a value of 1.0 means they've been moving in a straight line for a while, where 0.0 is completely random movement.</small>
+</dd>
+</dl>
+<p><em>bool</em> <strong>HasModifier</strong>( <em>sModifierName</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns whether the unit has the specified modifer.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetModifierByName</strong>( <em>sModifierName</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the modifier index for the specified modifier.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>NumModifiers</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the number of modifiers on the unit.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetModifierName</strong>( <em>nModifier</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns the name of the specified modifier.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetModifierStackCount</strong>( <em>nModifier</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns stack count of the specified modifier.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetModifierRemainingDuration</strong>( <em>nModifier</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns remaining duration of the specified modifier.</small>
+</dd>
+</dl>
+<p><em>int</em> <strong>GetModifierAuxiliaryUnits</strong>( <em>nModifier</em> )</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a table containing handles to units that the modifier is responsible for, such as Ember Spirit remnants.</small>
+</dd>
+</dl>
+<p><em>{time, location, normal_ping}</em> <strong>GetMostRecentPing</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns a table containing the time and location of the unit's most recent ping, and whether it was a normal or danger ping.</small>
+</dd>
+</dl>
+<p><em>{ { location, caster, player, ability, is_dodgeable, is_attack }, ... }</em> <strong>GetIncomingTrackingProjectiles</strong>()</p>
+<dl>
+<dt></dt>
+<dd><small>Returns information about all projectiles incoming towards this unit.</small>
+</dd>
+</dl>
+<p><br />
+</p>
+<h4 id="ability_scoped">Ability-Scoped</h4>
+<ul>
+<li>bool CanAbilityBeUpgraded()</li>
+<li>int GetAOERadius() * Doesn't work on all abilities, see special value</li>
+<li>int GetAbilityDamage() * Doesn't work on all abilities, see special value</li>
+<li>bool GetAutoCastState()</li>
+<li>int GetBehavior()</li>
+<li>float GetCastPoint()</li>
+<li>int GetCastRange() * Doesn't work on all abilities, see special value</li>
+<li>hUnit GetCaster()</li>
+<li>int GetChannelledManaCostPerSecond()</li>
+<li>float GetChannelTime()</li>
+<li>float GetCooldown()</li>
+<li>float GetCooldownTimeRemaining() - Only works on yourself and allies</li>
+<li>int GetCurrentCharges()</li>
+<li>float GetDuration()</li>
+<li>int GetDamageType()</li>
+<li>int GetEstimatedDamageToTarget(hTarget, fDuration, iDamageTypes) *</li>
+<li>int GetHeroLevelRequiredToUpgrade()</li>
+<li>int GetInitialCharges()</li>
+<li>int GetLevel()</li>
+<li>int GetManaCost()</li>
+<li>int GetMaxLevel()</li>
+<li>cstring GetName()</li>
+<li>int GetSecondaryCharges()</li>
+<li>float GetSpecialValueFloat(cstringKey) - See special values in npc_abilities.txt</li>
+<li>int GetSpecialValueInt(cstringKey) - See special values in npc_abilities.txt</li>
+<li>int GetTargetFlags()</li>
+<li>int GetTargetTeam()</li>
+<li>int GetTargetType()</li>
+<li>bool GetToggleState()</li>
+<li>bool IsActivated()</li>
+<li>bool IsAttributeBonus() ** not sure this still exists</li>
+<li>bool IsChanneling()</li>
+<li>bool IsCooldownReady() - Only works on yourself and allies</li>
+<li>bool IsFullyCastable()</li>
+<li>bool IsHidden()</li>
+<li>bool IsInAbilityPhase() - Is Ability being cast?</li>
+<li>bool IsItem()</li>
+<li>bool IsOwnersManaEnough()</li>
+<li>bool IsPassive()</li>
+<li>bool IsStealable()</li>
+<li>bool IsStolen()</li>
+<li>bool IsToggle()</li>
+<li>bool IsTrained()</li>
+<li>bool ProcsMagicStick()</li>
+<li>void ToggleAutoCast()</li>
+</ul>
+<p><em>- Item Only Functions</em></p>
+<ul>
+<li>bool CanBeDisassembled()</li>
+<li>bool IsCombineLocked()</li>
+<li>int GetPowerTreadsStat()</li>
+</ul>
+
+<h2 id="debugging">Debugging</h2>
+<p>There are a number of commands that help you debug what's happening with bots.</p>
+<p><br />
+<em>dota_bot_debug_team</em> Brings up a panel for the specified team (2 is Radiant, 3 is Dire) that displays:</p>
+<ul>
+<li>Team-level desires for pushing/defending/farming lanes, and Roshan.</li>
+<li>Bot names and levels</li>
+<li>Bot current and maximum "power" levels (see Appendex D for how power levels are calculated). Can be disabled with "dota_bot_debug_team_power 0".</li>
+<li>Active modes, and those mode desires.</li>
+<li>All modes for a bot ( individually collapsable), and each of those modes' desires.</li>
+<li>Current bot action along with that action's target if applicable.</li>
+<li>Total bot execution time for the overall team calculations, and each individual bot.</li>
+</ul>
+<p>It additionally enables the line-sphere rendering of dota_bot_select_debug for all bots on the specified team.</p>
+<p><br />
+<em>dota_bot_debug_grid</em><br />
+<em>dota_bot_debug_grid_cycle</em><br />
+<em>dota_bot_debug_minimap</em><br />
+<em>dota_bot_debug_minimap_cycle</em><br />
+Causes a grid to draw on the world or the minimap. The *_cycle variants just cycle through all the values, whereas the other commands just set the mode directly.</p>
+<ul>
+<li>0 - Off</li>
+<li>1 - Radiant avoidance</li>
+<li>2 - Dire avoidance</li>
+<li>3 - Potential enemy locations for the Radiant</li>
+<li>4 - Potential enemy locations for the Dire</li>
+<li>5 - Enemy visibility to the Radiant</li>
+<li>6 - Enemy visibility to the Dire</li>
+<li>7 - Height Values</li>
+<li>8 - Passability</li>
+</ul>
+<p><br />
+<em>dota_bot_select_debug</em></p>
+<p>Activates the following displays on the under-the-cursor bot:</p>
+<ul>
+<li>The current mode and action of the selected bot.</li>
+<li>A white line-sphere list to it current pathfind.</li>
+<li>A blue line-sphere to its current laning last-hit target.</li>
+<li>A red line-sphere to its current attack target.</li>
+</ul>
+<p><br />
+<em>dota_bot_select_debug_attack</em></p>
+<p>Displays how much the under-the-cursor bot wants to attack any nearby enemies.</p>
+<p><br />
+<em>dota_bot_debug_clear</em></p>
+<p>Clears the dota_bot_select_debug and dota_bot_select_debug_attack states of the under-the-cursor bot.</p>
+<p><br />
+<em>dota_bot_debug_lanes</em></p>
+<p>Shows the path of all of the lanes, along with a sphere at the "lane front".</p>
+<p><br />
+<em>dota_bot_debug_ward_locations</em></p>
+<p>Shows small yellow spheres at each of ward locations the bots will consider.</p>
+<p><br />
+<em>dump_modifier_list</em></p>
+<p>Dumps a reference list of all modifier names.</p>
+<h2 id="potential_locations">Potential Locations</h2>
+<p>One of the utility functions available to bot scripts is GetUnitPotentialValue(), which returns a value between 0 and 255 that represents an estimation of how likely it is that a hero is within the specified radius of the specified location. This value is based the potential location grid that is updated during bot games.<br />
+<br />
+It works like this:</p>
+<ul>
+<li>When a team loses visibility of that hero, there's a floodfill that starts through the passable areas of the map, moving at the movement speed of that missing hero.</li>
+<li>The intensity of the "potential location" starts out high, and then decreases as the potential location becomes larger and more diffuse.</li>
+<li>This floodfill happens for each enemy hero independently.</li>
+</ul>
+<p><br />
+<br />
+This does have some limitations:</p>
+<ul>
+<li>It doesn't take into account heroes that teleport or otherwise have speed/movement bursts (Lycan's wolf form, AM's blinking, etc)</li>
+<li>It doesn't include any logic about why a hero is missing or where they've gone -- it assumes an equal chance of a hero moving in any direction under FoW</li>
+</ul>
+<p><br />
+<br />
+Still, it can be useful for some decisionmaking, especially when the potential location values are high. You obviously don't want to stop considering a hero nearby the moment you lose sight of them, so using the potential location grid to help evaluate how dangerous a location is can be helpful.</p>
+<h2 id="hero_power">Hero Power</h2>
+<p>Note: Is broken for some heroes, need a new function</p>
+<p>It's often useful to understand how powerful a teammate bot is, or how dangerous an enemy is. One rough estimate is the Hero Power concept, which is updated for each hero each frame.<br />
+<br />
+Here is how it's calculated (done per-hero):</p>
+<ul>
+<li>For each enemy hero, calculate the amount of damage done over a time interval to that enemy hero.</li>
+<li>That time interval is defined as 5 seconds, plus the duration that the hero can stun a unit, plus half the duration that the hero can slow a unit.</li>
+<li>That damage includes both attacking for that duration, plus damage done by abilities.</li>
+<li>Attack damage includes procs as well as debuffs.</li>
+<li>Ability damage is based on available mana, cast time, cooldowns, silence status, etc.</li>
+<li>That damage is then averaged over all enemy heroes.</li>
+</ul>
+<p><br />
+Additionally, we calculate each hero's Raw Power as well, which ignores all cooldowns and hero state (mana, debuffs, etc). It's more a representation of how powerful a hero theoretically is than how powerful they are at any given moment.<br />
+<br />
+Note that this is an indicator of offensive power only, not tankiness or durability.<br />
+<br />
+GetRawOffensivePower() can be called on teammates or enemies that you can see. GetOffensivePower() can be called only on teammates.</p>
+<h2 id="appendix_a___chaining_to_a_generic_implementation_in_lua">Appendix A - Chaining to a generic implementation in Lua</h2>
+<p>If you're implementing a generic version of a mode or ability/item usage, you should add this code to the bottom of your generic file (adjusting the name of the module appropriately, and including the functions you want to be callable from hero-specific classes):</p>
+<table>
+<tbody>
+<tr class="odd">
+<td><p>BotsInit = require( "game/botsinit" );<br />
+local MyModule = BotsInit.CreateGeneric();<br />
+MyModule.OnStart = OnStart;<br />
+MyModule.OnEnd = OnEnd;<br />
+MyModule.Think = Think;<br />
+MyModule.GetDesire = GetDesire;<br />
+return MyModule;<br />
+</p></td>
+</tr>
+</tbody>
+</table>
+<p>Then in your hero-specific implementation, you can start your file with this:</p>
+<table>
+<tbody>
+<tr class="odd">
+<td><p>mode_defend_ally_generic = dofile( GetScriptDirectory().."/mode_defend_ally_generic" )</p></td>
+</tr>
+</tbody>
+</table>
+<p>which allows you to do things like the following in your bot-specific code:</p>
+<table>
+<tbody>
+<tr class="odd">
+<td><p>mode_defend_ally_generic.OnStart();</p></td>
+</tr>
+</tbody>
+</table>
+<h2 id="appendix_b___list_of_available_constants">Appendix B - List of available constants</h2>
+<h3 id="Bot_modes">Bot Modes</h3>
+<ul>
+<li>BOT_MODE_NONE</li>
+<li>BOT_MODE_LANING</li>
+<li>BOT_MODE_ATTACK</li>
+<li>BOT_MODE_ROAM</li>
+<li>BOT_MODE_RETREAT</li>
+<li>BOT_MODE_SECRET_SHOP</li>
+<li>BOT_MODE_SIDE_SHOP</li>
+<li>BOT_MODE_PUSH_TOWER_TOP</li>
+<li>BOT_MODE_PUSH_TOWER_MID</li>
+<li>BOT_MODE_PUSH_TOWER_BOT</li>
+<li>BOT_MODE_DEFEND_TOWER_TOP</li>
+<li>BOT_MODE_DEFEND_TOWER_MID</li>
+<li>BOT_MODE_DEFEND_TOWER_BOT</li>
+<li>BOT_MODE_ASSEMBLE</li>
+<li>BOT_MODE_TEAM_ROAM</li>
+<li>BOT_MODE_FARM</li>
+<li>BOT_MODE_DEFEND_ALLY</li>
+<li>BOT_MODE_EVASIVE_MANEUVERS</li>
+<li>BOT_MODE_ROSHAN</li>
+<li>BOT_MODE_ITEM</li>
+<li>BOT_MODE_WARD</li>
+</ul>
+<h3 id="Action_desires">Action Desires</h3>
+<p>These can be useful for making sure all action desires are using a common language for talking about their desire.</p>
+<ul>
+<li>BOT_ACTION_DESIRE_NONE - 0.0</li>
+<li>BOT_ACTION_DESIRE_VERYLOW - 0.1</li>
+<li>BOT_ACTION_DESIRE_LOW - 0.25</li>
+<li>BOT_ACTION_DESIRE_MODERATE - 0.5</li>
+<li>BOT_ACTION_DESIRE_HIGH - 0.75</li>
+<li>BOT_ACTION_DESIRE_VERYHIGH - 0.9</li>
+<li>BOT_ACTION_DESIRE_ABSOLUTE - 1.0</li>
+</ul>
+<h3 id="Mode_desires">Mode Desires</h3>
+<p>These can be useful for making sure all mode desires as using a common language for talking about their desire.</p>
+<ul>
+<li>BOT_MODE_DESIRE_NONE" - 0</li>
+<li>BOT_MODE_DESIRE_VERYLOW - 0.1</li>
+<li>BOT_MODE_DESIRE_LOW - 0.25</li>
+<li>BOT_MODE_DESIRE_MODERATE - 0.5</li>
+<li>BOT_MODE_DESIRE_HIGH - 0.75</li>
+<li>BOT_MODE_DESIRE_VERYHIGH - 0.9</li>
+<li>BOT_MODE_DESIRE_ABSOLUTE - 1.0</li>
+</ul>
+<h3 id="Damage_types">Damage Types</h3>
+<ul>
+<li>DAMAGE_TYPE_PHYSICAL - 1</li>
+<li>DAMAGE_TYPE_MAGICAL - 2</li>
+<li>DAMAGE_TYPE_PURE - 4</li>
+<li>DAMAGE_TYPE_HP_REMOVAL - 8</li>
+<li>DAMAGE_TYPE_ALL - 7</li>
+</ul>
+<h3 id="Unit_types">Unit Types</h3>
+<ul>
+<li>UNIT_LIST_ALL</li>
+<li>UNIT_LIST_ALLIES</li>
+<li>UNIT_LIST_ALLIED_HEROES</li>
+<li>UNIT_LIST_ALLIED_CREEPS</li>
+<li>UNIT_LIST_ALLIED_WARDS</li>
+<li>UNIT_LIST_ALLIED_BUILDINGS</li>
+<li>UNIT_LIST_ENEMIES</li>
+<li>UNIT_LIST_ENEMY_HEROES</li>
+<li>UNIT_LIST_ENEMY_CREEPS</li>
+<li>UNIT_LIST_ENEMY_WARDS</li>
+<li>UNIT_LIST_NEUTRAL_CREEPS</li>
+<li>UNIT_LIST_ENEMY_BUILDINGS</li>
+</ul>
+<h3 id="Attribute_types">Attribute Types</h3>
+<ul>
+<li>ATTRIBUTE_INVALID - -1</li>
+<li>ATTRIBUTE_STRENGTH - 0</li>
+<li>ATTRIBUTE_AGILITY - 1</li>
+<li>ATTRIBUTE_INTELLECT - 2 </li>
+</ul>
+<h3 id="Item_purchase_results">Item Purchase Results</h3>
+<ul>
+<li>PURCHASE_ITEM_SUCCESS</li>
+<li>PURCHASE_ITEM_OUT_OF_STOCK</li>
+<li>PURCHASE_ITEM_DISALLOWED_ITEM</li>
+<li>PURCHASE_ITEM_INSUFFICIENT_GOLD</li>
+<li>PURCHASE_ITEM_NOT_AT_HOME_SHOP</li>
+<li>PURCHASE_ITEM_NOT_AT_SIDE_SHOP</li>
+<li>PURCHASE_ITEM_NOT_AT_SECRET_SHOP</li>
+<li>PURCHASE_ITEM_INVALID_ITEM_NAME</li>
+</ul>
+<h3 id="Game_modes">Game Modes</h3>
+<ul>
+<li>GAMEMODE_NONE</li>
+<li>GAMEMODE_AP</li>
+<li>GAMEMODE_CM</li>
+<li>GAMEMODE_RD</li>
+<li>GAMEMODE_SD</li>
+<li>GAMEMODE_AR</li>
+<li>GAMEMODE_REVERSE_CM</li>
+<li>GAMEMODE_MO</li>
+<li>GAMEMODE_CD</li>
+<li>GAMEMODE_ABILITY_DRAFT</li>
+<li>GAMEMODE_ARDM</li>
+<li>GAMEMODE_1V1MID</li>
+<li>GAMEMODE_ALL_DRAFT (aka Ranked All Pick)</li>
+</ul>
+<h3 id="Teams">Teams</h3>
+<ul>
+<li>TEAM_RADIANT - 2</li>
+<li>TEAM_DIRE - 3</li>
+<li>TEAM_NEUTRAL - 4</li>
+<li>TEAM_NONE</li>
+</ul>
+<h3 id="Lanes">Lanes</h3>
+<ul>
+<li>LANE_NONE</li>
+<li>LANE_TOP</li>
+<li>LANE_MID</li>
+<li>LANE_BOT</li>
+</ul>
+<h3 id="Game_states">Game States</h3>
+<ul>
+<li>GAME_STATE_INIT</li>
+<li>GAME_STATE_WAIT_FOR_PLAYERS_TO_LOAD</li>
+<li>GAME_STATE_HERO_SELECTION</li>
+<li>GAME_STATE_STRATEGY_TIME</li>
+<li>GAME_STATE_PRE_GAME</li>
+<li>GAME_STATE_GAME_IN_PROGRESS</li>
+<li>GAME_STATE_POST_GAME</li>
+<li>GAME_STATE_DISCONNECT</li>
+<li>GAME_STATE_TEAM_SHOWCASE</li>
+<li>GAME_STATE_CUSTOM_GAME_SETUP</li>
+<li>GAME_STATE_WAIT_FOR_MAP_TO_LOAD</li>
+<li>GAME_STATE_LAST</li>
+</ul>
+<h3 id="Hero_pick_states">Hero Pick States</h3>
+<ul>
+<li>HEROPICK_STATE_NONE</li>
+<li>HEROPICK_STATE_AP_SELECT</li>
+<li>HEROPICK_STATE_SD_SELECT</li>
+<li>HEROPICK_STATE_CM_INTRO</li>
+<li>HEROPICK_STATE_CM_CAPTAINPICK</li>
+<li>HEROPICK_STATE_CM_BAN1</li>
+<li>HEROPICK_STATE_CM_BAN2</li>
+<li>HEROPICK_STATE_CM_BAN3</li>
+<li>HEROPICK_STATE_CM_BAN4</li>
+<li>HEROPICK_STATE_CM_BAN5</li>
+<li>HEROPICK_STATE_CM_BAN6</li>
+<li>HEROPICK_STATE_CM_BAN7</li>
+<li>HEROPICK_STATE_CM_BAN8</li>
+<li>HEROPICK_STATE_CM_BAN9</li>
+<li>HEROPICK_STATE_CM_BAN10</li>
+<li>HEROPICK_STATE_CM_SELECT1</li>
+<li>HEROPICK_STATE_CM_SELECT2</li>
+<li>HEROPICK_STATE_CM_SELECT3</li>
+<li>HEROPICK_STATE_CM_SELECT4</li>
+<li>HEROPICK_STATE_CM_SELECT5</li>
+<li>HEROPICK_STATE_CM_SELECT6</li>
+<li>HEROPICK_STATE_CM_SELECT7</li>
+<li>HEROPICK_STATE_CM_SELECT8</li>
+<li>HEROPICK_STATE_CM_SELECT9</li>
+<li>HEROPICK_STATE_CM_SELECT10</li>
+<li>HEROPICK_STATE_CM_PICK</li>
+<li>HEROPICK_STATE_AR_SELECT</li>
+<li>HEROPICK_STATE_MO_SELECT</li>
+<li>HEROPICK_STATE_FH_SELECT</li>
+<li>HEROPICK_STATE_CD_INTRO</li>
+<li>HEROPICK_STATE_CD_CAPTAINPICK</li>
+<li>HEROPICK_STATE_CD_BAN1</li>
+<li>HEROPICK_STATE_CD_BAN2</li>
+<li>HEROPICK_STATE_CD_BAN3</li>
+<li>HEROPICK_STATE_CD_BAN4</li>
+<li>HEROPICK_STATE_CD_BAN5</li>
+<li>HEROPICK_STATE_CD_BAN6</li>
+<li>HEROPICK_STATE_CD_SELECT1</li>
+<li>HEROPICK_STATE_CD_SELECT2</li>
+<li>HEROPICK_STATE_CD_SELECT3</li>
+<li>HEROPICK_STATE_CD_SELECT4</li>
+<li>HEROPICK_STATE_CD_SELECT5</li>
+<li>HEROPICK_STATE_CD_SELECT6</li>
+<li>HEROPICK_STATE_CD_SELECT7</li>
+<li>HEROPICK_STATE_CD_SELECT8</li>
+<li>HEROPICK_STATE_CD_SELECT9</li>
+<li>HEROPICK_STATE_CD_SELECT10</li>
+<li>HEROPICK_STATE_CD_PICK</li>
+<li>HEROPICK_STATE_BD_SELECT</li>
+<li>HERO_PICK_STATE_ABILITY_DRAFT_SELECT</li>
+<li>HERO_PICK_STATE_ARDM_SELECT</li>
+<li>HEROPICK_STATE_ALL_DRAFT_SELECT</li>
+<li>HERO_PICK_STATE_CUSTOMGAME_SELECT</li>
+<li>HEROPICK_STATE_SELECT_PENALTY</li>
+</ul>
+<h3 id="Rune_types">Rune Types</h3>
+<ul>
+<li>RUNE_INVALID (used as return value) - -1</li>
+<li>RUNE_DOUBLEDAMAGE - 0</li>
+<li>RUNE_HASTE - 1</li>
+<li>RUNE_ILLUSION - 2</li>
+<li>RUNE_INVISIBILITY - 3</li>
+<li>RUNE_REGENERATION - 4</li>
+<li>RUNE_BOUNTY - 5</li>
+<li>RUNE_ARCANE - 6</li>
+</ul>
+<h3 id="Rune_status">Rune Status</h3>
+<ul>
+<li>RUNE_STATUS_UNKNOWN</li>
+<li>RUNE_STATUS_AVAILABLE</li>
+<li>RUNE_STATUS_MISSING</li>
+</ul>
+<h3 id="Rune_locations">Rune Locations</h3>
+<ul>
+<li>RUNE_POWERUP_1</li>
+<li>RUNE_POWERUP_2</li>
+<li>RUNE_BOUNTY_1</li>
+<li>RUNE_BOUNTY_2</li>
+<li>RUNE_BOUNTY_3</li>
+<li>RUNE_BOUNTY_4</li>
+</ul>
+<h3 id="Item_slot_types">Item Slot Types</h3>
+<ul>
+<li>ITEM_SLOT_TYPE_INVALID</li>
+<li>ITEM_SLOT_TYPE_MAIN</li>
+<li>ITEM_SLOT_TYPE_BACKPACK</li>
+<li>ITEM_SLOT_TYPE_STASH</li>
+</ul>
+<h3 id="Inventory_slots">Item Slots</h3>
+<ul>
+    <li>DOTA_ITEM_SLOT_1 = 0</li>
+    <li>DOTA_ITEM_SLOT_2 = 1</li>
+    <li>DOTA_ITEM_SLOT_3 = 2</li>
+    <li>DOTA_ITEM_SLOT_4 = 3</li>
+    <li>DOTA_ITEM_SLOT_5 = 4</li>
+    <li>DOTA_ITEM_SLOT_6 = 5</li>
+    <li>DOTA_ITEM_SLOT_7 = 6</li>
+    <li>DOTA_ITEM_SLOT_8 = 7</li>
+    <li>DOTA_ITEM_SLOT_9 = 8</li>
+    <li>DOTA_STASH_SLOT_1 = 9</li>
+    <li>DOTA_STASH_SLOT_2 = 10</li>
+    <li>DOTA_STASH_SLOT_3 = 11</li>
+    <li>DOTA_STASH_SLOT_4 = 12</li>
+    <li>DOTA_STASH_SLOT_5 = 13</li>
+    <li>DOTA_STASH_SLOT_6 = 14</li>
+</ul>
+<h3 id="Action_types">Action Types</h3>
+<ul>
+<li>BOT_ACTION_TYPE_NONE</li>
+<li>BOT_ACTION_TYPE_IDLE</li>
+<li>BOT_ACTION_TYPE_MOVE_TO</li>
+<li>BOT_ACTION_TYPE_MOVE_TO_DIRECTLY</li>
+<li>BOT_ACTION_TYPE_ATTACK</li>
+<li>BOT_ACTION_TYPE_ATTACKMOVE</li>
+<li>BOT_ACTION_TYPE_USE_ABILITY</li>
+<li>BOT_ACTION_TYPE_PICK_UP_RUNE</li>
+<li>BOT_ACTION_TYPE_PICK_UP_ITEM</li>
+<li>BOT_ACTION_TYPE_DROP_ITEM</li>
+<li>BOT_ACTION_TYPE_SHRINE</li>
+<li>BOT_ACTION_TYPE_DELAY</li>
+</ul>
+<h3 id="Courier_actions_and_states">Courier Actions and States</h3>
+<ul>
+<li>COURIER_ACTION_BURST</li>
+<li>COURIER_ACTION_ENEMY_SECRET_SHOP</li>
+<li>COURIER_ACTION_RETURN</li>
+<li>COURIER_ACTION_SECRET_SHOP</li>
+<li>COURIER_ACTION_SIDE_SHOP</li>
+<li>COURIER_ACTION_SIDE_SHOP2</li>
+<li>COURIER_ACTION_TAKE_STASH_ITEMS</li>
+<li>COURIER_ACTION_TAKE_AND_TRANSFER_ITEMS</li>
+<li>COURIER_ACTION_TRANSFER_ITEMS</li>
+</ul>
+<ul>
+<li>COURIER_STATE_IDLE</li>
+<li>COURIER_STATE_AT_BASE</li>
+<li>COURIER_STATE_MOVING</li>
+<li>COURIER_STATE_DELIVERING_ITEMS</li>
+<li>COURIER_STATE_RETURNING_TO_BASE</li>
+<li>COURIER_STATE_DEAD</li>
+</ul>
+<h3 id="Towers">Towers</h3>
+<ul>
+<li>TOWER_TOP_1</li>
+<li>TOWER_TOP_2</li>
+<li>TOWER_TOP_3</li>
+<li>TOWER_MID_1</li>
+<li>TOWER_MID_2</li>
+<li>TOWER_MID_3</li>
+<li>TOWER_BOT_1</li>
+<li>TOWER_BOT_2</li>
+<li>TOWER_BOT_3</li>
+<li>TOWER_BASE_1</li>
+<li>TOWER_BASE_2</li>
+</ul>
+<h3 id="Barracks">Barracks</h3>
+<ul>
+<li>BARRACKS_TOP_MELEE</li>
+<li>BARRACKS_TOP_RANGED</li>
+<li>BARRACKS_MID_MELEE</li>
+<li>BARRACKS_MID_RANGED</li>
+<li>BARRACKS_BOT_MELEE</li>
+<li>BARRACKS_BOT_RANGED</li>
+</ul>
+<h3 id="Shrines">Shrines</h3>
+<ul>
+<li>SHRINE_BASE_1</li>
+<li>SHRINE_BASE_2</li>
+<li>SHRINE_BASE_3</li>
+<li>SHRINE_BASE_4</li>
+<li>SHRINE_BASE_5</li>
+<li>SHRINE_JUNGLE_1</li>
+<li>SHRINE_JUNGLE_2</li>
+</ul>
+<h3 id="Shops">Shops</h3>
+<ul>
+<li>SHOP_HOME</li>
+<li>SHOP_SIDE</li>
+<li>SHOP_SECRET</li>
+<li>SHOP_SIDE2</li>
+<li>SHOP_SECRET2</li>
+</ul>
+<h3 id="Ability_target_teams">Ability Target Teams</h3>
+<ul>
+<li>ABILITY_TARGET_TEAM_NONE</li>
+<li>ABILITY_TARGET_TEAM_FRIENDLY</li>
+<li>ABILITY_TARGET_TEAM_ENEMY</li>
+</ul>
+<h3 id="Ability_target_types">Ability Target Types</h3>
+<ul>
+<li>ABILITY_TARGET_TYPE_NONE</li>
+<li>ABILITY_TARGET_TYPE_HERO</li>
+<li>ABILITY_TARGET_TYPE_CREEP</li>
+<li>ABILITY_TARGET_TYPE_BUILDING</li>
+<li>ABILITY_TARGET_TYPE_COURIER</li>
+<li>ABILITY_TARGET_TYPE_OTHER</li>
+<li>ABILITY_TARGET_TYPE_TREE</li>
+<li>ABILITY_TARGET_TYPE_BASIC</li>
+<li>ABILITY_TARGET_TYPE_ALL</li>
+</ul>
+<h3 id="Ability_target_flags">Ability Target Flags</h3>
+<ul>
+<li>ABILITY_TARGET_FLAG_NONE</li>
+<li>ABILITY_TARGET_FLAG_RANGED_ONLY</li>
+<li>ABILITY_TARGET_FLAG_MELEE_ONLY</li>
+<li>ABILITY_TARGET_FLAG_DEAD</li>
+<li>ABILITY_TARGET_FLAG_MAGIC_IMMUNE_ENEMIES</li>
+<li>ABILITY_TARGET_FLAG_NOT_MAGIC_IMMUNE_ALLIES</li>
+<li>ABILITY_TARGET_FLAG_INVULNERABLE</li>
+<li>ABILITY_TARGET_FLAG_FOW_VISIBLE</li>
+<li>ABILITY_TARGET_FLAG_NO_INVIS</li>
+<li>ABILITY_TARGET_FLAG_NOT_ANCIENTS</li>
+<li>ABILITY_TARGET_FLAG_PLAYER_CONTROLLED</li>
+<li>ABILITY_TARGET_FLAG_NOT_DOMINATED</li>
+<li>ABILITY_TARGET_FLAG_NOT_SUMMONED</li>
+<li>ABILITY_TARGET_FLAG_NOT_ILLUSIONS</li>
+<li>ABILITY_TARGET_FLAG_NOT_ATTACK_IMMUNE</li>
+<li>ABILITY_TARGET_FLAG_MANA_ONLY</li>
+<li>ABILITY_TARGET_FLAG_CHECK_DISABLE_HELP</li>
+<li>ABILITY_TARGET_FLAG_NOT_CREEP_HERO</li>
+<li>ABILITY_TARGET_FLAG_OUT_OF_WORLD</li>
+<li>ABILITY_TARGET_FLAG_NOT_NIGHTMARED</li>
+<li>ABILITY_TARGET_FLAG_PREFER_ENEMIES</li>
+</ul>
+<h3 id="Ability_behavior_bitfields">Ability Behavior Bitfields</h3>
+<ul>
+<li>ABILITY_BEHAVIOR_NONE</li>
+<li>ABILITY_BEHAVIOR_HIDDEN</li>
+<li>ABILITY_BEHAVIOR_PASSIVE</li>
+<li>ABILITY_BEHAVIOR_NO_TARGET</li>
+<li>ABILITY_BEHAVIOR_UNIT_TARGET</li>
+<li>ABILITY_BEHAVIOR_POINT</li>
+<li>ABILITY_BEHAVIOR_AOE</li>
+<li>ABILITY_BEHAVIOR_NOT_LEARNABLE</li>
+<li>ABILITY_BEHAVIOR_CHANNELLED</li>
+<li>ABILITY_BEHAVIOR_ITEM</li>
+<li>ABILITY_BEHAVIOR_TOGGLE</li>
+<li>ABILITY_BEHAVIOR_DIRECTIONAL</li>
+<li>ABILITY_BEHAVIOR_IMMEDIATE</li>
+<li>ABILITY_BEHAVIOR_AUTOCAST</li>
+<li>ABILITY_BEHAVIOR_OPTIONAL_UNIT_TARGET</li>
+<li>ABILITY_BEHAVIOR_OPTIONAL_POINT</li>
+<li>ABILITY_BEHAVIOR_OPTIONAL_NO_TARGET</li>
+<li>ABILITY_BEHAVIOR_AURA</li>
+<li>ABILITY_BEHAVIOR_ATTACK</li>
+<li>ABILITY_BEHAVIOR_DONT_RESUME_MOVEMENT</li>
+<li>ABILITY_BEHAVIOR_ROOT_DISABLES</li>
+<li>ABILITY_BEHAVIOR_UNRESTRICTED</li>
+<li>ABILITY_BEHAVIOR_IGNORE_PSEUDO_QUEUE</li>
+<li>ABILITY_BEHAVIOR_IGNORE_CHANNEL</li>
+<li>ABILITY_BEHAVIOR_DONT_CANCEL_MOVEMENT</li>
+<li>ABILITY_BEHAVIOR_DONT_ALERT_TARGET</li>
+<li>ABILITY_BEHAVIOR_DONT_RESUME_ATTACK</li>
+<li>ABILITY_BEHAVIOR_NORMAL_WHEN_STOLEN</li>
+<li>ABILITY_BEHAVIOR_IGNORE_BACKSWING</li>
+<li>ABILITY_BEHAVIOR_RUNE_TARGET</li>
+<li>ABILITY_BEHAVIOR_DONT_CANCEL_CHANNEL</li>
+<li>ABILITY_BEHAVIOR_VECTOR_TARGETING</li>
+<li>ABILITY_BEHAVIOR_LAST_RESORT_POINT</li>
+</ul>
+<h3 id="Misc_constants">Misc Constants</h3>
+<ul>
+<li>GLYPH_COOLDOWN</li>
+</ul>
+<h3 id="Animation_activities">Animation Activities</h3>
+<ul>
+<li>ACTIVITY_IDLE</li>
+<li>ACTIVITY_IDLE_RARE</li>
+<li>ACTIVITY_RUN</li>
+<li>ACTIVITY_ATTACK</li>
+<li>ACTIVITY_ATTACK2</li>
+<li>ACTIVITY_ATTACK_EVENT</li>
+<li>ACTIVITY_DIE</li>
+<li>ACTIVITY_FLINCH</li>
+<li>ACTIVITY_FLAIL</li>
+<li>ACTIVITY_DISABLED</li>
+<li>ACTIVITY_CAST_ABILITY_1</li>
+<li>ACTIVITY_CAST_ABILITY_2</li>
+<li>ACTIVITY_CAST_ABILITY_3</li>
+<li>ACTIVITY_CAST_ABILITY_4</li>
+<li>ACTIVITY_CAST_ABILITY_5</li>
+<li>ACTIVITY_CAST_ABILITY_6</li>
+<li>ACTIVITY_OVERRIDE_ABILITY_1</li>
+<li>ACTIVITY_OVERRIDE_ABILITY_2</li>
+<li>ACTIVITY_OVERRIDE_ABILITY_3</li>
+<li>ACTIVITY_OVERRIDE_ABILITY_4</li>
+<li>ACTIVITY_CHANNEL_ABILITY_1</li>
+<li>ACTIVITY_CHANNEL_ABILITY_2</li>
+<li>ACTIVITY_CHANNEL_ABILITY_3</li>
+<li>ACTIVITY_CHANNEL_ABILITY_4</li>
+<li>ACTIVITY_CHANNEL_ABILITY_5</li>
+<li>ACTIVITY_CHANNEL_ABILITY_6</li>
+<li>ACTIVITY_CHANNEL_END_ABILITY_1</li>
+<li>ACTIVITY_CHANNEL_END_ABILITY_2</li>
+<li>ACTIVITY_CHANNEL_END_ABILITY_3</li>
+<li>ACTIVITY_CHANNEL_END_ABILITY_4</li>
+<li>ACTIVITY_CHANNEL_END_ABILITY_5</li>
+<li>ACTIVITY_CHANNEL_END_ABILITY_6</li>
+<li>ACTIVITY_CONSTANT_LAYER</li>
+<li>ACTIVITY_CAPTURE</li>
+<li>ACTIVITY_SPAWN</li>
+<li>ACTIVITY_KILLTAUNT</li>
+<li>ACTIVITY_TAUNT</li>
+</ul>
