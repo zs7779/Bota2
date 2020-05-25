@@ -63,6 +63,7 @@ function CDOTA_Bot_Script:GetKillRange()
     for _, ability in pairs(self.abilities) do
         if ability.handle:IsTrained() and (ability.timer == enums.timer.SLOW or ability.timer == enums.timer.STUN) then
             ability_range = math.max(ability_range, ability.cast_range);
+            -- todo: considier blink
         end
     end
     return math.min(ability_range, 1600);
@@ -123,6 +124,7 @@ function CDOTA_Bot_Script:FreeMana()
 end
 
 function CDOTA_Bot_Script:FreeAbility(ability)
+    -- todo: free ability needs a opposite function in ability usage. if I can rotate then I save free ability, otherwise use all mana to farm
     return ability ~= nil and ability:IsFullyCastable() and ability:GetCooldown() < 20 and ability:GetManaCost() < self:FreeMana();
 end
 
@@ -170,7 +172,7 @@ function CDOTA_Bot_Script:EstimateFriendsDisableTime(distance)
     return stun_factor * (stun_time + slow_factor * slow_time);
 end
 
-function CDOTA_Bot_Script:EstimatePower(disable_time)
+function CDOTA_Bot_Script:EstimatePower(available)
     -- mean to be a rough estimate, better than GetOffensivePower, probably worse than GetEstimatedDamageToTarget
     -- still considering if the factors should be args. it would complicate the
     -- power immediately drops after cast stun, problem!
@@ -180,12 +182,10 @@ function CDOTA_Bot_Script:EstimatePower(disable_time)
     local mana_cost = 1;
     if self.abilities ~= nil then
         for _, ability in pairs(self.abilities) do
-            if ability.handle:IsFullyCastable() then
+            if not available or ability.handle:IsFullyCastable() then
                 mana_cost = mana_cost + ability.handle:GetManaCost();
-
-                local ability_damage_type = ability.handle:GetDamageType();
                 local ability_damage = ability.damage;
-                
+                local ability_damage_type = ability.handle:GetDamageType();
                 if ability_damage_type == DAMAGE_TYPE_PHYSICAL then
                     physical_damage = physical_damage + ability_damage;
                 elseif ability_damage_type == DAMAGE_TYPE_MAGICAL then
@@ -196,8 +196,11 @@ function CDOTA_Bot_Script:EstimatePower(disable_time)
             end
         end
     end
-    local total_power = (physical_factor * physical_damage + magic_factor * magic_damage + pure_damage) * (math.min(self:GetMana(), mana_cost) / mana_cost);
-    local disable_time = disable_time or self:EstimateFriendsDisableTime();
+    local total_power = (physical_factor * physical_damage + magic_factor * magic_damage + pure_damage);
+    if available then
+        total_power = total_power * (math.min(self:GetMana(), mana_cost) / mana_cost); -- todo: so on enemy when true still consider mana cost? hmm
+    end
+    local disable_time = self:GetDisableDuration(available);
     local num_attacks = math.max((disable_time + free_attacks) / (self:GetSecondsPerAttack()+0.01), free_attacks);
     total_power = total_power + self:GetAttackDamage() * num_attacks;
     return total_power;    
@@ -244,16 +247,21 @@ function CDOTA_Bot_Script:EstimateFriendsDamageToTarget(distance, target)
     return damage;
 end
 
+function CDOTA_Bot_Script:GetDisableDuration(available)
+    local stun_time = self:GetStunDuration(available);
+    local slow_time = self:GetSlowDuration(available);
+    return stun_factor * (stun_time + slow_factor * slow_time);
+end
+
 function CDOTA_Bot_Script:EstimateEnemiesDisableTime(distance)
     local distance = distance or 1600;
-    local stun_time, slow_time = 0, 0;
+    local disable_time = 0;
     for _, enemy in pairs(self:GetNearbyHeroes(distance, true, BOT_MODE_NONE)) do
         if enemy:IsAlive() then
-            stun_time = stun_time + enemy:GetStunDuration(true);
-            slow_time = slow_time + enemy:GetSlowDuration(true);
+            disable_time = disable_time + enemy:GetDisableDuration(true);
         end
     end
-    return stun_factor * (stun_time + slow_factor * slow_time);
+    return disable_time;
 end
 
 function CDOTA_Bot_Script:EstimateEnemiesDamageToTarget(distance, target)
@@ -525,9 +533,9 @@ function CDOTA_Bot_Script:RefreshNeutralCamp()
     end
 end
 
-function CDOTA_Bot_Script:TimeToReachLocation(location)
+function CDOTA_Bot_Script:TimeToReachLocation(location, speed)
     -- print(GetUnitToLocationDistance(self, location), location)
-    return GetUnitToLocationDistance(self, location) / self:GetCurrentMovementSpeed() * 1.2; -- because path doesnt work!!!!!!!!!!!!!!!!
+    return GetUnitToLocationDistance(self, location) / speed * 1.2; -- because pathing doesnt work!!!!!!!!!!!!!!!!
 end
 
 function CDOTA_Bot_Script:IsAtLocation(location, range)
@@ -553,19 +561,13 @@ function CDOTA_Bot_Script:FindNeutralCamp(pull)
                 end
             else
                 if k == enums.pull_camps[team].small then
-                    local time_to_reach = self:TimeToReachLocation(neutral.location);
+                    local time_to_reach = self:TimeToReachLocation(neutral.location, self:GetCurrentMovementSpeed());
                     local time_to_pull = (DotaTime() + time_to_reach) % 30;
                     -- print(time_to_reach, time_to_pull)
                     if time_to_reach < 15 and time_to_pull > enums.pull_time[team].small - 5 and time_to_pull < enums.pull_time[team].small then
                         -- print("time to reach", time_to_reach, "arrive at", time_to_pull)
                         return neutral;
                     end
-                -- elseif k == enums.pull_camps[team].large then
-                --     local time_to_reach = self:TimeToReachLocation(neutral.location);
-                --     local time_to_pull = (DotaTime() + time_to_reach) % 30;
-                --     if time_to_reach < 30 and time_to_pull < enums.pull_time[team].large and time_to_pull > enums.pull_time[team].large - 10 then
-                --         return neutral;
-                --     end
                 end
             end
         end

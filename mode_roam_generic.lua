@@ -42,7 +42,7 @@ function GetDesire()
             end
         end
     end
-    if this_bot.position == 5 and time < 600 then
+    if this_bot.position == 0 and time < 600 then -- todo: pulling disabled for now
         if this_bot.pull == nil and this_bot.pull_state == nil then
             if not this_bot:WasRecentlyDamagedByAnyHero(1) and not this_bot:WasRecentlyDamagedByCreep(2) then
                 local pull_camp = this_bot:FindNeutralCamp(true);

@@ -369,9 +369,9 @@ ability_item_usage_generic.ability_usage = {
         UseCircleAbility(ability.handle, true, false, ability.cast_range, ability.aoe_radius, ability.cast_delay, 0, ability.target_flags, nil,
             {BOT_MODE_ATTACK, BOT_MODE_RETREAT, BOT_MODE_DEFEND_ALLY, BOT_MODE_EVASIVE_MANEUVERS}, false, 1);
         UseCircleAbility(ability.handle, true, false, ability.cast_range, ability.aoe_radius, ability.cast_delay, 0, ability.target_flags, nil,
-            {BOT_MODE_LANING}, true, 3);
+            {BOT_MODE_LANING}, true, 2);
         UseCircleAbility(ability.handle, true, true, ability.cast_range, ability.aoe_radius, ability.cast_delay, 0, ability.target_flags, nil,
-            {BOT_MODE_FARM}, true, 3);
+            {BOT_MODE_FARM}, true, 2);
     end,
     sandking_epicenter = function (ability)
         UseCircleAbility(ability.handle, true, false, ability.cast_range, ability.aoe_radius, ability.cast_delay, 0, ability.target_flags, nil,

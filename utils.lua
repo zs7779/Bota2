@@ -65,4 +65,22 @@ function utils.GetDistance(a, b) -- maybe its easier to just worke with squared 
 	return math.sqrt((a[1] - b[1]) * (a[1] - b[1]) + (a[2] - b[2]) * (a[2] - b[2]));
 end
 
+function utils.GetTimeToTravel(from_loc, to_loc, speed)
+    local dist = utils.GetDistance(from_loc, to_loc);
+    return dist / speed;
+end
+
+function utils.EnemyPotentialAtLocation(enemy_stat, location)
+    if enemy_stat ~= nil and enemy_stat.last_seen_info ~= nil and enemy_stat.speed ~= nil then
+        local time_to_travel = utils.GetTimeToTravel(enemy_stat.last_seen_info.location, location, enemy_stat.speed);
+        if time_to_travel > enemy_stat.last_seen_info.time_since_seen then
+            return 0;
+        else
+            -- if enemy can get to location in time, and missing less than 30s threat=1x, 40s threat=0.75x, 50s threat=0.6x
+            return 30 / math.max(enemy_stat.last_seen_info.time_since_seen, 1);
+        end
+    end
+    return 0;
+end
+
 return utils;
