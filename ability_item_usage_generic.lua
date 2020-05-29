@@ -327,13 +327,11 @@ ability_item_usage_generic.ability_usage = {
     end,
     sniper_take_aim = function(ability)
         UseCircleBuffAbility(ability.handle, false, ability.cast_range, ability.aoe_radius, ability.cast_delay, ability.target_flags, NoModifier(ability.modifier),
-            {BOT_MODE_ATTACK, BOT_MODE_LANING,
-            BOT_MODE_PUSH_TOWER_TOP, BOT_MODE_PUSH_TOWER_MID, BOT_MODE_PUSH_TOWER_BOT,
-            BOT_MODE_DEFEND_TOWER_TOP, BOT_MODE_DEFEND_TOWER_MID, BOT_MODE_DEFEND_TOWER_BOT}, true, 1);
+            {BOT_MODE_ATTACK, BOT_MODE_DEFEND_TOWER_TOP, BOT_MODE_DEFEND_TOWER_MID, BOT_MODE_DEFEND_TOWER_BOT}, true, 1);
     end,
     sniper_assassinate = function (ability)
         UseUnitAbility(ability.handle, true, false, ability.cast_range, ability.aoe_radius, 0, ability.target_flags, nil,
-            {BOT_MODE_ATTACK, BOT_MODE_DEFEND_ALLY}, false);
+            {BOT_MODE_ATTACK}, false);
         UseUnitAbility(ability.handle, true, false, ability.cast_range, ability.aoe_radius, 0, ability.target_flags, nil,
             {BOT_MODE_LANING}, true);
     end,

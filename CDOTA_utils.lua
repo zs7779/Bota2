@@ -72,6 +72,7 @@ end
 function CDOTA_Bot_Script:EnemyCanInitiateOnSelf(distance)
     local distance = distance or 0;
     for _, enemy in pairs(self:GetNearbyHeroes(math.min(distance, 1600), true, BOT_MODE_NONE)) do
+        print(enemy:GetUnitName(), "kill range", enemy:GetKillRange())
         if enemy:GetKillRange() >= GetUnitToUnitDistance(self, enemy) then
             return true;
         end
@@ -116,7 +117,7 @@ function CDOTA_Bot_Script:GetComboMana()
 end
 
 function CDOTA_Bot_Script:HealthyMana()
-    return math.max(math.min(self:GetComboMana(), self:GetMaxMana()), self:GetMaxMana() * 0.5);
+    return math.max(math.min(self:GetComboMana(), self:GetMaxMana()), self:GetMaxMana() * 0.4);
 end
 
 function CDOTA_Bot_Script:FreeMana()
@@ -125,7 +126,7 @@ end
 
 function CDOTA_Bot_Script:FreeAbility(ability)
     -- todo: free ability needs a opposite function in ability usage. if I can rotate then I save free ability, otherwise use all mana to farm
-    return ability ~= nil and ability:IsFullyCastable() and ability:GetCooldown() < 20 and ability:GetManaCost() < self:FreeMana();
+    return ability ~= nil and ability:IsFullyCastable() and ability:GetCooldown() <= 30 and ability:GetManaCost() < self:FreeMana();
 end
 
 function CDOTA_Bot_Script:TimeToRegenMana(healthy)
@@ -462,28 +463,38 @@ end
 -- TimeSinceDamagedByHero how does it work on illusions?
 
 function CDOTA_Bot_Script:FindFarm()
+    local team = GetTeam();
     local enemy_team = GetOpposingTeam();
-    local neutral_camps = GetNeutralSpawners();
+    local enemies = GetUnitList(UNIT_LIST_ENEMY_HEROES);
     local min_distance = 1000000;
     local my_lane = nil;
     for lane = 1, 3 do
+        local lane_tower = utils.GetLaneTower(enemy_team, enums.lanes[lane]);
         local lane_front_location = GetLaneFrontLocation(enemy_team, enums.lanes[lane], 0);
-        if GetFarmLaneDesire(enums.lanes[lane]) >= enums.safety[self.position] then
-            local lane_distance = GetUnitToLocationDistance(this_bot, lane_front_location);
-            if lane_distance < min_distance then
-                min_distance = lane_distance;
-                my_lane = lane;
+        if GetUnitToLocationDistance(lane_tower, lane_front_location) > 700 and
+           math.abs(GetLaneFrontAmount(enemy_team, enums.lanes[lane], false) - GetLaneFrontAmount(team, enums.lanes[lane], false)) < 0.05 then
+            local farm_lane_desire = GetFarmLaneDesire(enums.lanes[lane]);
+            if self.safety_factor then
+                farm_lane_desire = farm_lane_desire * self.safety_factor;
             end
-        end
-        for _, friend in pairs(GetUnitList(UNIT_LIST_ALLIED_HEROES)) do
-            -- print(self:GetUnitName(), friend:GetUnitName(), GetUnitToLocationDistance(friend, lane_front_location), GetUnitToLocationDistance(self, lane_front_location))
-            if friend ~= self and friend.is_initialized and friend.position < self.position and 
-               (friend.farm_lane ~= nil and friend.farm_lane == my_lane or GetUnitToLocationDistance(friend, lane_front_location) < GetUnitToLocationDistance(self, lane_front_location)) then
-                my_lane = nil;
+            if farm_lane_desire >= enums.safety[self.position] then
+                local lane_distance = GetUnitToLocationDistance(this_bot, lane_front_location);
+                if lane_distance < min_distance then
+                    min_distance = lane_distance;
+                    my_lane = lane;
+                end
+            end
+            -- print(self:GetUnitName(), my_lane)
+            for _, friend in pairs(GetUnitList(UNIT_LIST_ALLIED_HEROES)) do
+                if friend ~= self and friend.is_initialized and friend.position < self.position and 
+                (friend.farm_lane ~= nil and friend.farm_lane == my_lane) then
+                    -- print(self:GetUnitName(), friend.position, self.position, friend.farm_lane, my_lane)
+                    my_lane = nil;
+                end
             end
         end
     end
-    self.farm_lane = enums.lanes[lane];
+    self.farm_lane = enums.lanes[my_lane];
     -- { { string, vector }, ... } GetNeutralSpawners() 
 end
 
@@ -548,14 +559,14 @@ function CDOTA_Bot_Script:FindNeutralCamp(pull)
     end
     local team = GetTeam();
     local enemy_team = GetOpposingTeam();
-    local min_distance = 1000000;
+    local min_distance = 10000;
     local my_neutral = nil;
-
+    -- todo: add enemy potential danger
     for k, neutral in pairs(self.neutral_camps) do
         if not neutral.dead and not neutral.blocked then
             if not pull then
                 local distance = GetUnitToLocationDistance(self, neutral.location);
-                if distance < min_distance then
+                if (self:GetLevel() > 10 or neutral.type ~= 'ancient') and distance < min_distance and #self:GetNearbyHeroes(1200, true, BOT_MODE_NONE) == 0 then
                     min_distance = distance;
                     my_neutral = neutral;
                 end
@@ -587,6 +598,29 @@ function CDOTA_Bot_Script:LastHit(creeps, damage)
     end
 end
 
+function CDOTA_Bot_Script:MoveToLocationOnPath(location)
+    -- todo: this is apparently bad because every function call creates the local function again, but dunno what else to do
+    local function MoveToWaypoint(distance, table_length_I_assume, waypoints)
+        if distance > 0 and waypoints ~= nil and #waypoints > 0 then
+            self:Action_MovePath(waypoints);
+        end
+    end
+    GeneratePath(self:GetLocation(), location, GetAvoidanceZones(), MoveToWaypoint);
+end
+
+function CDOTA_Bot_Script:MoveTowardBase(distance)
+    local base = GetAncient(self:GetTeam());
+    self:MoveToLocationOnPath(base:GetLocation());
+end
+
+function CDOTA_Bot_Script:IsBeingTargetedBy(enemies)
+    for _, enemy in pairs(enemies) do
+        if enemy:GetAttackTarget() ~= nil and enemy:GetAttackTarget() == this_bot then
+            print(this_bot:GetUnitName().." attacked by "..enemy:GetUnitName())
+        end
+    end
+end
+
 function CDOTA_Bot_Script:FarmCreeps(creeps, damage)
     if creeps ~= nil and #creeps > 0 then
         for _, creep in pairs(creeps) do
@@ -596,16 +630,12 @@ function CDOTA_Bot_Script:FarmCreeps(creeps, damage)
                 return;
             end
         end
-        self:Action_AttackMove(creeps[1]:GetLocation());
+        -- if GetUnitToLocationDistance(self, creeps[1]:GetLocation()) > self:GetAttackRange() then
+            -- self:Action_AttackMove(creeps[1]:GetLocation());
+        -- else
+            self:Action_AttackUnit(creeps[1], false);
+            return;
+        -- end
     end
-end
-
-function CDOTA_Bot_Script:MoveToLocationOnPath(location)
-    -- todo: this is apparently bad because every function call creates the local function again, but dunno what else to do
-    local function MoveToWaypoint(distance, table_length_I_assume, waypoints)
-        if distance > 0 and waypoints ~= nil and #waypoints > 0 then
-            self:Action_MovePath(waypoints);
-        end
-    end
-    GeneratePath(self:GetLocation(), location, GetAvoidanceZones(), MoveToWaypoint);
+    print(self:GetUnitName(), "no creeps at all")
 end

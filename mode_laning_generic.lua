@@ -13,9 +13,6 @@ function GetDesire()
     if not this_bot:IsAlive() then
         return 0;
     end
-    if time > 600 then
-        return 0;
-    end
 
     local this_bot_level = this_bot:GetLevel();
     local lane_front = GetLaneFrontLocation(this_bot:GetTeam(), this_bot:GetAssignedLane(), 0);
@@ -29,11 +26,11 @@ function GetDesire()
     if time < 0 then
         return enums.mode_desire.laning;
     end
-    if time < 600 and this_bot_level <= 6 then
+    if this_bot_level <= 7 then
         -- Time < 5 minutes or level < 7
         -- if lane is not too far from tower
         -- and if laning enemy is not too strong
-        if this_bot_tower ~= nil and GetUnitToLocationDistance(this_bot_tower, lane_front) < 5000 then
+        -- if GetUnitToLocationDistance(this_bot_tower, lane_front) < 5000 then
             local lane_danger = 0;
             lane_danger = this_bot_tower:EstimateEnemiesDamageToTarget(1600, this_bot);
             if lane_danger < enums.stupidity * this_bot:GetHealth() then
@@ -53,7 +50,7 @@ function GetDesire()
                     return enums.mode_desire.laning;
                 end
             end
-        end
+        -- end
     end
     -- GetAssignedLane() 
     -- vector GetLaneFrontLocation( nTeam, nLane, fDeltaFromFront ) 

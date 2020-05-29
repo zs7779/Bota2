@@ -112,6 +112,7 @@ function Think()
                         end
                     end
                     for _, c in pairs(friend_creeps) do
+                        -- todo: use GetAttackTarget instead
                         if GetUnitToUnitDistance(c, neutral) < 500 then
                             this_bot.pull_state = {["state"] = "success", ["time"] = time + 15};
                             -- print("pull good")

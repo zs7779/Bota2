@@ -6,10 +6,16 @@ require(GetScriptDirectory().."/CDOTA_utils");
 local update_time = 0;
 local enemy_heroes_status = {};
 local friend_heroes_status = {};
+local friends_mean_health = 0;
 local we_have_aegis = false;
+local roshan_time = 0;
+local time;
+local team;
+local enemy_team;
+local game_started = false;
 
 function UpdateEnemyHeroes()
-    -- update any enemy you can see
+    -- update any enemy you can see, OK to use sparsely. every 5 second?
     local enemy_heroes = GetUnitList( UNIT_LIST_ENEMY_HEROES );
     local current_status = {};
     for _, enemy in pairs(enemy_heroes) do
@@ -34,50 +40,78 @@ function UpdateEnemyHeroes()
     end
 end
 
+function UpdateFriendHeroes()
+    -- update any enemy you can see, OK to use sparsely. every 5 second?
+    local friend_heroes = GetUnitList( UNIT_LIST_ALLIED_HEROES );
+    local total_health, total_friends = 0, 0;
+    for _, friend in pairs(friend_heroes) do
+        local friend_id = friend:GetPlayerID();
+        if IsHeroAlive(friend_id) then
+            local stat = {handle = friend, health = friend:GetHealth(), max_health = friend:GetMaxHealth(), power = friend:EstimatePower(true),
+                          speed = friend:GetCurrentMovementSpeed(), networth = friend:GetNetWorth()};
+            total_health = total_health + stat.max_health;
+            total_friends = total_friends + 1;
+            friend_heroes_status[friend_id] = stat;
+        end
+    end
+    friends_mean_health = total_health / total_friends;
+    for _, friend_stat in pairs(friend_heroes_status) do
+        friend_stat.handle.safety_factor = friend_stat.health / friends_mean_health;
+    end
+end
+
+function TeamThink()
+    if GetGameState() ~= GAME_STATE_GAME_IN_PROGRESS then
+        return;
+    end
+    time = DotaTime();
+    team = GetTeam();
+    enemy_team = GetOpposingTeam();
+    UpdateEnemyHeroes();
+    UpdateFriendHeroes();
+    -- todo: look for enemy warding
+    -- todo: calculate enemy networth
+    game_started = true;
+end
+
 -- Called every frame. Returns floating point values between 0 and 1 that represent the desires for pushing the top, middle, and bottom lanes, respectively.
 function UpdatePushLaneDesires()
-    if GetGameState() ~= GAME_STATE_GAME_IN_PROGRESS then
+    if not game_started then
         return {0, 0, 0};
     end
-    UpdateEnemyHeroes();
-    local time = DotaTime();
-    local team = GetTeam();
-    local enemy_team = GetOpposingTeam();
+    local old_push_desire = {GetPushLaneDesire(LANE_TOP), GetPushLaneDesire(LANE_MID), GetPushLaneDesire(LANE_BOT)};
     -- 1. lane front at tower 2. friend at tower 3. enemy (potential location) at tower assume any enemy missing long enough to be at tower
     local push_desire = {0.5, 0.5, 0.5};
     local friend_heroes = GetUnitList( UNIT_LIST_ALLIED_HEROES );
     -- local lanes = {LANE_TOP, LANE_MID, LANE_BOT};
-    local lane_front_locations = {GetLaneFrontLocation(team, LANE_TOP, 600), GetLaneFrontLocation(team, LANE_MID, 600), GetLaneFrontLocation(team, LANE_BOT, 600)};
-    local enemy_potential = {{}, {}, {}};
-    local cc = {{255,0,0},{0,255,0},{0,0,255}}
+    local lane_front_locations = {GetLaneFrontLocation(team, LANE_TOP, 0), GetLaneFrontLocation(team, LANE_MID, 0), GetLaneFrontLocation(team, LANE_BOT, 0)};
     for lane = 1, 3 do
-        DebugDrawCircle(lane_front_locations[lane], 200, 255,0,0)
+        local enemy_potential = {};
+        -- DebugDrawCircle(lane_front_locations[lane], 200, 255,0,0)
         for enemy_id, enemy_stat in pairs(enemy_heroes_status) do
             local enemy = enemy_stat.handle;
             if IsHeroAlive(enemy_id) then
-                local enemy_distance = GetUnitToLocationDistance(enemy, lane_front_locations[lane]);
-                if enemy_distance > 0 and enemy_distance < 2000 then
-                    enemy_potential[lane][enemy_id] = 256;
-                elseif enemy_potential[lane][enemy_id] == nil then
-                    enemy_potential[lane][enemy_id] = GetUnitPotentialValue(enemy, lane_front_locations[lane], 2000);
+                if enemy_potential[enemy_id] == nil then
+                    enemy_potential[enemy_id] = utils.EnemyPotentialAtLocation(enemy_stat, lane_front_locations[lane], 2000);
                 else
-                    enemy_potential[lane][enemy_id] = math.max(enemy_potential[lane][enemy_id], GetUnitPotentialValue(enemy, lane_front_locations[lane], 2000));
+                    enemy_potential[enemy_id] = math.max(enemy_potential[enemy_id], utils.EnemyPotentialAtLocation(enemy_stat, lane_front_locations[lane], 2000));
                 end
             end
         end
-        for eid, ep in pairs(enemy_potential[lane]) do
-            DebugDrawText(0+lane*100, 0+eid*20,tostring(ep),cc[lane][1],cc[lane][2],cc[lane][3])
-            if ep > 0 then
-                if ep < 256 then
-                    print(lane, eid, GetSelectedHeroName(eid), "potential", ep)
-                end
-                push_desire[lane] = push_desire[lane] - 0.1;
+        
+        for eid, ep in pairs(enemy_potential) do
+            DebugDrawText(0+lane*100, 0+eid*20,tostring(ep),255,0,0)
+            if ep > 0.1 then
+                -- if ep < 1 then
+                --     print(lane, GetSelectedHeroName(eid), "pt", ep)
+                -- end
+                push_desire[lane] = push_desire[lane] - 0.1 * ep;
             end
         end
-        local siege = time > 1200 and 0.1 or 0.08;
+        local siege = time > 1200 and 1 or 0.8;
         for _, friend in pairs(friend_heroes) do
             if not siege and friend:GetActiveMode() == enums.push_modes[lane] then
-                for _, creep in pairs(friend:GetNearbyCreeps(900, false)) do
+                for _, creep in pairs(friend:GetNearbyCreeps(1600, false)) do
                     if creep:IsAlive() and creep:GetUnitName() == enums.siege_creep_name[team] then
                         siege = 1;
                     end
@@ -86,118 +120,92 @@ function UpdatePushLaneDesires()
         end
         for fid, friend in pairs(friend_heroes) do
             if friend:IsAlive() and friend:GetActiveMode() ~= BOT_MODE_RETREAT and GetUnitToLocationDistance(friend, lane_front_locations[lane]) < 1600 then
-                push_desire[lane] = push_desire[lane] + siege;
+                push_desire[lane] = push_desire[lane] + siege * 0.1;
                 -- print(fid,friend:GetUnitName(),push_desire[lane])
             end
         end
         push_desire[lane] = push_desire[lane] * enums.tower_importance[team][lane];
-        if push_desire[lane] < 0 or push_desire[lane] > 1 then
-            print(push_desire[lane])
-        end
+        push_desire[lane] = old_push_desire[lane] + (push_desire[lane] - old_push_desire[lane]) * 0.1;
     end
     return push_desire;
 end
 -- Called every frame. Returns floating point values between 0 and 1 that represent the desires for defending the top, middle, and bottom lanes, respectively.
 function UpdateDefendLaneDesires()
-    if GetGameState() ~= GAME_STATE_GAME_IN_PROGRESS then
+    if not game_started then
         return {0, 0, 0};
     end
-    local team = GetTeam();
-    local enemy_team = GetOpposingTeam();
+    local old_defend_desire = {GetDefendLaneDesire(LANE_TOP), GetDefendLaneDesire(LANE_MID), GetDefendLaneDesire(LANE_BOT)};
+    -- 1. lane front at tower 2. friend at tower 3. enemy (potential location) at tower assume any enemy missing long enough to be at tower
     local defend_desire = {0, 0, 0};
-    local enemy_heroes = GetUnitList( UNIT_LIST_ENEMY_HEROES );
     local friend_heroes = GetUnitList( UNIT_LIST_ALLIED_HEROES );
-    local enemy_distances = {};
     for lane = 1, 3 do
         local tower = utils.GetLaneTower(team, lane);
-        if tower ~= nil then
-            for _, enemy in pairs(enemy_heroes) do
-                if enemy:IsAlive() and enemy:CanBeSeen() then
-                    local enemy_id = enemy:GetPlayerID();
-                    if enemy_distances[enemy_id] == nil then
-                        enemy_distances[enemy_id] = GetUnitToUnitDistance(enemy, tower);
-                    else
-                        enemy_distances[enemy_id] = math.min(enemy_distances[enemy_id], GetUnitToUnitDistance(enemy, tower));
-                    end
+        local enemy_potential = {};
+        -- DebugDrawCircle(lane_front_locations[lane], 200, 255,0,0)
+        for enemy_id, enemy_stat in pairs(enemy_heroes_status) do
+            local enemy = enemy_stat.handle;
+            if IsHeroAlive(enemy_id) then
+                if enemy_potential[enemy_id] == nil then
+                    enemy_potential[enemy_id] = utils.EnemyPotentialAtLocation(enemy_stat, tower:GetLocation(), 2000);
+                else
+                    enemy_potential[enemy_id] = math.max(enemy_potential[enemy_id], utils.EnemyPotentialAtLocation(enemy_stat, tower:GetLocation(), 2000));
                 end
             end
-            for _, enemy_distance in pairs(enemy_distances) do
-                if enemy_distance < 2000 then
-                    defend_desire[lane] = defend_desire[lane] + 0.2;
-                end
-            end
-            if defend_desire[lane] > 0.6 then
-                defend_desire[lane] = 0.6;
-            end
-            local enemy_creeps = tower:GetNearbyCreeps(900, true);
-            if enemy_creeps ~= nil then
-                if #enemy_creeps > 2 then
-                    defend_desire[lane] = defend_desire[lane] + 0.2;
-                end
-                local siege = DotaTime() > 1200;
-                if not siege then
-                    for _, creep in pairs(enemy_creeps) do
-                        if creep:IsAlive() and creep:GetUnitName() == enums.siege_creep_name[team] then
-                            siege = true;
-                        end
-                    end
-                end
-                if defend_desire[lane] > 0 and siege then
-                    defend_desire[lane] = defend_desire[lane] + 0.2;
-                end
-            end
-            defend_desire[lane] = defend_desire[lane] * enums.tower_importance[team][lane];
         end
+        local siege = time > 1200 and 1 or 0.6;
+        local creeps = tower:GetNearbyCreeps(1600, true);
+        if not siege and not creeps then
+            for _, creep in pairs() do
+                if not siege and creep:IsAlive() and creep:GetUnitName() == enums.siege_creep_name[team] then
+                    siege = 1;    
+                end
+            end
+        end
+        for eid, ep in pairs(enemy_potential) do
+            DebugDrawText(0+lane*100, 150+eid*20,tostring(ep),255,0,0)
+            if ep > 0 then
+                defend_desire[lane] = defend_desire[lane] + siege * ep * 0.5;
+            end
+        end
+        
+        defend_desire[lane] = math.min(defend_desire[lane] * enums.tower_importance[team][lane], 1);
+        defend_desire[lane] = old_defend_desire[lane] + (defend_desire[lane] - old_defend_desire[lane]) * 0.1;
     end
     return defend_desire;
 end
 -- Called every frame. Returns floating point values between 0 and 1 that represent the desires for farming the top, middle, and bottom lanes, respectively.
 function UpdateFarmLaneDesires()
-    if GetGameState() ~= GAME_STATE_GAME_IN_PROGRESS then
+    if not game_started then
         return {0, 0, 0};
     end
-    local team = GetTeam();
-    local enemy_team = GetOpposingTeam();
-    -- GetHeroLastSeenInfo
-    -- GetUnitPotentialValue
-    local farm_desire = {0.5, 0.5, 0.5};
-    local enemy_heroes = GetUnitList( UNIT_LIST_ENEMY_HEROES );
-    local friend_heroes = GetUnitList( UNIT_LIST_ALLIED_HEROES );
+    local old_farm_desire = {GetFarmLaneDesire(LANE_TOP), GetFarmLaneDesire(LANE_MID), GetFarmLaneDesire(LANE_BOT)};
+    local farm_desire = {0, 0, 0};
+    -- 1. lane front at tower 2. friend at tower 3. enemy (potential location) at tower assume any enemy missing long enough to be at tower
+    local farm_danger = {0, 0, 0};
+    -- local lanes = {LANE_TOP, LANE_MID, LANE_BOT};
     local lane_front_locations = {GetLaneFrontLocation(enemy_team, LANE_TOP, 0), GetLaneFrontLocation(enemy_team, LANE_MID, 0), GetLaneFrontLocation(enemy_team, LANE_BOT, 0)};
-    local enemy_distances = {};
     for lane = 1, 3 do
-        for _, enemy in pairs(enemy_heroes) do
-            if enemy:IsAlive() and enemy:CanBeSeen() then
-                local enemy_id = enemy:GetPlayerID();
-                if enemy_distances[enemy_id] == nil then
-                    enemy_distances[enemy_id] = GetUnitToLocationDistance(enemy, lane_front_locations[lane]);
+        local enemy_potential = {};
+        -- DebugDrawCircle(lane_front_locations[lane], 200, 255,0,0)
+        for enemy_id, enemy_stat in pairs(enemy_heroes_status) do
+            local enemy = enemy_stat.handle;
+            if IsHeroAlive(enemy_id) then
+                if enemy_potential[enemy_id] == nil then
+                    enemy_potential[enemy_id] = utils.EnemyPotentialAtLocation(enemy_stat, lane_front_locations[lane], 2000);
                 else
-                    enemy_distances[enemy_id] = math.min(enemy_distances[enemy_id], GetUnitToLocationDistance(enemy, lane_front_locations[lane]));
+                    enemy_potential[enemy_id] = math.max(enemy_potential[enemy_id], utils.EnemyPotentialAtLocation(enemy_stat, lane_front_locations[lane], 2000));
                 end
             end
         end
-        for _, enemy_distance in pairs(enemy_distances) do
-            if enemy_distance < 2000 then
-                farm_desire[lane] = farm_desire[lane] - 0.09;
+        
+        for eid, ep in pairs(enemy_potential) do
+            DebugDrawText(0+lane*100, 300+eid*20,tostring(ep),255,0,0)
+            if ep > 0 then
+                farm_danger[lane] = farm_danger[lane] + enemy_heroes_status[eid].power * ep;
             end
         end
-        local enemy_tower = utils.GetLaneTower(enemy_team, lane);
-        if enemy_tower ~= nil and enemy_tower:IsAlive() and GetUnitToLocationDistance(enemy_tower, lane_front_locations[lane]) < 1600 then
-            farm_desire[lane] = farm_desire[lane] - 0.05;
-        end
-        for _, friend in pairs(friend_heroes) do
-            if friend:IsAlive() and GetUnitToLocationDistance(friend, lane_front_locations[lane]) < 1600 then
-                farm_desire[lane] = farm_desire[lane] + 0.09;
-            end
-        end
-        local tower = utils.GetLaneTower(team, lane);
-        if tower ~= nil and tower:IsAlive() and GetUnitToLocationDistance(tower, lane_front_locations[lane]) < 1600 then
-            farm_desire[lane] = farm_desire[lane] + 0.05;
-        end
-        farm_desire[lane] = farm_desire[lane] * enums.farm_safty[team][lane];
-    end
-    if DotaTime() > update_time then
-        update_time = update_time + 30;
+        farm_desire[lane] = 1 - math.min(farm_danger[lane] / friends_mean_health * enums.tower_importance[team][lane], 1);
+        farm_desire[lane] = old_farm_desire[lane] + (farm_desire[lane] - old_farm_desire[lane]) * 0.1;
     end
     return farm_desire;
 end

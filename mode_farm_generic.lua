@@ -5,6 +5,7 @@ require(GetScriptDirectory().."/CDOTA_utils");
 local this_bot = GetBot();
 local team = GetTeam();
 local enemy_team = GetOpposingTeam();
+local avoidance_zone = {};
 
 function GarbageCleaning()
     this_bot.pull_camp = nil;
@@ -18,6 +19,11 @@ end
 -- Called every ~300ms, and needs to return a floating-point value between 0 and 1 that indicates how much this mode wants to be the active mode.
 update_time = 0;
 function GetDesire()
+    -- if this_bot.position == 5 then
+    --     for _, av in pairs(GetAvoidanceZones()) do
+    --         DebugDrawCircle(av.location, av.radius, 255, 100, 100);
+    --     end
+    -- end
     local time = DotaTime();
     if not this_bot.is_initialized then
         this_bot:InitializeBot();
@@ -26,7 +32,6 @@ function GetDesire()
     if not this_bot:IsAlive() then
         return 0;
     end
-    
     if time > update_time then
         if this_bot.farm_lane ~= nil then
             print(this_bot:GetUnitName().." farm is "..this_bot.farm_lane)
@@ -38,9 +43,6 @@ function GetDesire()
     if this_bot:WasRecentlyDamagedByAnyHero(3) then
         this_bot.pull_camp = nil;
     end
-    if this_bot:GetActiveMode() == BOT_MODE_FARM then
-        this_bot:FindFarm();
-    end
     return enums.mode_desire.farm;
 end
 
@@ -51,13 +53,18 @@ end
 -- end
 
 function Think()
+    if not this_bot:IsAlive() then
+        return;
+    end
     local this_bot_location = this_bot:GetLocation();
     local time = DotaTime();
-    local attack_range = math.min(this_bot:GetAttackRange(), 600);
+    local attack_range = this_bot:GetAttackRange() + 100;
+    this_bot:FindFarm();
     if this_bot.farm_lane ~= nil then
-        local lane_front_location = GetLaneFrontLocation(enemy_team, enums.lanes[this_bot.farm_lane], 0);
-        if this_bot:IsAtLocation(lane_front_location, attack_range) and IsLocationVisible(lane_front_location) then
-            local creeps = this_bot:GetNearbyCreeps(attack_range, true);
+        -- print(this_bot:GetUnitName(), this_bot.farm_lane)
+        local lane_front_location = GetLaneFrontLocation(enemy_team, enums.lanes[this_bot.farm_lane], -attack_range);
+        if this_bot:IsAtLocation(lane_front_location, 150) and IsLocationVisible(lane_front_location) then
+            local creeps = this_bot:GetNearbyCreeps(1600, true);
             this_bot:FarmCreeps(creeps, this_bot:GetAttackDamage());
         else
             this_bot:MoveToLocationOnPath(lane_front_location);
@@ -70,8 +77,8 @@ function Think()
             neutral_camp = this_bot:FindNeutralCamp(false);
         end
         if neutral_camp ~= nil then
-            if this_bot:IsAtLocation(neutral_camp.location, attack_range) and IsLocationVisible(neutral_camp.location) then
-                local neutrals = this_bot:GetNearbyCreeps(attack_range, true);
+            if this_bot:IsAtLocation(neutral_camp.location, 350) and IsLocationVisible(neutral_camp.location) then
+                local neutrals = this_bot:GetNearbyCreeps(1200, true);
                 this_bot:FarmCreeps(neutrals, this_bot:GetAttackDamage());
             else
                 this_bot:MoveToLocationOnPath(neutral_camp.location);
@@ -80,6 +87,11 @@ function Think()
     end
 end
 
+function OnStart()
+    avoidance_zone = utils.AddAvoidance(nil);
+end
+
 function OnEnd()
+    utils.RemoveAvoidance(avoidance_zone);
     GarbageCleaning();
 end

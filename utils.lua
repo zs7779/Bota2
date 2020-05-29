@@ -20,19 +20,25 @@ function utils.VectorAdd(v1, v2)
 end
 
 function utils.GetLaneTower(team, lane)
-    local towers = {[LANE_TOP]={TOWER_TOP_1, TOWER_TOP_2, TOWER_TOP_3},
-                    [LANE_MID]={TOWER_MID_1, TOWER_MID_2, TOWER_MID_3}, 
-                    [LANE_BOT]={TOWER_BOT_1, TOWER_BOT_2, TOWER_BOT_3}};
-    for i, t in pairs(towers[lane]) do
+    for i, t in pairs(enums.towers[lane]) do
         local tower = GetTower(team, t);
         if tower ~= nil and tower:IsAlive() then
             return tower;
         end
-        if i == 3 then -- dead or alive or nil, get tower 3
+    end
+    for i, b in pairs(enums.barracks[lane]) do
+        local barrack = GetBarracks(team, b);
+        if barrack ~= nil and barrack:IsAlive() then
+            return barrack;
+        end
+    end
+    for i, t in pairs(enums.base_towers) do
+        local tower = GetTower(team, t);
+        if tower ~= nil and tower:IsAlive() then
             return tower;
         end
     end
-    return nil;
+    return GetAncient(team);
 end
 
 function utils.GetOutposts()
@@ -65,22 +71,58 @@ function utils.GetDistance(a, b) -- maybe its easier to just worke with squared 
 	return math.sqrt((a[1] - b[1]) * (a[1] - b[1]) + (a[2] - b[2]) * (a[2] - b[2]));
 end
 
-function utils.GetTimeToTravel(from_loc, to_loc, speed)
-    local dist = utils.GetDistance(from_loc, to_loc);
+function utils.GetTimeToTravel(from_loc, to_loc, speed, range)
+    local range = range or 100;
+    local dist = math.max(utils.GetDistance(from_loc, to_loc) - range, 0);
     return dist / speed;
 end
 
-function utils.EnemyPotentialAtLocation(enemy_stat, location)
+function utils.EnemyPotentialAtLocation(enemy_stat, location, range)
+    if enemy_stat == nil and enemy_stat.last_seen_info == nil and enemy_stat.speed == nil then
+        print(enemy_stat,enemy_stat.last_seen_info, enemy_stat.speed)
+    end
     if enemy_stat ~= nil and enemy_stat.last_seen_info ~= nil and enemy_stat.speed ~= nil then
-        local time_to_travel = utils.GetTimeToTravel(enemy_stat.last_seen_info.location, location, enemy_stat.speed);
+        local time_to_travel = utils.GetTimeToTravel(enemy_stat.last_seen_info.location, location, enemy_stat.speed, range);
+        -- print(time_to_travel, enemy_stat.last_seen_info.time_since_seen)
         if time_to_travel > enemy_stat.last_seen_info.time_since_seen then
             return 0;
         else
             -- if enemy can get to location in time, and missing less than 30s threat=1x, 40s threat=0.75x, 50s threat=0.6x
-            return 30 / math.max(enemy_stat.last_seen_info.time_since_seen, 1);
+            return math.min(5 / math.max(enemy_stat.last_seen_info.time_since_seen, 1), 1);
         end
     end
     return 0;
+end
+
+function utils.AddAvoidance(vision)
+    -- todo: vision can be nil or list of wards
+    local added_handles = {};
+    local team = GetTeam();
+    for _, towers in pairs(enums.towers) do
+        for _, t in pairs(towers) do
+            local tower = GetTower(team, t);
+            if tower ~= nil and tower:IsAlive() then
+                if vision then
+                    added_handles[#added_handles+1] = AddAvoidanceZone(tower:GetLocation(), tower:GetCurrentVisionRange());
+                else
+                    added_handles[#added_handles+1] = AddAvoidanceZone(tower:GetLocation(), 700);
+                    -- print("avoid", added_handles[#added_handles])
+                end
+            end
+        end
+    end
+    if vision then
+        for _, ward in pairs(vision) do
+            added_handles[#added_handles+1] = AddAvoidanceZone(ward, 1400);
+        end
+    end
+    return added_handles;
+end
+
+function utils.RemoveAvoidance(av_zones)
+    for _, zone in pairs(av_zones) do
+        RemoveAvoidanceZone(zone);
+    end
 end
 
 return utils;
