@@ -16,7 +16,7 @@ function GetDesire()
 
     local this_bot_level = this_bot:GetLevel();
     local lane_front = GetLaneFrontLocation(this_bot:GetTeam(), this_bot:GetAssignedLane(), 0);
-    local this_bot_tower = utils.GetLaneTower(this_bot:GetTeam(), this_bot:GetAssignedLane());
+    local this_bot_tower, _ = utils.GetLaneTower(this_bot:GetTeam(), this_bot:GetAssignedLane());
     
     if time > update_time then
         -- print(this_bot:GetUnitName().." Tower "..GetUnitToLocationDistance(this_bot_tower, lane_front));
@@ -49,6 +49,7 @@ function GetDesire()
                     print(friend_need_help:GetUnitName().." need help")
                     return enums.mode_desire.laning;
                 end
+                -- todo: 4 position always in else??
             end
         -- end
     end

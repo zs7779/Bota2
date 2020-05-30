@@ -32,6 +32,12 @@ function GetDesire()
         end
         return enums.mode_desire.retreat;
     end
+    -- modes
+    local active_mode = this_bot:GetActiveMode();
+    if (active_mode == BOT_MODE_LANING or active_mode == BOT_MODE_RETREAT or active_mode == BOT_MODE_ROAM or active_mode == BOT_MODE_SECRET_SHOP or active_mode == BOT_MODE_FARM) and
+       (this_bot:WasRecentlyDamagedByAnyHero(3) or this_bot:WasRecentlyDamagedByTower(3)) then
+        return enums.mode_desire.retreat;
+    end
     -- no mana or health to do anything
     if this_bot:TimeToRegenHealth(0.6) > timeout or this_bot:TimeToRegenMana(0.4) > timeout or
        this_bot:GetHealth() / this_bot:GetMaxHealth() < 0.2 or this_bot:GetMana() / this_bot:GetMaxMana() < 0.1 then

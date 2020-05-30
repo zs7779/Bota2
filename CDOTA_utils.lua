@@ -478,7 +478,7 @@ function CDOTA_Bot_Script:FindFarm()
     local min_distance = 1000000;
     local my_lane = nil;
     for lane = 1, 3 do
-        local lane_tower = utils.GetLaneTower(enemy_team, enums.lanes[lane]);
+        local lane_tower, tier = utils.GetLaneTower(enemy_team, enums.lanes[lane]);
         local lane_front_location = GetLaneFrontLocation(enemy_team, enums.lanes[lane], 0);
         if GetUnitToLocationDistance(lane_tower, lane_front_location) > 700 and
            math.abs(GetLaneFrontAmount(enemy_team, enums.lanes[lane], false) - GetLaneFrontAmount(team, enums.lanes[lane], false)) < 0.05 then
@@ -495,10 +495,10 @@ function CDOTA_Bot_Script:FindFarm()
             end
             -- print(self:GetUnitName(), my_lane)
             for _, friend in pairs(GetUnitList(UNIT_LIST_ALLIED_HEROES)) do
-                if self.position == nil or friend.position == nil then
+                if (self.position == nil or friend.position == nil) and not friend:IsIllusion() then
                     print(self:GetUnitName(), self:IsAlive(), self.position, friend:GetUnitName(), friend:IsAlive(), friend.position)
                 end
-                if friend ~= self and self.position and friend.position and friend:IsAlive() and
+                if friend ~= self and self.position and friend.position and friend:IsAlive() and not friend:IsIllusion() and
                    friend.position < self.position and 
                    friend.farm_lane ~= nil and friend.farm_lane == my_lane then
                     -- print(self:GetUnitName(), friend.position, self.position, friend.farm_lane, my_lane)
@@ -661,8 +661,8 @@ function CDOTA_Bot_Script:FarmNeutral()
             local neutral_distance = GetUnitToLocationDistance(self, self.farm_neutral.location);
             if lane_distance > 4500 and neutral_distance < 900 then
                 self:MoveToLocationOnPath(self.farm_neutral.location);
-            else
-                print(self:GetUnitName(),"lane first")
+            -- else
+            --     print(self:GetUnitName(),"lane first")
             end
         else
             self:MoveToLocationOnPath(self.farm_neutral.location);
@@ -685,8 +685,8 @@ function CDOTA_Bot_Script:FarmLane()
             local neutral_distance = GetUnitToLocationDistance(self, self.farm_neutral.location);
             if lane_distance <= 4500 or neutral_distance >= 900 then
                 self:MoveToLocationOnPath(lane_front_location);
-            else
-                print(self:GetUnitName(), "neutral first")
+            -- else
+            --     print(self:GetUnitName(), "neutral first")
             end
         else
             self:MoveToLocationOnPath(lane_front_location);

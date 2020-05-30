@@ -23,7 +23,7 @@ function UpdateEnemyHeroes()
         if IsHeroAlive(enemy_id) then
             local last_seen = GetHeroLastSeenInfo(enemy_id);
             local stat = {handle = enemy, health = enemy:GetHealth(), power = enemy:EstimatePower(true),
-                          last_seen_info = last_seen[1],
+                          level = enemy:GetLevel(), last_seen_info = last_seen[1],
                           speed = enemy:GetCurrentMovementSpeed(), networth = enemy:GetNetWorth()};
             if current_status[enemy_id] == nil then
                 current_status[enemy_id] = stat;
@@ -33,12 +33,8 @@ function UpdateEnemyHeroes()
                     current_status[enemy_id] = stat;
                 end
             end
-            if not enemy.is_initialized then
-                enemy:InitializeBot();
-            else
-                enemy:GetAbilities();
-                -- enemy:GetPlayerPosition();
-            end
+            enemy:GetAbilities();
+                
         end
     end
     for enemy_id, enemy_status in pairs(current_status) do
@@ -52,13 +48,13 @@ function UpdateFriendHeroes()
     local total_health, total_friends = 0, 0;
     for _, friend in pairs(friend_heroes) do
         local friend_id = friend:GetPlayerID();
-        if IsHeroAlive(friend_id) then
+        if not friend:IsIllusion() and IsHeroAlive(friend_id) then
             local stat = {handle = friend, health = friend:GetHealth(), max_health = friend:GetMaxHealth(), power = friend:EstimatePower(true),
-                          speed = friend:GetCurrentMovementSpeed(), networth = friend:GetNetWorth()};
+                          level = friend:GetLevel(), speed = friend:GetCurrentMovementSpeed(), networth = friend:GetNetWorth()};
             total_health = total_health + stat.max_health;
             total_friends = total_friends + 1;
             friend_heroes_status[friend_id] = stat;
-            if not friend.is_initialized then
+            if not friend.is_initialized or not friend.position or not friend.abilities or not friend.neutral_camps then
                 friend:InitializeBot();
             else
                 friend:GetAbilities();
@@ -68,7 +64,7 @@ function UpdateFriendHeroes()
     end
     friends_mean_health = total_health / total_friends;
     for _, friend_stat in pairs(friend_heroes_status) do
-        friend_stat.handle.safety_factor = friend_stat.health / friends_mean_health;
+        friend_stat.handle.safety_factor = friend_stat.max_health / friends_mean_health;
     end
 end
 
@@ -137,7 +133,7 @@ function UpdatePushLaneDesires()
             end
         end
         push_desire[lane] = push_desire[lane] * enums.tower_importance[team][lane];
-        push_desire[lane] = old_push_desire[lane] + (push_desire[lane] - old_push_desire[lane]) * 0.1;
+        push_desire[lane] = old_push_desire[lane] + (push_desire[lane] - old_push_desire[lane]) * 0.05;
     end
     return push_desire;
 end
@@ -150,8 +146,9 @@ function UpdateDefendLaneDesires()
     -- 1. lane front at tower 2. friend at tower 3. enemy (potential location) at tower assume any enemy missing long enough to be at tower
     local defend_desire = {0, 0, 0};
     local friend_heroes = GetUnitList( UNIT_LIST_ALLIED_HEROES );
+    local lane_front_locations = {GetLaneFrontLocation(enemy_team, LANE_TOP, 0), GetLaneFrontLocation(enemy_team, LANE_MID, 0), GetLaneFrontLocation(enemy_team, LANE_BOT, 0)};
     for lane = 1, 3 do
-        local tower = utils.GetLaneTower(team, lane);
+        local tower, tier = utils.GetLaneTower(team, lane);
         local enemy_potential = {};
         -- DebugDrawCircle(lane_front_locations[lane], 200, 255,0,0)
         for enemy_id, enemy_stat in pairs(enemy_heroes_status) do
@@ -173,15 +170,19 @@ function UpdateDefendLaneDesires()
                 end
             end
         end
+        if tier < 4 and GetUnitToLocationDistance(tower, lane_front_locations[lane]) <= 2000 or
+           tier >= 4 and GetUnitToLocationDistance(tower, lane_front_locations[lane]) <= 4000 then
+            defend_desire[lane] = defend_desire[lane] + siege * 0.4
+        end
         for eid, ep in pairs(enemy_potential) do
             DebugDrawText(0+lane*100, 150+eid*20,tostring(ep),255,0,0)
             if ep > 0 then
-                defend_desire[lane] = defend_desire[lane] + siege * ep * 0.5;
+                defend_desire[lane] = defend_desire[lane] + siege * ep * 0.3;
             end
         end
         
         defend_desire[lane] = math.min(defend_desire[lane] * enums.tower_importance[team][lane], 1);
-        defend_desire[lane] = old_defend_desire[lane] + (defend_desire[lane] - old_defend_desire[lane]) * 0.1;
+        defend_desire[lane] = old_defend_desire[lane] + (defend_desire[lane] - old_defend_desire[lane]) * 0.05;
     end
     return defend_desire;
 end
@@ -217,7 +218,7 @@ function UpdateFarmLaneDesires()
             end
         end
         farm_desire[lane] = 1 - math.min(farm_danger[lane] / friends_mean_health * enums.tower_importance[team][lane], 1);
-        farm_desire[lane] = old_farm_desire[lane] + (farm_desire[lane] - old_farm_desire[lane]) * 0.1;
+        farm_desire[lane] = old_farm_desire[lane] + (farm_desire[lane] - old_farm_desire[lane]) * 0.05;
     end
     return farm_desire;
 end

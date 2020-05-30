@@ -23,22 +23,22 @@ function utils.GetLaneTower(team, lane)
     for i, t in pairs(enums.towers[lane]) do
         local tower = GetTower(team, t);
         if tower ~= nil and tower:IsAlive() then
-            return tower;
+            return tower, i;
         end
     end
     for i, b in pairs(enums.barracks[lane]) do
         local barrack = GetBarracks(team, b);
         if barrack ~= nil and barrack:IsAlive() then
-            return barrack;
+            return barrack, i;
         end
     end
     for i, t in pairs(enums.base_towers) do
         local tower = GetTower(team, t);
         if tower ~= nil and tower:IsAlive() then
-            return tower;
+            return tower, 4;
         end
     end
-    return GetAncient(team);
+    return GetAncient(team), 5;
 end
 
 function utils.GetOutposts()
