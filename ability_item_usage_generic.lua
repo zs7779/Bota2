@@ -306,7 +306,7 @@ ability_item_usage_generic.ability_usage = {
     -- todo: it suddenly feels like this is much better format. add free_ability and use_in_mode in everything and loop through
     sven_warcry = function(ability)
         UseCircleBuffAbility(ability.handle, false, ability.cast_range, ability.aoe_radius, ability.cast_delay, ability.target_flags, nil,
-            {BOT_MODE_ATTACK, BOT_MODE_RETREAT, BOT_MODE_FARM, BOT_MODE_EVASIVE_MANEUVERS, BOT_MODE_DEFEND_ALLY, BOT_MODE_ROSHAN}, false, 1);
+            {BOT_MODE_ATTACK, BOT_MODE_RETREAT, BOT_MODE_FARM, BOT_MODE_EVASIVE_MANEUVERS, BOT_MODE_DEFEND_ALLY, BOT_MODE_ROSHAN}, true, 1);
         UseCircleBuffAbility(ability.handle, false, ability.cast_range, ability.aoe_radius, ability.cast_delay, ability.target_flags, nil,
             {BOT_MODE_FARM}, true, 1);
     end,

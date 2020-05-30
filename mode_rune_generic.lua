@@ -45,7 +45,7 @@ function GetDesire()
     local runes = {power={RUNE_POWERUP_1, RUNE_POWERUP_2},
                 bounty={RUNE_BOUNTY_1, RUNE_BOUNTY_2, RUNE_BOUNTY_3, RUNE_BOUNTY_4},
                 all={RUNE_POWERUP_1, RUNE_POWERUP_2,RUNE_BOUNTY_1, RUNE_BOUNTY_2, RUNE_BOUNTY_3, RUNE_BOUNTY_4}};
-    
+    -- todo: add if rune is about to expire and i am close
     this_bot:DecideRoamRune(runes.all, true, 600);
     -- Bounty rune
     if this_bot.rune == nil then

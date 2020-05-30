@@ -19,7 +19,7 @@ function GetDesire()
         GarbageCleaning();
         return 0;
     end
-
+    local team = GetTeam();
     if time > update_time then
         -- print(this_bot:GetUnitName().." Power "..this_bot:EstimatePower().." Disable "..this_bot:EstimateFriendsDisableTime(0));
         this_bot:GetAbilities(); -- maybe good idea
@@ -44,14 +44,29 @@ function GetDesire()
     local target = this_bot:GetFriendsTarget(600);
     if target == nil then
         -- weakest enemy vs closest enemy? if you have blink then weakest?
-        target = this_bot:FindClosestEnemy(this_bot:GetKillRange());
-        -- target = this_bot:FindWeakestEnemy(this_bot:GetKillRange());
+        -- target = this_bot:FindClosestEnemy(this_bot:GetKillRange());
+        target = this_bot:FindWeakestEnemy(this_bot:GetKillRange());
     end
 
-    if target ~= nil and target:EstimateEnemiesDamageToSelf(600) > enums.passiveness * target:GetHealth() then
-        this_bot:SetTarget(target);
-        -- print("Target "..target:GetUnitName().." Damage "..this_bot:EstimateFriendsDamageToTarget(900, target).." Disable "..target:GetRemainingDisableTime());
-        return enums.mode_desire.attack;
+    if target ~= nil then
+        local projectiles = target:GetIncomingTrackingProjectiles();
+        for _, pjt in pairs(projectiles) do
+            if pjt.caster:GetTeam() == team and pjt.is_attack == false then
+                this_bot:SetTarget(target);
+                return enums.mode_desire.attack;
+            end
+        end
+        if this_bot:GetEstimatedDamageToTarget(true, target, this_bot:GetAttackPoint() * 2 + 0.1, DAMAGE_TYPE_ALL) > enums.passiveness * target:GetHealth() or
+           target:IsStunned() or target:IsRooted() or target:IsHexed() or target:GetRemainingDisableTime() > 0 then
+            this_bot:SetTarget(target);
+            return enums.mode_desire.attack;
+        end
+        if target:EstimateEnemiesDamageToSelf(1600) > enums.passiveness * target:GetHealth() and target:EnemyCanInitiateOnSelf(1600) and
+           not this_bot:IsBeingTargetedBy(this_bot:GetNearbyTowers(700, true)) and not this_bot:WasRecentlyDamagedByTower(2) then
+            this_bot:SetTarget(target);
+            -- print("Target "..target:GetUnitName().." Damage "..this_bot:EstimateFriendsDamageToTarget(900, target).." Disable "..target:GetRemainingDisableTime());
+            return enums.mode_desire.attack;
+        end
     end
     return 0;	
 end

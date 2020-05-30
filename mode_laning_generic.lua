@@ -26,7 +26,7 @@ function GetDesire()
     if time < 0 then
         return enums.mode_desire.laning;
     end
-    if this_bot_level <= 7 then
+    if this_bot_level < 7 then
         -- Time < 5 minutes or level < 7
         -- if lane is not too far from tower
         -- and if laning enemy is not too strong

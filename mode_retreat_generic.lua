@@ -27,7 +27,7 @@ function GetDesire()
     end
     -- still need regen
     if this_bot.regen then
-        if this_bot:DistanceFromFountain() < 100 and this_bot:GetHealth() / this_bot:GetMaxHealth() > 0.8 and this_bot:GetMana() / this_bot:GetMaxMana() > 0.8 then
+        if this_bot:GetHealth() / this_bot:GetMaxHealth() > 0.8 and this_bot:GetMana() / this_bot:GetMaxMana() > 0.8 then
             this_bot.regen = false;
         end
         return enums.mode_desire.retreat;

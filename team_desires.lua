@@ -33,6 +33,12 @@ function UpdateEnemyHeroes()
                     current_status[enemy_id] = stat;
                 end
             end
+            if not enemy.is_initialized then
+                enemy:InitializeBot();
+            else
+                enemy:GetAbilities();
+                -- enemy:GetPlayerPosition();
+            end
         end
     end
     for enemy_id, enemy_status in pairs(current_status) do
@@ -52,6 +58,12 @@ function UpdateFriendHeroes()
             total_health = total_health + stat.max_health;
             total_friends = total_friends + 1;
             friend_heroes_status[friend_id] = stat;
+            if not friend.is_initialized then
+                friend:InitializeBot();
+            else
+                friend:GetAbilities();
+                -- friend:GetPlayerPosition();
+            end
         end
     end
     friends_mean_health = total_health / total_friends;

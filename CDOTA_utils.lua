@@ -45,7 +45,12 @@ function CDOTA_Bot_Script:GetAbilities()
     for i = 0, 23 do
         local ability = self:GetAbilityInSlot(i);
         if ability ~= nil and not ability:IsTalent() and not ability:IsItem() and not ability:IsHidden() and not ability:IsPassive() then
-            abilities[#abilities+1] = abilities_dictionary[ability:GetName()](ability);
+            local ability_dict_func = abilities_dictionary[ability:GetName()];
+            if ability_dict_func ~= nil then
+                abilities[#abilities+1] = abilities_dictionary[ability:GetName()](ability);
+            else
+                abilities[#abilities+1] = utils.fake_ability_func(ability);
+            end
         end
     end
     self.abilities = abilities;
@@ -61,8 +66,12 @@ function CDOTA_Bot_Script:GetKillRange()
     end
     local ability_range = 0;
     for _, ability in pairs(self.abilities) do
-        if ability.handle:IsTrained() and (ability.timer == enums.timer.SLOW or ability.timer == enums.timer.STUN) then
+        -- print(self:GetUnitName(), ability.handle:IsTrained())
+        if ability.handle:IsTrained() and (ability.timer == enums.timer.SLOW or ability.timer == enums.timer.STUN or ability.timer == enums.timer.FAKE) then
             ability_range = math.max(ability_range, ability.cast_range);
+            -- if self:GetTeam() ~= GetTeam() then
+            --     print(self:GetUnitName(), ability.handle:GetName(), ability_range)
+            -- end
             -- todo: considier blink
         end
     end
@@ -72,7 +81,7 @@ end
 function CDOTA_Bot_Script:EnemyCanInitiateOnSelf(distance)
     local distance = distance or 0;
     for _, enemy in pairs(self:GetNearbyHeroes(math.min(distance, 1600), true, BOT_MODE_NONE)) do
-        print(enemy:GetUnitName(), "kill range", enemy:GetKillRange())
+        -- print(enemy:GetUnitName(), "kill range", enemy:GetKillRange())
         if enemy:GetKillRange() >= GetUnitToUnitDistance(self, enemy) then
             return true;
         end
@@ -486,8 +495,12 @@ function CDOTA_Bot_Script:FindFarm()
             end
             -- print(self:GetUnitName(), my_lane)
             for _, friend in pairs(GetUnitList(UNIT_LIST_ALLIED_HEROES)) do
-                if friend ~= self and friend.is_initialized and friend.position < self.position and 
-                (friend.farm_lane ~= nil and friend.farm_lane == my_lane) then
+                if self.position == nil or friend.position == nil then
+                    print(self:GetUnitName(), self:IsAlive(), self.position, friend:GetUnitName(), friend:IsAlive(), friend.position)
+                end
+                if friend ~= self and self.position and friend.position and friend:IsAlive() and
+                   friend.position < self.position and 
+                   friend.farm_lane ~= nil and friend.farm_lane == my_lane then
                     -- print(self:GetUnitName(), friend.position, self.position, friend.farm_lane, my_lane)
                     my_lane = nil;
                 end
@@ -495,6 +508,7 @@ function CDOTA_Bot_Script:FindFarm()
         end
     end
     self.farm_lane = enums.lanes[my_lane];
+    return self.farm_lane;
     -- { { string, vector }, ... } GetNeutralSpawners() 
 end
 
@@ -583,19 +597,8 @@ function CDOTA_Bot_Script:FindNeutralCamp(pull)
             end
         end
     end
-    return my_neutral;
-end
-
-function CDOTA_Bot_Script:LastHit(creeps, damage)
-    if creeps ~= nil then
-        for _, creep in pairs(creeps) do
-            if creep:IsAlive() and creep:CanBeSeen() and creep:GetHealth() < damage then
-                -- self:Action_ClearActions(false);
-                self:Action_AttackUnit(creep, false);
-                return;
-            end
-        end
-    end
+    self.farm_neutral = my_neutral;
+    return self.farm_neutral;
 end
 
 function CDOTA_Bot_Script:MoveToLocationOnPath(location)
@@ -621,12 +624,12 @@ function CDOTA_Bot_Script:IsBeingTargetedBy(enemies)
     end
 end
 
-function CDOTA_Bot_Script:FarmCreeps(creeps, damage)
+function CDOTA_Bot_Script:HitCreeps(creeps, damage)
     if creeps ~= nil and #creeps > 0 then
         for _, creep in pairs(creeps) do
             if creep:IsAlive() and creep:CanBeSeen() and creep:GetHealth() < damage then
                 -- self:Action_ClearActions(false);
-                self:Action_AttackUnit(creep, false);
+                self:Action_AttackUnit(creep, true);
                 return;
             end
         end
@@ -638,4 +641,55 @@ function CDOTA_Bot_Script:FarmCreeps(creeps, damage)
         -- end
     end
     print(self:GetUnitName(), "no creeps at all")
+end
+
+function CDOTA_Bot_Script:FarmNeutral()
+    if self.pull ~= nil and self.pull_state.state == "success" then
+        self.farm_neutral = self.pull;
+    else
+        self:FindNeutralCamp(false);
+    end
+    if self.farm_neutral ~= nil then
+        if self:IsAtLocation(self.farm_neutral.location, 350) and IsLocationVisible(self.farm_neutral.location) then
+            local neutrals = self:GetNearbyCreeps(1200, true);
+            self:HitCreeps(neutrals, self:GetAttackDamage());
+            return;
+        end
+        if self.farm_lane ~= nil then
+            local lane_front_location = GetLaneFrontLocation(GetOpposingTeam(), enums.lanes[self.farm_lane], -self:GetAttackRange() - 100);
+            local lane_distance = GetUnitToLocationDistance(self, lane_front_location);
+            local neutral_distance = GetUnitToLocationDistance(self, self.farm_neutral.location);
+            if lane_distance > 4500 and neutral_distance < 900 then
+                self:MoveToLocationOnPath(self.farm_neutral.location);
+            else
+                print(self:GetUnitName(),"lane first")
+            end
+        else
+            self:MoveToLocationOnPath(self.farm_neutral.location);
+        end
+    end
+end
+
+function CDOTA_Bot_Script:FarmLane()
+    self:FindFarm();
+    if self.farm_lane ~= nil then
+        -- print(this_bot:GetUnitName(), this_bot.farm_lane)
+        local lane_front_location = GetLaneFrontLocation(GetOpposingTeam(), enums.lanes[self.farm_lane], -150);
+        if self:IsAtLocation(lane_front_location, 500) and IsLocationVisible(lane_front_location) then
+            local creeps = self:GetNearbyCreeps(1600, true);
+            self:HitCreeps(creeps, self:GetAttackDamage());
+            return;
+        end
+        if self.farm_neutral ~= nil then
+            local lane_distance = GetUnitToLocationDistance(self, lane_front_location);
+            local neutral_distance = GetUnitToLocationDistance(self, self.farm_neutral.location);
+            if lane_distance <= 4500 or neutral_distance >= 900 then
+                self:MoveToLocationOnPath(lane_front_location);
+            else
+                print(self:GetUnitName(), "neutral first")
+            end
+        else
+            self:MoveToLocationOnPath(lane_front_location);
+        end
+    end
 end

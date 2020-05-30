@@ -1,7 +1,7 @@
 local enums = {};
 
 enums.atentnion = 0.5;
-enums.passiveness = 0.6;
+enums.passiveness = 1.0;
 enums.stupidity = 1.0;
 enums.healthy = 0.6;
 
@@ -75,5 +75,6 @@ enums.timer = {
     BUFF = "buff_timer",
     SAVE = "save_timer",
     NONE = nil,
+    FAKE = "fake_timer",
 };
 return enums;

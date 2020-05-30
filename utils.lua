@@ -125,4 +125,18 @@ function utils.RemoveAvoidance(av_zones)
     end
 end
 
+function utils.fake_ability_func(ability)
+    -- print("fake_ability", ability:GetName())
+    return {
+        handle = ability,
+        cast_range = ability:GetCastRange(),
+        aoe_radius = ability:GetAOERadius(),
+        damage = ability:GetAbilityDamage(),
+        duration = ability:GetDuration(),
+        target_flags = ability:GetTargetFlags(),
+        modifier = "",
+        timer = enums.timer.FAKE,
+    };
+end
+
 return utils;
