@@ -12,7 +12,7 @@ function GetDesire()
         return 0;
     end
     local team = GetTeam();
-    local lane = LANE_TOP;
+    local lane = LANE_MID;
     local other_lanes = {LANE_TOP, LANE_BOT};
     local this_mode = BOT_MODE_DEFEND_TOWER_MID;
     -- highest desire and highest tier

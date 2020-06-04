@@ -525,7 +525,7 @@ function CDOTA_Bot_Script:FindFarm()
                 farm_lane_desire = farm_lane_desire * self.safety_factor;
             end
             if farm_lane_desire >= enums.safety[self.position] then
-                local lane_distance = GetUnitToLocationDistance(this_bot, lane_front_location);
+                local lane_distance = GetUnitToLocationDistance(self, lane_front_location);
                 if lane_distance < min_distance then
                     min_distance = lane_distance;
                     my_lane = lane;
@@ -655,11 +655,16 @@ function CDOTA_Bot_Script:MoveTowardBase(distance)
 end
 
 function CDOTA_Bot_Script:IsBeingTargetedBy(enemies)
+    if enemies == nil then
+        return false;
+    end
     for _, enemy in pairs(enemies) do
-        if enemy:GetAttackTarget() ~= nil and enemy:GetAttackTarget() == this_bot then
-            print(this_bot:GetUnitName().." attacked by "..enemy:GetUnitName())
+        if enemy:GetAttackTarget() ~= nil and enemy:GetAttackTarget() == self then
+            -- print(self:GetUnitName().." attacked by "..enemy:GetUnitName())
+            return true;
         end
     end
+    return false;
 end
 
 function CDOTA_Bot_Script:HitCreeps(creeps, damage)
@@ -711,7 +716,6 @@ end
 function CDOTA_Bot_Script:FarmLane()
     self:FindFarm();
     if self.farm_lane ~= nil then
-        -- print(this_bot:GetUnitName(), this_bot.farm_lane)
         local lane_front_location = GetLaneFrontLocation(GetOpposingTeam(), enums.lanes[self.farm_lane], -150);
         if self:IsAtLocation(lane_front_location, 500) and IsLocationVisible(lane_front_location) then
             local creeps = self:GetNearbyCreeps(1600, true);

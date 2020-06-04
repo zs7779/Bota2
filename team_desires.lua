@@ -70,7 +70,7 @@ function UpdateFriendHeroes()
     end
     friends_mean_health = total_health / total_friends;
     for _, friend_stat in pairs(friend_heroes_status) do
-        friend_stat.handle.safety_factor = friend_stat.max_health / friends_mean_health;
+        friend_stat.handle.safety_factor = friend_stat.health / friends_mean_health;
     end
 end
 
@@ -78,9 +78,13 @@ function TeamThink()
     if GetGameState() ~= GAME_STATE_GAME_IN_PROGRESS then
         return;
     end
+    if team == nil then
+        team = GetTeam();
+    end
+    if enemy_team == nil then
+        enemy_team = GetOpposingTeam();
+    end
     time = DotaTime();
-    team = GetTeam();
-    enemy_team = GetOpposingTeam();
     UpdateEnemyHeroes();
     UpdateFriendHeroes();
     -- todo: look for enemy warding
@@ -176,8 +180,9 @@ function UpdateDefendLaneDesires()
                 end
             end
         end
-        if tier < 4 and GetUnitToLocationDistance(tower, lane_front_locations[lane]) <= 2000 or
-           tier >= 4 and GetUnitToLocationDistance(tower, lane_front_locations[lane]) <= 4000 then
+        if tier < 3 and GetUnitToLocationDistance(tower, lane_front_locations[lane]) <= 900 or
+           tier == 3 and GetUnitToLocationDistance(tower, lane_front_locations[lane]) <= 1600 or
+           tier > 3 and GetUnitToLocationDistance(tower, lane_front_locations[lane]) <= 3000 then
             defend_desire[lane] = defend_desire[lane] + siege * 0.4;
         end
         -- siege    0    1    2    3    4    5

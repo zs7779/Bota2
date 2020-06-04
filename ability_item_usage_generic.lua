@@ -140,9 +140,12 @@ end
 function ThinkUnitAbility(enemy, creep, cast_range, aoe_radius, damage, target_flags, modifier_func)
     local this_bot = GetBot();
     local target = this_bot:GetTarget();
-    if CanCastOnTarget(target, target_flags, modifier_func) and
-       GetUnitToUnitDistance(this_bot, target) < cast_range and (damage == 0 or target:GetHealth() < damage) then
-        return target;
+    if CanCastOnTarget(target, target_flags, modifier_func) then
+        if GetUnitToUnitDistance(this_bot, target) < cast_range and (damage == 0 or target:GetHealth() < damage) then
+            return target;
+        else
+            return nil;
+        end
     end
     local targets = GetTargetsInRange(cast_range, enemy, creep, this_bot:GetLocation(), 0, damage);
     for _, target in pairs(targets) do
