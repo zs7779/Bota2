@@ -221,6 +221,10 @@ function NoStunTime(target)
     return false;
 end
 
+function IsAttacked(target)
+    return target:IsBeingTargetedBy(target:GetNearbyHeroes(1600, true, BOT_MODE_NONE)) or target:IsBeingTargetedBy(target:GetNearbyTowers(800, true));
+end
+
 function NoModifier(modifier)
     return function (target)
         return not target:HasModifier(modifier);
@@ -347,7 +351,9 @@ ability_item_usage_generic.ability_usage = {
             BOT_MODE_DEFEND_TOWER_TOP, BOT_MODE_DEFEND_TOWER_MID, BOT_MODE_DEFEND_TOWER_BOT, BOT_MODE_ROSHAN}, true, 2);
     end,
     necrolyte_sadist = function(ability)
-        UseCircleBuffAbility(ability.handle, false, ability.cast_range, ability.aoe_radius, ability.cast_delay, ability.target_flags, nil,
+        UseCircleAbility(ability.handle, true, false, ability.cast_range, ability.aoe_radius, ability.cast_delay, 0, ability.target_flags, nil,
+            {BOT_MODE_ATTACK, BOT_MODE_RETREAT, BOT_MODE_EVASIVE_MANEUVERS, BOT_MODE_DEFEND_ALLY}, false, 1);
+        UseCircleBuffAbility(ability.handle, false, ability.cast_range, 0, ability.cast_delay, ability.target_flags, IsAttacked,
             {BOT_MODE_ATTACK, BOT_MODE_RETREAT, BOT_MODE_EVASIVE_MANEUVERS, BOT_MODE_DEFEND_ALLY}, false, 1);
     end,
     -- todo: need special function

@@ -22,6 +22,7 @@ function UpdateEnemyHeroes()
         local enemy_id = enemy:GetPlayerID();
         if IsHeroAlive(enemy_id) then
             local last_seen = GetHeroLastSeenInfo(enemy_id);
+            -- todo: use projectile.caster to update hero information
             local stat = {handle = enemy, health = enemy:GetHealth(), power = enemy:EstimatePower(true),
                           level = enemy:GetLevel(), last_seen_info = last_seen[1],
                           speed = enemy:GetCurrentMovementSpeed(), networth = enemy:GetNetWorth()};
@@ -54,13 +55,18 @@ function UpdateFriendHeroes()
             total_health = total_health + stat.max_health;
             total_friends = total_friends + 1;
             friend_heroes_status[friend_id] = stat;
-            if not friend.is_initialized or not friend.position or not friend.abilities or not friend.neutral_camps then
+            if not friend.is_initialized or not friend.neutral_camps then
                 friend:InitializeBot();
             else
-                friend:GetAbilities();
-                -- friend:GetPlayerPosition();
+                if DotaTime() > update_time then
+                    friend:GetAbilities();
+                    friend:GetTeamMates();
+                end
             end
         end
+    end
+    if DotaTime() > update_time then
+        update_time = update_time + 10;
     end
     friends_mean_health = total_health / total_friends;
     for _, friend_stat in pairs(friend_heroes_status) do
@@ -116,7 +122,7 @@ function UpdatePushLaneDesires()
                 push_desire[lane] = push_desire[lane] - 0.1 * ep;
             end
         end
-        local siege = time > 1200 and 1 or 0.8;
+        local siege = math.min(time / 900, 1);
         for _, friend in pairs(friend_heroes) do
             if not siege and friend:GetActiveMode() == enums.push_modes[lane] then
                 for _, creep in pairs(friend:GetNearbyCreeps(1600, false)) do
@@ -161,27 +167,32 @@ function UpdateDefendLaneDesires()
                 end
             end
         end
-        local siege = time > 1200 and 1 or 0.6;
+        local siege = math.min(time / 900, 1);
         local creeps = tower:GetNearbyCreeps(1600, true);
         if not siege and not creeps then
             for _, creep in pairs() do
-                if not siege and creep:IsAlive() and creep:GetUnitName() == enums.siege_creep_name[team] then
+                if not siege and creep:IsAlive() and creep:GetUnitName() == enums.siege_creep_name[enemy_team] then
                     siege = 1;    
                 end
             end
         end
         if tier < 4 and GetUnitToLocationDistance(tower, lane_front_locations[lane]) <= 2000 or
            tier >= 4 and GetUnitToLocationDistance(tower, lane_front_locations[lane]) <= 4000 then
-            defend_desire[lane] = defend_desire[lane] + siege * 0.4
+            defend_desire[lane] = defend_desire[lane] + siege * 0.4;
         end
+        -- siege    0    1    2    3    4    5
+        --   no  0.32 0.48 0.64 0.80 0.96 1.00
+        --  yes  0.40 0.60 0.80 1.00 1.00 1.00
         for eid, ep in pairs(enemy_potential) do
             DebugDrawText(0+lane*100, 150+eid*20,tostring(ep),255,0,0)
             if ep > 0 then
-                defend_desire[lane] = defend_desire[lane] + siege * ep * 0.3;
+                defend_desire[lane] = defend_desire[lane] + siege * ep * 0.2;
             end
         end
-        
-        defend_desire[lane] = math.min(defend_desire[lane] * enums.tower_importance[team][lane], 1);
+        if tier < 3 then
+            defend_desire[lane] = defend_desire[lane] * enums.tower_importance[team][lane];
+        end
+        defend_desire[lane] = math.min(defend_desire[lane], 1);
         defend_desire[lane] = old_defend_desire[lane] + (defend_desire[lane] - old_defend_desire[lane]) * 0.05;
     end
     return defend_desire;

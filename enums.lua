@@ -1,7 +1,7 @@
 local enums = {};
 
 enums.atentnion = 0.5;
-enums.passiveness = 1.0;
+enums.passiveness = 1.1;
 enums.stupidity = 0.8;
 enums.healthy = 0.6;
 
@@ -10,10 +10,11 @@ enums.passiveness_factor = 0.9;
 enums.excution_factor = 1.0;
 enums.friend_help_factor = 1.5;
 
+-- the idea of this system is that some modes have higher desire than others by nature
 enums.mode_desire = {
     -- super duper emergency
     evasive_maneuvers = 1.0,
-    rune = 0.95,
+    rune = 0.95, -- todo: rune mode does not have constant BOT_MODE_RUNE?
     retreat = 0.9,
     -- emergency
     attack = 0.75,
@@ -36,7 +37,7 @@ enums.mode_desire = {
     side_shop = 0,
     item = 0,
 }
-enums.free_time = {1, 5, 10, 15, 15};
+enums.free_time = {1, 1, 5, 10, 10};
 enums.safety = {0.7, 0.7, 0.5, 0.4, 0.3};
 enums.siege_creep_name = {[TEAM_RADIANT] = "npc_dota_goodguys_siege", [TEAM_DIRE] = "npc_dota_badguys_siege"};
 enums.tower_importance = {[TEAM_RADIANT] = {1.0, 0.8, 0.6}, [TEAM_DIRE] = {0.6, 0.8, 1.0}};

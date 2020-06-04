@@ -15,6 +15,7 @@ function CDOTA_Bot_Script:InitializeBot()
     self:GetPlayerPosition();
     self:GetAbilities();
     self:GetNeutralCamp();
+    self:GetTeamMates()
     self.is_initialized = true;
 
     if debug then
@@ -32,11 +33,22 @@ function CDOTA_Bot_Script:GetPlayerPosition()
             end
         end    
     end
-
     if debug then
         print("Position", self.position);
     end
 	return self.position;
+end
+
+function CDOTA_Bot_Script:GetTeamMates()
+    team_mates = {};
+    for position = 1, 5 do
+        local friend_handle = GetTeamMember(position);
+        team_mates[position] = friend_handle;
+    end
+    self.team_mates = team_mates;
+    -- for k, v in pairs(self.team_mates) do
+    --     print(k, v:GetUnitName());
+    -- end
 end
 
 function CDOTA_Bot_Script:GetAbilities()
@@ -60,10 +72,11 @@ function CDOTA_Bot_Script:GetAbilities()
 	return self.abilities;
 end
 
-function CDOTA_Bot_Script:GetKillRange()
+function CDOTA_Bot_Script:GetKillRange(attack)
     if self.abilities == nil then
         return 0;
     end
+    local attack = attack or false;
     local ability_range = 0;
     for _, ability in pairs(self.abilities) do
         -- print(self:GetUnitName(), ability.handle:IsTrained())
@@ -75,14 +88,18 @@ function CDOTA_Bot_Script:GetKillRange()
             -- todo: considier blink
         end
     end
-    return math.min(ability_range, 1600);
+    if attack then
+        ability_range = math.max(ability_range, self:GetAttackRange());
+    end
+    return ability_range;
+    -- return math.min(ability_range, 1600);
 end
 
 function CDOTA_Bot_Script:EnemyCanInitiateOnSelf(distance)
     local distance = distance or 0;
     for _, enemy in pairs(self:GetNearbyHeroes(math.min(distance, 1600), true, BOT_MODE_NONE)) do
         -- print(enemy:GetUnitName(), "kill range", enemy:GetKillRange())
-        if enemy:GetKillRange() >= GetUnitToUnitDistance(self, enemy) then
+        if enemy:GetKillRange(false) >= GetUnitToUnitDistance(self, enemy) then
             return true;
         end
     end
@@ -113,6 +130,22 @@ function CDOTA_Bot_Script:FriendCanSaveMe(range)
         end
     end
     return false;
+end
+
+function CDOTA_Bot_Script:HaveWaveClear()
+    if self.abilities ~= nil then
+        for _, ability in pairs(self.abilities) do
+            if self:FreeAbility(ability.handle) and
+               ability.damage > 0 and ability.cast_range > 0 and ability.aoe_radius > 0 and ability.timer ~= enums.timer.STUN then
+                -- print(self:GetUnitName(), "have wave clear")
+                return true;
+            end
+        end
+    end
+    return false;
+end
+
+function CDOTA_Bot_Script:HaveCatch()
 end
 
 function CDOTA_Bot_Script:GetComboMana()
@@ -280,21 +313,26 @@ function CDOTA_Bot_Script:EstimateEnemiesDamageToTarget(distance, target)
     
     local damage = 0;
     for _, attacker in pairs(target:GetNearbyHeroes(distance, true, BOT_MODE_NONE)) do
-        if attacker:IsAlive() and not attacker:IsIllusion() then
+    -- for _, attacker in pairs(GetUnitList(UNIT_LIST_ALLIED_HEROES)) do
+        if attacker:IsAlive() and not attacker:IsIllusion() and GetUnitToUnitDistance(attacker, target) < attacker:GetKillRange(true) then
             -- power = power + nearby_friends[i]:EstimatePower(disable_time);
             damage = damage + attacker:GetEstimatedDamageToTarget(true, target, disable_time, DAMAGE_TYPE_ALL);
         end
     end
-    for _, attacker in pairs(target:GetNearbyCreeps(300, true)) do
-        if attacker:IsAlive() and not attacker:IsIllusion() then
+    for _, attacker in pairs(target:GetNearbyTowers(800, true)) do
+        if attacker:IsAlive() then
             -- power = power + nearby_friends[i]:EstimatePower(disable_time);
             damage = damage + attacker:GetEstimatedDamageToTarget(true, target, disable_time, DAMAGE_TYPE_ALL);
         end
     end
-    for _, attacker in pairs(target:GetNearbyTowers(700, true)) do
-        if attacker:IsAlive() and not attacker:IsIllusion() then
-            -- power = power + nearby_friends[i]:EstimatePower(disable_time);
-            damage = damage + attacker:GetEstimatedDamageToTarget(true, target, disable_time, DAMAGE_TYPE_ALL);
+    local enemy_creeps = target:GetNearbyCreeps(300, true);
+    local friend_creeps = target:GetNearbyCreeps(300, false);
+    if enemy_creeps ~= nil and (friend_creeps == nil or #enemy_creeps > #friend_creeps)then
+        for _, attacker in pairs(enemy_creeps) do
+            if attacker:IsAlive() then
+                -- power = power + nearby_friends[i]:EstimatePower(disable_time);
+                damage = damage + attacker:GetEstimatedDamageToTarget(true, target, disable_time, DAMAGE_TYPE_ALL);
+            end
         end
     end
     return damage;
