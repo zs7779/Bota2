@@ -21,8 +21,8 @@ enums.mode_desire = {
     defend_ally = 0.7,
     ward = 0.65,
     -- team activity
-    push = 0.6, -- [push_tower_top push_tower_mid push_tower_bot]
-    defend = 0.55, -- [defend_tower_top defend_tower_mid defend_tower_bottom]
+    defend = 0.6, -- [defend_tower_top defend_tower_mid defend_tower_bottom]
+    push = 0.55, -- [push_tower_top push_tower_mid push_tower_bot]
     roshan = 0.5,
     team_roam = 0.45,
     assemble = 0.4,
@@ -64,6 +64,7 @@ enums.hero_list = {[true]=UNIT_LIST_ENEMY_HEROES, [false]=UNIT_LIST_ALLIED_HEROE
 enums.creep_list = {[true]=UNIT_LIST_ENEMY_CREEPS, [false]=UNIT_LIST_ALLIED_CREEPS};
 
 enums.push_modes = {BOT_MODE_PUSH_TOWER_TOP, BOT_MODE_PUSH_TOWER_MID, BOT_MODE_PUSH_TOWER_BOT};
+enums.defend_modes = {[LANE_TOP]=BOT_MODE_DEFEND_TOWER_TOP, [LANE_MID]=BOT_MODE_DEFEND_TOWER_MID, [LANE_BOT]=BOT_MODE_DEFEND_TOWER_BOT};
 enums.modes = {BOT_MODE_LANING, BOT_MODE_ATTACK, BOT_MODE_ROAM, BOT_MODE_RETREAT, BOT_MODE_SECRET_SHOP, BOT_MODE_SIDE_SHOP,
 BOT_MODE_PUSH_TOWER_TOP, BOT_MODE_PUSH_TOWER_MID, BOT_MODE_PUSH_TOWER_BOT, BOT_MODE_DEFEND_TOWER_TOP, BOT_MODE_DEFEND_TOWER_MID, BOT_MODE_DEFEND_TOWER_BOT,
 BOT_MODE_ASSEMBLE, BOT_MODE_TEAM_ROAM, BOT_MODE_FARM, BOT_MODE_DEFEND_ALLY, BOT_MODE_EVASIVE_MANEUVERS, BOT_MODE_ROSHAN, BOT_MODE_ITEM, BOT_MODE_WARD};

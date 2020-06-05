@@ -169,7 +169,7 @@ end
 function CDOTA_Bot_Script:FreeAbility(ability)
     -- todo: free ability needs a opposite function in ability usage. if I can rotate then I save free ability, otherwise use all mana to farm
     return ability ~= nil and ability:IsFullyCastable() and ability:GetCooldown() <= 30 and
-           ability:GetManaCost() < self:FreeMana() and ability:GetCurrentCharges() >= ability:GetInitialCharges();
+           ability:GetManaCost() < self:FreeMana();
 end
 
 function CDOTA_Bot_Script:TimeToRegenMana(healthy)

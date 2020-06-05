@@ -59,19 +59,22 @@ function GetDesire()
             end
         end
         -- 1 attack away from kill
-        if this_bot:GetEstimatedDamageToTarget(true, target, this_bot:GetAttackPoint() * 2 + 0.1, DAMAGE_TYPE_ALL) > enums.passiveness * target:GetHealth() or
+        if this_bot:GetEstimatedDamageToTarget(true, target, this_bot:GetAttackPoint() + 0.1, DAMAGE_TYPE_ALL) > enums.passiveness * target:GetHealth() or
            target:IsStunned() or target:IsRooted() or target:IsHexed() or target:GetRemainingDisableTime() > 0 then
             this_bot:SetTarget(target);
+            print(this_bot:GetUnitName(), "fast kill", target:GetUnitName())
             return enums.mode_desire.attack;
         end
         -- plan kill, if not being hit by tower
         if not this_bot:IsBeingTargetedBy(this_bot:GetNearbyTowers(800, true)) and not this_bot:WasRecentlyDamagedByTower(2) then
-
             if target:IsStunned() or  target:EstimateEnemiesDamageToSelf(1600) > enums.passiveness * target:GetHealth() and target:EnemyCanInitiateOnSelf(1600) then
                 this_bot:SetTarget(target);
                 -- print("Target "..target:GetUnitName().." Damage "..this_bot:EstimateFriendsDamageToTarget(900, target).." Disable "..target:GetRemainingDisableTime());
+                print(this_bot:GetUnitName(), "Can kill", target:GetUnitName())
                 return enums.mode_desire.attack;
             end
+        else
+            print(this_bot:GetUnitName(), "Abort kill", target:GetUnitName())
         end
     end
     return 0;	

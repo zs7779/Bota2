@@ -36,7 +36,7 @@ function GetTargetsInRange(range, enemy, creep, base_location, time_in_future, d
     else
         units = GetUnitList(enums.hero_list[enemy]);
         for _, unit in pairs(units) do
-            if unit:GetMovementDirectionStability() >= time_in_future and
+            if unit:GetMovementDirectionStability() >= 0.99 and
                utils.GetDistance(base_location, unit:GetExtrapolatedLocation(time_in_future)) <= range and
                (damage == 0 or target:GetHealth() < damage) then
                 targets[#targets+1] = unit;
@@ -92,7 +92,7 @@ function ThinkCircleAbilityOnTarget(base_location, cast_range, aoe_radius, time_
     end
     local target_location = target:GetExtrapolatedLocation(time_in_future);
     if utils.GetDistance(base_location, target_location) < cast_range and (damage == 0 or target:GetHealth() < damage)
-       and target:GetMovementDirectionStability() >= time_in_future then -- todo: maybe adda aoe_radius
+       and target:GetMovementDirectionStability() >= 0.99 then -- todo: maybe adda aoe_radius
         return 1, target_location;
     end
     return 0, nil;
@@ -105,12 +105,13 @@ function UseCircleAbility(ability, enemy, creep, cast_range, aoe_radius, time_in
     local use_in_modes = use_in_modes or enums.modes;
     local min_units = min_units or 1;
     local this_bot = GetBot();
+    local ability_name = ability:GetName();
     -- print(this_bot:GetUnitName(), ability:GetName())
     local aoe_num_units, aoe_location = 0, nil;
     local bot_location = this_bot:GetLocation();
     local active_mode = this_bot:GetActiveMode();
     for _, mode in pairs(use_in_modes) do
-        if active_mode == mode and (not free_ability or this_bot:FreeAbility(ability)) then
+        if active_mode == mode and (not free_ability or this_bot:FreeAbility(ability) and (this_bot[ability_name] == nil or this_bot[ability_name].time < DotaTime() - 3)) then
             if active_mode == BOT_MODE_ATTACK then
                 aoe_num_units, aoe_location = ThinkCircleAbilityOnTarget(bot_location, cast_range, aoe_radius, time_in_future, 0, target_flags, modifier_func);
             else
@@ -132,6 +133,11 @@ function UseCircleAbility(ability, enemy, creep, cast_range, aoe_radius, time_in
                 this_bot:Action_UseAbilityOnLocation(ability, aoe_location);
             else
                 this_bot:Action_UseAbility(ability);
+            end
+            if free_ability then
+                this_bot[ability_name] = {time = DotaTime()};
+            else
+                this_bot[ability_name] = nil;
             end
         end
     end
@@ -162,16 +168,22 @@ function UseUnitAbility(ability, enemy, creep, cast_range, aoe_radius, damage, t
     end
     local use_in_modes = use_in_modes or enums.modes;
     local this_bot = GetBot();
+    local ability_name = ability:GetName();
     -- print(this_bot:GetUnitName(), ability:GetName())
     local active_mode = this_bot:GetActiveMode();
     local target = nil;
     for _, mode in pairs(use_in_modes) do
-        if active_mode == mode and (not free_ability or this_bot:FreeAbility(ability)) then
+        if active_mode == mode and (not free_ability or this_bot:FreeAbility(ability) and (this_bot[ability_name] == nil or this_bot[ability_name].time < DotaTime() - 3)) then
             target = ThinkUnitAbility(enemy, creep, cast_range, aoe_radius, damage, target_flags, modifier_func);
         end
     end
     if target ~= nil then
         this_bot:Action_UseAbilityOnEntity(ability, target);
+        if free_ability then
+            this_bot[ability_name] = {time = DotaTime()};
+        else
+            this_bot[ability_name] = nil;
+        end
     end
 end
 
@@ -196,12 +208,13 @@ function UseCircleBuffAbility(ability, creep, cast_range, aoe_radius, time_in_fu
     local use_in_modes = use_in_modes or enums.modes;
     local min_units = min_units or 1;
     local this_bot = GetBot();
+    local ability_name = ability:GetName();
     -- print(ability:GetName(), NoModifier("modifier_sniper_take_aim")(this_bot), this_bot:GetUnitName(), this_bot:HasModifier("modifier_sniper_take_aim"))
     -- print(this_bot:GetUnitName(), ability:GetName())
     local aoe_num_units, aoe_location = 0, nil;
     local active_mode = this_bot:GetActiveMode();
     for _, mode in pairs(use_in_modes) do
-        if active_mode == mode and (not free_ability or this_bot:FreeAbility(ability)) then
+        if active_mode == mode and (not free_ability or this_bot:FreeAbility(ability) and (this_bot[ability_name] == nil or this_bot[ability_name].time < DotaTime() - 3)) then
             aoe_num_units, aoe_location = ThinkBuffCircleAbilityTarget(creep, this_bot:GetLocation(), cast_range, aoe_radius, time_in_future, target_flags, modifier_func);
         end
     end
@@ -211,6 +224,11 @@ function UseCircleBuffAbility(ability, creep, cast_range, aoe_radius, time_in_fu
             this_bot:Action_UseAbilityOnLocation(ability, aoe_location);
         else
             this_bot:Action_UseAbility(ability);
+        end
+        if free_ability then
+            this_bot[ability_name] = {time = DotaTime()};
+        else
+            this_bot[ability_name] = nil;
         end
     end
 end
@@ -310,12 +328,9 @@ ability_item_usage_generic.ability_usage = {
         UseUnitAbility(ability.handle, true, false, ability.cast_range, ability.aoe_radius, 0, ability.target_flags, NoStunTime,
             {BOT_MODE_RETREAT, BOT_MODE_ATTACK, BOT_MODE_DEFEND_ALLY}, false);
     end,
-    -- todo: it suddenly feels like this is much better format. add free_ability and use_in_mode in everything and loop through
     sven_warcry = function(ability)
         UseCircleBuffAbility(ability.handle, false, ability.cast_range, ability.aoe_radius, ability.cast_delay, ability.target_flags, nil,
-            {BOT_MODE_ATTACK, BOT_MODE_RETREAT, BOT_MODE_FARM, BOT_MODE_EVASIVE_MANEUVERS, BOT_MODE_DEFEND_ALLY, BOT_MODE_ROSHAN}, true, 1);
-        UseCircleBuffAbility(ability.handle, false, ability.cast_range, ability.aoe_radius, ability.cast_delay, ability.target_flags, nil,
-            {BOT_MODE_FARM}, true, 1);
+            {BOT_MODE_ATTACK, BOT_MODE_RETREAT, BOT_MODE_FARM, BOT_MODE_EVASIVE_MANEUVERS, BOT_MODE_DEFEND_ALLY, BOT_MODE_ROSHAN, BOT_MODE_FARM}, true, 1);
     end,
     sven_gods_strength = function(ability)
         UseCircleBuffAbility(ability.handle, false, ability.cast_range, ability.aoe_radius, ability.cast_delay, ability.target_flags, nil,
