@@ -33,9 +33,9 @@ function GetDesire()
         return 0;
     end
     if time > update_time then
-        if this_bot.farm_lane ~= nil then
-            print(this_bot:GetUnitName().." farm is "..this_bot.farm_lane)
-        end
+        -- if this_bot.farm_lane ~= nil then
+        --     print(this_bot:GetUnitName().." farm is "..this_bot.farm_lane)
+        -- end
         update_time = update_time + 10;
         -- print("enemy "..GetLaneFrontAmount(enemy_team, LANE_BOT, true))
         -- print("friend "..GetLaneFrontAmount(team, LANE_BOT, true))

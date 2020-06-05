@@ -2,7 +2,7 @@ local enums = {};
 
 enums.atentnion = 0.5;
 enums.passiveness = 1.1;
-enums.stupidity = 0.8;
+enums.stupidity = 0.7;
 enums.healthy = 0.6;
 
 enums.slow_factor = 0.5;

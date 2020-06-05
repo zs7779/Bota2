@@ -168,7 +168,8 @@ end
 
 function CDOTA_Bot_Script:FreeAbility(ability)
     -- todo: free ability needs a opposite function in ability usage. if I can rotate then I save free ability, otherwise use all mana to farm
-    return ability ~= nil and ability:IsFullyCastable() and ability:GetCooldown() <= 30 and ability:GetManaCost() < self:FreeMana();
+    return ability ~= nil and ability:IsFullyCastable() and ability:GetCooldown() <= 30 and
+           ability:GetManaCost() < self:FreeMana() and ability:GetCurrentCharges() >= ability:GetInitialCharges();
 end
 
 function CDOTA_Bot_Script:TimeToRegenMana(healthy)
@@ -683,21 +684,26 @@ function CDOTA_Bot_Script:HitCreeps(creeps, damage)
             return;
         -- end
     end
-    print(self:GetUnitName(), "no creeps at all")
+    -- print(self:GetUnitName(), "no creeps at all")
 end
 
 function CDOTA_Bot_Script:FarmNeutral()
+    local creeps = self:GetNearbyCreeps(1600, true);
+    if creeps ~= nil and #creeps > 0 then
+        self:HitCreeps(creeps, self:GetAttackDamage());
+        return;
+    end
     if self.pull ~= nil and self.pull_state.state == "success" then
         self.farm_neutral = self.pull;
     else
         self:FindNeutralCamp(false);
     end
     if self.farm_neutral ~= nil then
-        if self:IsAtLocation(self.farm_neutral.location, 350) and IsLocationVisible(self.farm_neutral.location) then
-            local neutrals = self:GetNearbyCreeps(1200, true);
-            self:HitCreeps(neutrals, self:GetAttackDamage());
-            return;
-        end
+        -- if self:IsAtLocation(self.farm_neutral.location, 350) and IsLocationVisible(self.farm_neutral.location) then
+        --     local neutrals = self:GetNearbyCreeps(1200, true);
+        --     self:HitCreeps(neutrals, self:GetAttackDamage());
+        --     return;
+        -- end
         if self.farm_lane ~= nil then
             local lane_front_location = GetLaneFrontLocation(GetOpposingTeam(), enums.lanes[self.farm_lane], -self:GetAttackRange() - 100);
             local lane_distance = GetUnitToLocationDistance(self, lane_front_location);
@@ -714,14 +720,16 @@ function CDOTA_Bot_Script:FarmNeutral()
 end
 
 function CDOTA_Bot_Script:FarmLane()
+    local creeps = self:GetNearbyCreeps(1600, true);
+    if creeps ~= nil and #creeps > 0 then
+        self:HitCreeps(creeps, self:GetAttackDamage());
+        return;
+    end
     self:FindFarm();
     if self.farm_lane ~= nil then
         local lane_front_location = GetLaneFrontLocation(GetOpposingTeam(), enums.lanes[self.farm_lane], -150);
-        if self:IsAtLocation(lane_front_location, 500) and IsLocationVisible(lane_front_location) then
-            local creeps = self:GetNearbyCreeps(1600, true);
-            self:HitCreeps(creeps, self:GetAttackDamage());
-            return;
-        end
+        -- if self:IsAtLocation(lane_front_location, 500) and IsLocationVisible(lane_front_location) then
+        -- end
         if self.farm_neutral ~= nil then
             local lane_distance = GetUnitToLocationDistance(self, lane_front_location);
             local neutral_distance = GetUnitToLocationDistance(self, self.farm_neutral.location);

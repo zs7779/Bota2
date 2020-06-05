@@ -67,7 +67,7 @@ function GetDesire()
         -- plan kill, if not being hit by tower
         if not this_bot:IsBeingTargetedBy(this_bot:GetNearbyTowers(800, true)) and not this_bot:WasRecentlyDamagedByTower(2) then
 
-            if target:EstimateEnemiesDamageToSelf(1600) > enums.passiveness * target:GetHealth() and target:EnemyCanInitiateOnSelf(1600) then
+            if target:IsStunned() or  target:EstimateEnemiesDamageToSelf(1600) > enums.passiveness * target:GetHealth() and target:EnemyCanInitiateOnSelf(1600) then
                 this_bot:SetTarget(target);
                 -- print("Target "..target:GetUnitName().." Damage "..this_bot:EstimateFriendsDamageToTarget(900, target).." Disable "..target:GetRemainingDisableTime());
                 return enums.mode_desire.attack;

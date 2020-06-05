@@ -45,14 +45,20 @@ function GetDesire()
         return enums.mode_desire.defend;
     end
     if this_bot.position > 2 then
+        -- if not core, defend when needed or is nearby
         if defend_strength < defend_desire and closest == this_bot then
             return enums.mode_desire.defend;
         end
+        if GetUnitToUnitDistance(this_bot, tower) < 1600 then
+            return enums.mode_desire.defend;
+        end
     else
-        if this_bot.team_mates[3]:GetActiveMode() == this_mode and
+        -- if is core, defend when have waveclear and needed, or is nearby
+        if this_bot:HaveWaveClear() and
+           (this_bot.team_mates[3]:GetActiveMode() == this_mode and
            this_bot.team_mates[4]:GetActiveMode() == this_mode and
            this_bot.team_mates[5]:GetActiveMode() == this_mode and
-           defend_strength < defend_desire and this_bot:HaveWaveClear() then
+           defend_strength < defend_desire or GetUnitToUnitDistance(this_bot, tower) < 1600) then
             return enums.mode_desire.defend;
         end
     end

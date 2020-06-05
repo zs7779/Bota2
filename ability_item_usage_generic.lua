@@ -220,7 +220,7 @@ function NoStunTime(target)
         -- print(target:GetUnitName(),"Not stunned");
         return true;
     end
-    print(target:GetUnitName().." Stunned "..target:GetStunTime());
+    -- print(target:GetUnitName().." Stunned "..target:GetStunTime());
     return false;
 end
 
